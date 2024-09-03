@@ -17,7 +17,7 @@ Here is a typical workflow for contributing...
 6. Push your changes and create a pull request to branch '**dev**'
 7. Make sure the tests and quality gate passes and you add reviewers
 
-### Sonar - the qualtiy gate checker
+### Sonar - the quality gate checker
 SonarQube offers reports on duplicated code, coding standards, unit tests, code coverage, code complexity, comments, bugs, and security recommendations. The analysis is done in the cloud and comments on your pull request with it's finding and a link to the cloud's environment.
 
 #### Access cloud and enable project analysis
@@ -29,7 +29,9 @@ SonarQube offers reports on duplicated code, coding standards, unit tests, code 
    - Inspecting, resolving and assigning quality errors
    - Update the [Quality profile](https://docs.sonarsource.com/sonarcloud/standards/overview/)
 4. Code coverage analysis can _also_ be done be updating Github's workflow as done here using [Sonar's guide](https://docs.sonarsource.com/sonarcloud/enriching/test-coverage/overview/). 
-   - Currently the code coverage analysis is already done via the [Python Coverage Comment](https://github.com/marketplace/actions/python-coverage-comment)
+   - Currently, the code coverage analysis is already done via the [Python Coverage Comment](https://github.com/marketplace/actions/python-coverage-comment)
 
 #### Sonarlint
-The Sonarlint plugin for your IDE (VSCode or Pycharm) is your local checker for your code quality. It's recommended to use this to catch issues early.
+The Sonarlint plugin for your IDE is your local checker for your code quality. It's recommended to use this to catch issues early.
+- Connected mode setup [tutorial](https://docs.sonarsource.com/sonarlint/vs-code/team-features/connected-mode-setup/)
+- Or use the json file (if any) in the ```.sonarlint/``` folder
