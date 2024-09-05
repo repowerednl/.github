@@ -17,6 +17,10 @@ Here is a typical workflow for contributing...
 6. Push your changes and create a pull request to branch '**dev**'
 7. Make sure the tests and quality gate passes and you add reviewers
 
+## Development standards
+See [How to Write Beautiful Python Code With PEP 8](https://realpython.com/python-pep8/) for a condensed version of the PEP-8 guidelines and best practices for writing Python code.
+
+Furthermore, we have some [Confluence](https://repowerednl.atlassian.net/wiki/spaces/SOLARFLEX/pages/2588673/Way+of+working) pages describing our internal way of working. _Feel free to move them here 😃_
 ### Sonar - the quality gate checker
 SonarQube offers reports on duplicated code, coding standards, unit tests, code coverage, code complexity, comments, bugs, and security recommendations. The analysis is done in the cloud and comments on your pull request with it's finding and a link to the cloud's environment.
 
