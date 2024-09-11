@@ -21,18 +21,23 @@ Here is a typical workflow for contributing...
 See [How to Write Beautiful Python Code With PEP 8](https://realpython.com/python-pep8/) for a condensed version of the PEP-8 guidelines and best practices for writing Python code.
 
 Furthermore, we have some [Confluence](https://repowerednl.atlassian.net/wiki/spaces/SOLARFLEX/pages/2588673/Way+of+working) pages describing our internal way of working. _Feel free to move them here 😃_
+
+## Workflows
+### Templates and Reusing workflows
+It is **strongly advised** to use the workflow templates that have been designed organization wide instead of custom build workflows. Next to that, [reusing workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows) within your repository is also *strongly advised*:   
+
 ### Sonar - the quality gate checker
-SonarQube offers reports on duplicated code, coding standards, unit tests, code coverage, code complexity, comments, bugs, and security recommendations. The analysis is done in the cloud and comments on your pull request with it's finding and a link to the cloud's environment.
+SonarQube offers reports on duplicated code, coding standards, unit tests, code coverage, code complexity, comments, bugs, and security recommendations. The analysis is done in the cloud, triggered by a workflow, and comments on your pull request with it's finding and a link to the cloud's environment.
 
 #### Access cloud and enable project analysis
-1. Go to [Sonarcloud](https://sonarcloud.io/projects) and login with your github account
+1. Go to [Sonarcloud](https://sonarcloud.io/projects) and login with your GitHub account
    - For more information you can refer to the [Getting Started](https://docs.sonarsource.com/sonarcloud/getting-started/github/) and [First analysis](https://docs.sonarsource.com/sonarcloud/getting-started/first-analysis/)
 2. Analyse a new project by clicking the '+' icon next to your profile picture. A list of available repositories is available
    - Note that you need to be an owner of the repository to enable this
 3. Contribute by:
    - Inspecting, resolving and assigning quality errors
    - Update the [Quality profile](https://docs.sonarsource.com/sonarcloud/standards/overview/)
-4. Code coverage analysis can _also_ be done be updating Github's workflow as done here using [Sonar's guide](https://docs.sonarsource.com/sonarcloud/enriching/test-coverage/overview/). 
+4. Code coverage analysis can _also_ be done be updating GitHub's workflow as done here using [Sonar's guide](https://docs.sonarsource.com/sonarcloud/enriching/test-coverage/overview/). 
    - Currently, the code coverage analysis is already done via the [Python Coverage Comment](https://github.com/marketplace/actions/python-coverage-comment)
 
 #### Sonarlint
