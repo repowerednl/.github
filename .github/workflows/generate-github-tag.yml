@@ -4,7 +4,7 @@ on:
   workflow_call:
     outputs:
       tag:
-        description: "something meaningful here"
+        description: "The Semantic Versioning GitHub tag used for version control"
         value: ${{ jobs.generate-tag.outputs.tag }}
 
 jobs:
@@ -29,4 +29,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
           PRERELEASE: true
-          DRY_RUN: true
