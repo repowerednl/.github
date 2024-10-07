@@ -1,0 +1,57 @@
+name: Docker build and push
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      host:
+        type: string
+        required: true
+      # Optional
+      docker-compose_remote_dir:
+        type: string
+        required: false
+        default: .
+      server_username:
+        type: string
+        required: false
+        default: root
+      docker-compose_file_path:
+        type: string
+        required: false
+        default: docker-compose.yml
+    secrets:
+      key:
+        required: true
+
+jobs:
+  scp-docker-compose:
+    name: Secure copy docker-compose to server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy docker-compose file via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ inputs.host }}
+          username: ${{ inputs.server_username }}
+          key: ${{ secrets.key }}
+          source: ${{ inputs.docker-compose_file_path }}
+          target: ${{ inputs.docker-compose_remote_dir }}
+
+  deploy-docker-compose:
+    name: Deploy docker-compose via SSH
+    needs: scp-docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deployment with docker-compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ inputs.host }}
+          username: ${{ inputs.server_username }}
+          key: ${{ secrets.key }}
+          script: |
+            docker system prune --all --force
+            DOCKER_COMPOSE_PATH=${{ inputs.docker-compose_remote_dir }}/${{ inputs.docker-compose_file_path }}
+            docker-compose -f $DOCKER_COMPOSE_PATH pull 
+            docker-compose -f $DOCKER_COMPOSE_PATH up -d --force-recreate

@@ -1,0 +1,75 @@
+name: Docker build and push
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The Semantic Versioning tag (generated in a different workflow)
+        type: string
+        required: true
+      dockerfile_name:
+        type: string
+        required: false
+        default: Dockerfile
+      docker_hub_username:
+        required: true
+        type: string
+    secrets:
+      docker_hub_access_token:
+        required: true
+      docker_secret_1:
+      docker_secret_2:
+      docker_secret_3:
+      docker_secret_4:
+      docker_secret_5:
+      docker_secret_6:
+
+jobs:
+  generate-image-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.docker-image-tag.outputs.IMAGE_TAG }}
+    steps:
+      # Sets the docker image tag according to the file system structure of Dockerhub with versioning
+      # Examples:
+      # - standard Dockerfile: thehubusername/repositoryfoobar:v1.0.1.beta.3
+      # - with name (i.e. Dockerfile.foobar): thehubusername/repositoryfoobar-helloworld:v1.0.1.beta.3
+      # - Repowered example: repowered/platform-django:v1.0.1.beta.3
+      - name: Set docker image tag for '${{ inputs.dockerfile_name }}'
+        id: docker-image-tag
+        env:
+          hub_repo: ${{ inputs.docker_hub_username }}/${{ github.event.repository.name }}
+        run: |
+          DOCKERFILE=${{ inputs.dockerfile_name }}
+          DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
+          echo "IMAGE_TAG=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: generate-image-tag
+    steps:
+      #  Log in to the desired docker hub space
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ inputs.docker_hub_username }}
+          password: ${{ secrets.docker_hub_access_token }}
+
+      # Build the Dockerfile(s) with the image tag in the correct format and push to the hub
+      - name: Build ${{ inputs.dockerfile_name }} and push with tag
+        uses: docker/build-push-action@v6
+        # Add ALL the secret(s) (if any) to the environment variable using a multi-line value and enable them below
+        env:
+          SECRETS: "|
+              FIRST_SECRET=${{ secrets.docker_secret_1 }}
+              SECOND_SECRET=${{ secrets.docker_secret_2 }}
+              THIRD_SECRET=${{ secrets.docker_secret_3 }}
+              FOURTH_SECRET=${{ secrets.docker_secret_5 }}
+              FIFTH_SECRET=${{ secrets.docker_secret_4 }}
+              SIXTH_SECRET=${{ secrets.docker_secret_6 }}"
+        with:
+          context: "{{defaultContext}}:./"
+          file: ${{ inputs.dockerfile_name }}
+          push: ${{ github.event_name != 'pull_request' }} #temp
+          tags: ${{ job.generate-image-tag.outputs.image_tag }}
+          secrets: ${{ env.SECRETS }}
