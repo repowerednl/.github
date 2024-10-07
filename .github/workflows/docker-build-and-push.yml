@@ -70,6 +70,6 @@ jobs:
         with:
           context: "{{defaultContext}}:./"
           file: ${{ inputs.dockerfile_name }}
-          push: ${{ github.event_name != 'pull_request' }} #temp
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ job.generate-image-tag.outputs.image_tag }}
           secrets: ${{ env.SECRETS }}

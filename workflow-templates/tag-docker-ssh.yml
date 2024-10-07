@@ -25,7 +25,7 @@ jobs:
       # dockerfile_name: # Optional, defaults to 'Dockerfile'
     secrets:
       docker_hub_access_token: ${{ vars.DOCKER_HUB_ACCESS_TOKEN }}
-      # Optional (max. 6 secrets)
+      # Optional (Current maximum of secrets that can be set =  6 secrets. Can be expanded)
       # docker_secret_1:
       # docker_secret_2:
       # docker_secret_3:
