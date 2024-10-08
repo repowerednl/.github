@@ -14,7 +14,7 @@ jobs:
       contents: write
     uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
 
- # Repeat steps below if there are multiple Dockerfiles and/or docker-compose files
+  # Repeat steps below if there are multiple Dockerfiles and/or docker-compose files
 
   docker:
     uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
@@ -34,11 +34,11 @@ jobs:
       # docker_secret_6:
 
   environment:
-    uses: test-org-fanna/.github/.github/workflows/determine-environment.yml@main
+    uses: Repowered/.github/.github/workflows/determine-environment.yml@main
 
   deploy:
-    needs: [environment, docker]
-    uses: test-org-fanna/.github/.github/workflows/deploy-docker-compose.yml@main
+    needs: [ environment, docker ]
+    uses: Repowered/.github/.github/workflows/deploy-docker-compose.yml@main
     with:
       environment: ${{ needs.environment.outputs.environment }}
       # server_username: Optional, defaults to 'root'

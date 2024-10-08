@@ -7,6 +7,9 @@ on:
       environment:
         type: string
         required: true
+      tag:
+        type: string
+        required: true
       # Optional
       docker-compose_remote_dir:
         type: string
@@ -45,13 +48,19 @@ jobs:
     steps:
       - name: SSH deployment with docker-compose
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          TAG: ${{ inputs.tag }}
+          HOST: ${{ vars.HOST }}
+          # Optional extra domain to reroute traffic from. Currently limited to 1. Can be expanded
+          # (Note: Needed for energyshift.repowered.nl because they have different frontend styling but the service is the same)
+          EXTRA_DOMAIN: ${{ vars.EXTRA_DOMAIN }}
         with:
           host: ${{ vars.HOST }}
           username: ${{ inputs.server_username }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: TAG,HOST,EXTRA_DOMAIN
           script: |
             docker system prune --all --force
             DOCKER_COMPOSE_PATH=${{ inputs.docker-compose_remote_dir }}/${{ inputs.docker-compose_file_path }}
             docker-compose -f $DOCKER_COMPOSE_PATH pull 
             docker-compose -f $DOCKER_COMPOSE_PATH up -d --force-recreate
-
