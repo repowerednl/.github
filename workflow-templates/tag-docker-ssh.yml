@@ -37,10 +37,11 @@ jobs:
     uses: Repowered/.github/.github/workflows/determine-environment.yml@main
 
   deploy:
-    needs: [ environment, docker ]
+    needs: [ environment, docker, tag ]
     uses: Repowered/.github/.github/workflows/deploy-docker-compose.yml@main
     with:
       environment: ${{ needs.environment.outputs.environment }}
+      tag: ${{ needs.tag.outputs.tag }}
       # server_username: Optional, defaults to 'root'
       # docker-compose_remote_dir: Optional, defaults to '/root'
       # docker-compose_file_path: Optional, defaults to 'docker-compose.yml'
