@@ -33,13 +33,15 @@ jobs:
       # docker_secret_5:
       # docker_secret_6:
 
+  environment:
+    uses: test-org-fanna/.github/.github/workflows/determine-environment.yml@main
+
   deploy:
-    uses: Repowered/.github/.github/workflows/deploy-docker-compose.yml@main
-    needs: docker
+    needs: [environment, docker]
+    uses: test-org-fanna/.github/.github/workflows/deploy-docker-compose.yml@main
     with:
-      host: ${{ vars.HOST }}
+      environment: ${{ needs.environment.outputs.environment }}
       # server_username: Optional, defaults to 'root'
       # docker-compose_remote_dir: Optional, defaults to '/root'
       # docker-compose_file_path: Optional, defaults to 'docker-compose.yml'
-    secrets:
-      key: ${{ secrets.SSH_PRIVATE_KEY }}
+    secrets: inherit
