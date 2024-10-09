@@ -15,10 +15,30 @@ on:
 jobs:
   deploy-verify:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     strategy:
       matrix:
         container_name: ${{ fromJSON(inputs.container_names) }}
     steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Save DigitalOcean kubeconfig with short-lived credentials
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+        run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+
+      - name: Update kubernetes secrets
+        continue-on-error: true
+        run: |
+          kubectl delete secret infisical-secrets --ignore-not-found=true
+          kubectl create secret generic infisical-secrets \
+          --from-literal=INFISICAL_CLIENT_ID=${{ secrets.INFISICAL_CLIENT_ID }} \
+          --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.INFISICAL_CLIENT_SECRET }} \
+          --from-literal=INFISICAL_PROJECT_ID=${{ secrets.INFISICAL_PROJECT_ID }}
+
       - name: Deploy ${{matrix.container_name}}
         run: kubectl set image deployment/${{matrix.container_name}}-deployment ${{matrix.container_name}}=${{inputs.docker_image_tag}}
 

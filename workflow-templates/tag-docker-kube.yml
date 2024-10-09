@@ -36,13 +36,6 @@ jobs:
   github-environment:
     uses: Repowered/.github/.github/workflows/determine-environment.yml@main
 
-  setup-doctl:
-    uses: Repowered/.github/.github/workflows/setup-doctl-kube.yml@main
-    needs: github-environment
-    with:
-      environment: ${{ needs.github-environment.outputs.environment }}
-    secrets: inherit
-
 # TODO(REP-2945): Move this step to the repository infra
 # Should only be active for repower-django (add job to 'needs' in deploy-verify)
 #  run-migrations:
@@ -53,7 +46,7 @@ jobs:
 
   deploy-verify:
     uses: Repowered/.github/.github/workflows/kube-deploy-verify.yml@main
-    needs: [setup-doctl, docker]
+    needs: [github-environment, docker]
     with:
       # If there are multiple deployments for a single docker image, the container names can be specified here
       # Example:
@@ -61,3 +54,5 @@ jobs:
       # the corresponding container_names are: "['foo', 'bar']"
       container_names: # A JSON list string i.e. "['my name']"
       docker_image_tag: ${{ needs.docker.outputs.image_tag }}
+      environment: ${{ needs.github-environment.outputs.environment }}
+    secrets: inherit
