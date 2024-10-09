@@ -43,6 +43,14 @@ jobs:
       environment: ${{ needs.github-environment.outputs.environment }}
     secrets: inherit
 
+# TODO(REP-2945): Move this step to the repository infra
+# Should only be active for repower-django (add job to 'needs' in deploy-verify)
+#  run-migrations:
+#    uses: Repowered/.github/.github/workflows/run-kube-migration.yml@main
+#    needs: tag
+#    with:
+#      tag: ${{ needs.tag.outputs.tag }}
+
   deploy-verify:
     uses: Repowered/.github/.github/workflows/kube-deploy-verify.yml@main
     needs: [setup-doctl, docker]
