@@ -2,11 +2,11 @@ name: GitHub Tag, Docker publish build, SSH Deploy
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
+      - main
       - dev
-      - release/**
-      - hotfix/**
+      - qa #TODO(REP-2853): temporarily until the rollback workflow is in place
 
 jobs:
   tag:
