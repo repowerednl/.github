@@ -1,0 +1,26 @@
+name: Deploy the docker image on Kubernetes and verify the deployment
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      container_names:
+        type: string
+        required: true
+        description: A JSON string list of all deployments belonging to the same (docker) image
+      docker_image_tag:
+        type: string
+        required: true
+
+jobs:
+  deploy-verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container_name: ${{ fromJSON(inputs.container_names) }}
+    steps:
+      - name: Deploy ${{matrix.container_name}}
+        run: kubectl set image deployment/${{matrix.container_name}}-deployment ${{matrix.container_name}}=${{inputs.docker_image_tag}}
+
+      - name: Verify ${{matrix.container_name}} deployment
+        run: kubectl rollout status deployment/${{matrix.container_name}}-deployment
