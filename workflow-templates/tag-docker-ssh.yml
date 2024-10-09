@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - dev
-      - release/** #TODO geen release en hotfix branches
+      - release/**
       - hotfix/**
 
 jobs:
