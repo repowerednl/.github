@@ -1,4 +1,4 @@
-name: Docker build and push
+name: Deploy docker-compose via SSH
 
 on:
   workflow_call:

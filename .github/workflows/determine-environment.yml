@@ -1,4 +1,4 @@
-name: Determine environment
+name: Determine GitHub environment
 
 on:
   workflow_call:
