@@ -18,4 +18,13 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Save DigitalOcean kubeconfig with short-lived credentials
-        run: doctl kubernetes cluster kubeconfig save  --expiry-seconds 600 ${{ vars.CLUSTER_NAME }}
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 600 }}
+        run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+      - name: Update kubernetes secrets
+        run: |
+          kubectl delete secret infisical-secrets --ignore-not-found=true
+          kubectl create secret generic infisical-secrets \
+          --from-literal=INFISICAL_CLIENT_ID=${{ secrets.INFISICAL_CLIENT_ID }} \
+          --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.INFISICAL_CLIENT_SECRET }} \
+          --from-literal=INFISICAL_PROJECT_ID=${{ secrets.INFISICAL_PROJECT_ID }}
