@@ -12,12 +12,12 @@ jobs:
   tag:
     permissions:
       contents: write
-    uses: test-org-fanna/.github/.github/workflows/generate-github-tag.yml@main
+    uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
 
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
   docker:
-    uses: test-org-fanna/.github/.github/workflows/docker-build-and-push.yml@main
+    uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
@@ -34,17 +34,17 @@ jobs:
       # docker_secret_6:
 
   github-environment:
-    uses: test-org-fanna/.github/.github/workflows/determine-environment.yml@main
+    uses: Repowered/.github/.github/workflows/determine-environment.yml@main
 
   setup-doctl:
-    uses: test-org-fanna/.github/.github/workflows/setup-doctl-kube.yml@main
+    uses: Repowered/.github/.github/workflows/setup-doctl-kube.yml@main
     needs: github-environment
     with:
       environment: ${{ needs.github-environment.outputs.environment }}
     secrets: inherit
 
   deploy-verify:
-    uses: test-org-fanna/.github/.github/workflows/kube-deploy-verify.yml@main
+    uses: Repowered/.github/.github/workflows/kube-deploy-verify.yml@main
     needs: [setup-doctl, docker]
     with:
       # If there are multiple deployments for a single docker image, the container names can be specified here
