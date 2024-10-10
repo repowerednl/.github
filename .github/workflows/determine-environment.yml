@@ -1,0 +1,25 @@
+name: Determine GitHub environment
+
+on:
+  workflow_call:
+    outputs:
+      environment:
+        description: "The GitHub's environment"
+        value: ${{ jobs.determine-environment.outputs.env_name }}
+
+jobs:
+  determine-environment:
+    name: Determine the GitHub environment
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.retrieve-environment.outputs.env_name }}
+    steps:
+      - name: Retrieve environment
+        id: retrieve-environment
+        run: |
+          echo "Running on branch ${{ github.ref }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "env_name=prod" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=dev" >> $GITHUB_OUTPUT
+          fi
