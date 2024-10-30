@@ -37,8 +37,3 @@ jobs:
         with:
           name: python-coverage-comment-action
           path: python-coverage-comment-action.txt
-
-
-
-
-

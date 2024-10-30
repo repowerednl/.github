@@ -7,7 +7,7 @@ on:
 
 jobs:
   django-unit-test:
-    uses: test-org-fanna/.github/.github/workflows/django-test-coverage.yml@main
+    uses: Repowered/.github/.github/workflows/django-test-coverage.yml@main
     with:
       postgres_db: ${{ vars.POSTGRES_DB }}
       postgres_user: ${{ vars.POSTGRES_USER }}
@@ -22,7 +22,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   django-migration-test:
-    uses: test-org-fanna/.github/.github/workflows/django-migration-test.yml@main
+    uses: Repowered/.github/.github/workflows/django-migration-test.yml@main
     with:
       postgres_db: ${{ vars.POSTGRES_DB }}
       postgres_user: ${{ vars.POSTGRES_USER }}
@@ -35,7 +35,7 @@ jobs:
 
   quality-control-sonar:
     needs: django-unit-test
-    uses: test-org-fanna/.github/.github/workflows/quality-control-sonar.yml@main
+    uses: Repowered/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
     # coverage_report_name: # Optional, defaults to 'coverage.xml'
     secrets:
@@ -43,6 +43,6 @@ jobs:
 
   coverage-comment:
     needs: django-unit-test
-    uses: test-org-fanna/.github/.github/workflows/coverage-comment.yml@main
+    uses: Repowered/.github/.github/workflows/coverage-comment.yml@main
     # with:
     # coverage_report_name: # Optional, defaults to 'coverage.xml'
