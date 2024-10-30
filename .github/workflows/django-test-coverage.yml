@@ -137,11 +137,11 @@ jobs:
         env:
           CI: true
           COLUMNS: 120 # For the test output
-          POSTGRES_DB: ${{ inputs.postgres_db }}
-          POSTGRES_USER: ${{ inputs.postgres_user }}
-          POSTGRES_HOST: ${{ inputs.postgres_host }}
-          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
-          POSTGRES_PORT: 5432
+          SQL_DATABASE: ${{ inputs.postgres_db }}
+          SQL_USER: ${{ inputs.postgres_user }}
+          SQL_HOST: ${{ inputs.postgres_host }}
+          SQL_PASSWORD: ${{ secrets.postgres_password }}
+          SQL_PORT: 5432
 
       - name: Archive test coverage report
         uses: actions/upload-artifact@v4
