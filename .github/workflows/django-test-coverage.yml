@@ -13,19 +13,18 @@ on:
       postgres_host:
         type: string
         required: true
+      # Provided by caller workflow
+      python_version:
+        type: string
+        required: true
+      poetry_version:
+        type: string
+        required: true
       # Optional
-      python_versions:
-        type: string
-        description: A JSON string list of all python versions to run these tests on
-        default: "['3.11.2']"
-      poetry_versions:
-        type: string
-        description: A JSON string list of all python versions to run these tests on
-        default: "['1.8.4']"
       working_directory:
         type: string
-        description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here
-        default: .
+        description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here. The last slash needs to be included
+        default: ./
       num_test_processes:
         type: number
         description: The number of parallel test processes
@@ -34,24 +33,16 @@ on:
       postgres_password:
         required: true
       private_pypi_url:
-        type: string
         required: true
       private_pypi_user:
-        type: string
         required: true
       private_pypi_password:
-        type: string
         required: true
 
 jobs:
   unit-tests-with-coverage:
-    name: Django Tests With Postgres and Coverage for python version ${{ matrix.python.version }}
-    strategy:
-      matrix:
-        python-version: ${{ fromJSON(inputs.python_versions) }}
-        poetry-version: ${{ fromJSON(inputs.poetry_versions) }}
-      runs-on: ubuntu-latest
-      container: python:${{ matrix.python-version }}-alpine
+    name: Django Tests With Postgres and Coverage
+    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -73,79 +64,104 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install needed apk packages
-        run: apk update && apk add bash && apk add zstd && apk add tar
+      - name: Setup python ${{ inputs.python_version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
 
       - name: Load cache
         id: cache
         uses: actions/cache@v4
         with:
           path: |
-            ${{ inputs.working_directory }}/.venv
-            /github/home/.local
-          key: cache-poetry-${{ matrix.poetry_version }}-python-${{ matrix.python_version }}--${{ hashFiles('**/poetry.lock') }}
+            ${{ inputs.working_directory }}.testmondata
+            ${{ inputs.working_directory }}.coverage
+            ${{ inputs.working_directory }}coverage.xml
+            ${{ inputs.working_directory }}.venv
+            /home/runner/.local/
+          key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Add cache to path
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: echo "/github/home/.local/bin" >> $GITHUB_PATH
-
-      - name: Install Poetry V${{ matrix.poetry_version }}
+      - name: Install Poetry ${{ inputs.poetry_version }}
         if: steps.cache.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
         with:
-          version: ${{ matrix.poetry_version }}
+          version: ${{ inputs.poetry_version }}
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
 
-      - name: Poetry; configure and (check) package install
+      - name: Check Poetry
         working-directory: ${{ inputs.working_directory }}
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           INSTALL_MSG=$(poetry install --dry-run 2>&1 | tail -1)
           if [[ "$INSTALL_MSG" != '' ]]; then
             echo "<h2>:no_entry_sign: Poetry install dry-run failed </h2>" >> $GITHUB_STEP_SUMMARY
-            echo "<h3>You should probably run 'poetry lock' </h3>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
             echo "$INSTALL_MSG" >> $GITHUB_STEP_SUMMARY
             exit 3
           fi
+
+      - name: Configure Poetry and install packages
+        working-directory: ${{ inputs.working_directory }}
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
           poetry config repositories.repowered ${{ secrets.private_pypi_url}}
           poetry config http-basic.repowered ${{ secrets.private_pypi_user }} ${{ secrets.private_pypi_password}}
           poetry install --no-interaction --no-root --no-ansi
 
-      - name: Run tests with coverage
-        working-directory: django-test #INPUT
+      - name: Run tests with coverage (${{ inputs.num_test_processes }} parallel test procs)
+        working-directory: ${{ inputs.working_directory }}
         run: |
-          poetry run pytest --cov-config=.coveragerc --cov-report=xml --cov=. --durations=5 --numprocesses=2 2>&1 | tee /dev/stderr >test_report
-          HAS_FAILURES=$(cat test_report | grep 'failed' )
-          if [ -f test_report ]; then
-              if [ "$HAS_FAILURES" == '' ]; then
-                echo "<details><summary>:white_check_mark: Tests Succeeded</summary>" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                cat test_report >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "</details>" >> $GITHUB_STEP_SUMMARY
-              else
-                echo "<details><summary>:x: Tests Failed</summary>" >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                cat test_report >> $GITHUB_STEP_SUMMARY
-                echo "" >> $GITHUB_STEP_SUMMARY
-                echo "</details>" >> $GITHUB_STEP_SUMMARY
-                exit 3
-              fi
+          if [ ${{ env.IS_STANDARD_BRANCH }} == 'true' ]; then
+            TEST_MON_FLAG=--testmon-noselect;
+          else
+            TEST_MON_FLAG=--testmon;
           fi
+            echo "Running pytest with flag $TEST_MON_FLAG and ${{ inputs.num_test_processes }} parallel processes"
+          poetry run pytest -v \
+            "$TEST_MON_FLAG" --durations=5 -n ${{vars.PARALLEL_TEST_PROCS}} \
+            --cov-report=term --cov-report=xml --cov=. --cov-append \
+            --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output test_report.md
         env:
           CI: true
-          COLUMNS: 120 # For the test output
-          SQL_DATABASE: ${{ inputs.postgres_db }}
-          SQL_USER: ${{ inputs.postgres_user }}
-          SQL_HOST: ${{ inputs.postgres_host }}
-          SQL_PASSWORD: ${{ secrets.postgres_password }}
-          SQL_PORT: 5432
+          IS_STANDARD_BRANCH: ${{ endsWith( GITHUB.REF, 'main') || endsWith( GITHUB.REF, 'dev')
+            || contains( GITHUB.REF, 'release/') || contains( GITHUB.REF, 'hotfix/') }}
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_HOST: ${{ inputs.postgres_host }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+          POSTGRES_PORT: 5432
 
-      - name: Archive test coverage report
+      - name: Show test failures in the job summary
+        working-directory: ${{ inputs.working_directory }}
+        if: failure()
+        run: |
+          if [ -f test_report.md ]; then
+            echo "<h2>:x: Tests Failed</h2>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat test_report.md >> $GITHUB_STEP_SUMMARY
+          fi      
+
+      - name: Coverage comment
+        id: coverage-comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_PATH: ${{ inputs.working_directory }}
+          MINIMUM_ORANGE: 80
+
+      - name: Store Coverage Information
+        uses: actions/upload-artifact@v4
+        if: steps.coverage-comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        with:
+          name: python-coverage-comment-action
+          path: python-coverage-comment-action.txt
+
+      - name: Archive 'coverage.xml' report
         uses: actions/upload-artifact@v4
         with:
           name: coverage.xml
-          path: coverage.xml
+          path: ${{ inputs.working_directory }}coverage.xml
           if-no-files-found: 'error'
