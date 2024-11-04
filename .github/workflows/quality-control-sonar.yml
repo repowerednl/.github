@@ -1,0 +1,34 @@
+name: Sonar Quality Control
+
+on:
+  workflow_call:
+    inputs:
+      # Optional
+      coverage_report_name:
+        type: string
+        default: coverage.xml
+    secrets:
+      # Required
+      sonar-token:
+        required: true
+      # Optional
+      github-token:
+        description: Standard availability during run-time via secrets.GITHUB_TOKEN
+        required: false
+        default: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  quality-control-sonar:
+    name: Quality checks via SonarCloud with coverage report
+
+  steps:
+    - name: Download coverage artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.coverage_report_name }}
+
+    - name: SonarCloud analysis
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.sonar_token }}
+        GITHUB_TOKEN: ${{ secrets.github-token }}

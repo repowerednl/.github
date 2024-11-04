@@ -1,0 +1,11 @@
+{
+    "name": "Django tests and quality checks, Run Sonar and Linting Quality Checks",
+    "description": "Runs the django unit tests with coverage that is uploaded as an artifact, checks the migrations and quality via sonarcloud and linting (black flake8 isort)",
+    "iconName": "octicon check-circle",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        ".*.py",
+        "poetry.lock",
+        "pyproject.toml"
+    ]
+}
