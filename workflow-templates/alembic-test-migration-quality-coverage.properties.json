@@ -1,0 +1,12 @@
+{
+    "name": "Pytests, Alembic migration check and Sonar with test coverage",
+    "description": "Runs the python unit tests (pytests) with coverage, checks for alembic migrations and analyses the quality via sonarcloud",
+    "iconName": "octicon check-circle",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        "alembic.ini",
+        ".*.py",
+        "poetry.lock",
+        "pyproject.toml"
+    ]
+}

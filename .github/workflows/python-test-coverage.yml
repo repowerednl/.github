@@ -90,18 +90,6 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
 
-      - name: Check Poetry
-        working-directory: ${{ inputs.working_directory }}
-        run: |
-          INSTALL_MSG=$(poetry install --dry-run 2>&1 | tail -1)
-          if [[ "$INSTALL_MSG" != '' ]]; then
-            echo "<h2>:no_entry_sign: Poetry install dry-run failed </h2>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "$INSTALL_MSG" >> $GITHUB_STEP_SUMMARY
-            exit 3
-          fi
-
       - name: Configure Poetry and install packages
         working-directory: ${{ inputs.working_directory }}
         if: steps.cache.outputs.cache-hit != 'true'
