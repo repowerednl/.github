@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  django-unit-test-coverage:
+  pytest-with-coverage:
     uses: Repowered/.github/.github/workflows/python-test-coverage.yml@main
     permissions:
       contents: write
