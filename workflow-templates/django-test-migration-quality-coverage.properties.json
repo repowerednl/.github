@@ -1,6 +1,6 @@
 {
-    "name": "Django tests and quality checks, Run Sonar and Linting Quality Checks",
-    "description": "Runs the django unit tests with coverage that is uploaded as an artifact, checks the migrations and quality via sonarcloud and linting (black flake8 isort)",
+    "name": "Pytests, Django migration check and Sonar with test coverage",
+    "description": "Runs the python unit tests (pytests) with coverage, checks for django migrations and analyses the quality via sonarcloud",
     "iconName": "octicon check-circle",
     "categories": ["Repowered"],
     "filePatterns": [

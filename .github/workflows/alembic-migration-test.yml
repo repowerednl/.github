@@ -1,4 +1,4 @@
-name: Django Migration Check
+name: Alembic Migration Check
 
 on:
   workflow_call:
@@ -13,7 +13,7 @@ on:
       postgres_host:
         type: string
         required: true
-      # Provided by caller workflow
+      # Giving from caller workflow matrix
       python_version:
         type: string
         required: true
@@ -37,7 +37,7 @@ on:
 
 jobs:
   test-migrations:
-    name: Django Migration Check
+    name: Alembic Migration Check
     runs-on: ubuntu-latest
 
     services:
@@ -79,7 +79,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
         with:
-          version: 1.8.4
+          version: ${{ inputs.poetry_version }}
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
@@ -92,16 +92,13 @@ jobs:
           poetry config http-basic.repowered ${{ secrets.private_pypi_user }} ${{ secrets.private_pypi_password}}
           poetry install --no-interaction --no-root --no-ansi
 
-      - name: Check Django Migrations
+      - name: Check Alembic Migrations
         working-directory: ${{ inputs.working_directory }}
+        id: migration-check
         run: |
-          MIGRATION_MSG=$(poetry run python manage.py makemigrations --dry-run 2>&1 )
-          if [[ "$MIGRATION_MSG" != 'No changes detected' ]]; then
-            echo "<h2>:no_entry_sign: Migration check failed </h2>" >> $GITHUB_STEP_SUMMARY
-            echo "<h3>The message:</h3>" >> $GITHUB_STEP_SUMMARY
-            echo "$MIGRATION_MSG" >> $GITHUB_STEP_SUMMARY
-            exit 3
-          fi
+          poetry run alembic upgrade head
+          echo "migration_msg=$(poetry run alembic check)" >> "$GITHUB_OUTPUT"
+          poetry run alembic check
         env:
           CI: true
           SQL_DATABASE: ${{ inputs.postgres_db }}
@@ -109,3 +106,13 @@ jobs:
           SQL_HOST: ${{ inputs.postgres_host }}
           SQL_PASSWORD: ${{ secrets.postgres_password }}
           SQL_PORT: 5432
+
+      - name: Output Migration Failures
+        if:  failure()
+        run: |
+          echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
+          
+        
