@@ -1,4 +1,4 @@
-name: Run Django Unit Test with Coverage, Check the Migration, Run Sonar and Create Coverage Comment
+name: Run Pytest with Coverage, Check the Alembic Migration and run the Sonar Analysis
 
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   sonar-cloud:
-    needs: django-unit-test-coverage
+    needs: pytest-with-coverage
     uses: Repowered/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # working_directory: # Optional, defaults to './'. The last slash needs to be included
