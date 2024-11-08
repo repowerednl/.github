@@ -23,7 +23,7 @@ on:
       # Optional
       working_directory:
         type: string
-        description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here. The last slash needs to be included
+        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here.
         default: ./
     secrets:
       postgres_password:
