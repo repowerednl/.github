@@ -22,6 +22,11 @@ jobs:
       postgres_host: ${{ vars.POSTGRES_HOST }}
       python_version: ${{ matrix.python_version }}
       poetry_version: ${{ matrix.poetry_version }}
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        django-test/.venv
+        /home/runner/.local/
       # working_directory: # Optional, defaults to './'. The last slash needs to be included
       # num_test_processes: # Optional, defaults to 2
     secrets:
@@ -53,7 +58,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   sonar-cloud:
-    needs: django-unit-test-coverage
+    needs: pytest-with-coverage
     uses: Repowered/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # working_directory: # Optional, defaults to './'. The last slash needs to be included
