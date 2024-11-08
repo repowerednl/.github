@@ -50,6 +50,11 @@ jobs:
       postgres_host: ${{ vars.POSTGRES_HOST }}
       python_version: ${{ matrix.python_version }}
       poetry_version: ${{ matrix.poetry_version }}
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        django-test/.venv
+        /home/runner/.local/
       # working_directory: # Optional, defaults to './'. The last slash needs to be included
     secrets:
       postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
