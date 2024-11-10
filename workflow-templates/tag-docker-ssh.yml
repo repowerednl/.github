@@ -2,7 +2,7 @@ name: GitHub Tag, Docker publish build, SSH Deploy
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
       - main
       - dev
@@ -10,6 +10,7 @@ on:
 
 jobs:
   tag:
+    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
     permissions:
       contents: write
     uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
@@ -17,6 +18,7 @@ jobs:
   # Repeat steps below if there are multiple Dockerfiles and/or docker-compose files
 
   docker:
+    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
     uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
     needs: tag
     with:
@@ -34,9 +36,11 @@ jobs:
       # docker_secret_6:
 
   environment:
+    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
     uses: Repowered/.github/.github/workflows/determine-environment.yml@main
 
   deploy:
+    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
     needs: [ environment, docker, tag ]
     uses: Repowered/.github/.github/workflows/deploy-docker-compose.yml@main
     with:

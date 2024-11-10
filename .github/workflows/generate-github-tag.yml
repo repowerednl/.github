@@ -10,8 +10,6 @@ on:
 jobs:
   generate-tag:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       tag: ${{ steps.github-tag.outputs.tag }}
     steps:
@@ -28,4 +26,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
-          PRERELEASE: true
+          RELEASE_BRANCHES: main, dev
+          PRERELEASE: ${{ github.event_name == 'pull_request' }}

@@ -46,7 +46,11 @@ jobs:
         run: |
           DOCKERFILE=${{ inputs.dockerfile_name }}
           DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
-          echo "IMAGE_TAG=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          if [ ${{ github.ref == 'refs/heads/main' }} ]; then
+            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }},latest" >> $GITHUB_OUTPUT
+          else
+            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          fi
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -74,6 +78,6 @@ jobs:
         with:
           context: "{{defaultContext}}:./"
           file: ${{ inputs.dockerfile_name }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ needs.generate-image-tag.outputs.image_tag }}
           secrets: ${{ env.SECRETS }}
