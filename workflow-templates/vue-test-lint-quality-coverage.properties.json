@@ -1,0 +1,16 @@
+{
+    "name": "Run Yarn commands and run Sonar Analysis",
+    "description": "Run yarn install, check-updates, lint, prettier, test with coverage and/or build with publish and analyse the quality via SonarCloud",
+    "iconName": "octicon codescan-checkmark",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        "package.json",
+        "yarn.lock",
+        ".yarnrc.yml",
+        ".prettierrc*",
+        "*eslint*",
+        "vite.config*",
+        "vitest.config.js"
+    ]
+}
+
