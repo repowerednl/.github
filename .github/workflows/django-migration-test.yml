@@ -71,7 +71,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ inputs.working_directory }}.venv
+            ${{ inputs.working_directory }}/.venv
             /home/runner/.local/
           key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
 
