@@ -1,4 +1,4 @@
-name: Run Django Unit Test with Coverage, Check the Migration, Run Sonar and Create Coverage Comment
+name: Run Pytest with Coverage, Check the Alembic Migration and run the Sonar Analysis
 
 on:
   workflow_dispatch:
