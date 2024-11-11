@@ -32,7 +32,7 @@ jobs:
   generate-image-tag:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.docker-image-tag.outputs.IMAGE_TAG }}
+      image_tag: ${{ steps.docker-image-tag.outputs.image_tag }}
     steps:
       # Sets the docker image tag according to the file system structure of Dockerhub with versioning
       # Examples:

@@ -1,7 +1,11 @@
 name: GitHub Tag, Docker publish build, SSH Deploy
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+      - qa #TODO(REP-2853): temporarily until the rollback workflow is in place
   pull_request:
     branches:
       - main
@@ -10,7 +14,7 @@ on:
 
 jobs:
   tag:
-    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
+    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     permissions:
       contents: write
     uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
@@ -18,7 +22,7 @@ jobs:
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
   docker:
-    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
+    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
     needs: tag
     with:
@@ -36,20 +40,20 @@ jobs:
       # docker_secret_6:
 
   github-environment:
-    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
+    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     uses: Repowered/.github/.github/workflows/determine-environment.yml@main
 
 # TODO(REP-2945): Move this step to the repository infra
 # Should only be active for repower-django (add job to 'needs' in deploy-verify)
 #  run-migrations:
-#    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
+#    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
 #    uses: Repowered/.github/.github/workflows/run-kube-migration.yml@main
 #    needs: tag
 #    with:
 #      tag: ${{ needs.tag.outputs.tag }}
 
   deploy-verify:
-    if: ${{ github.event.pull_request.merged == true || contains(github.event.pull_request.title, '[deploy]') }}
+    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     uses: Repowered/.github/.github/workflows/kube-deploy-verify.yml@main
     needs: [github-environment, docker]
     with:
