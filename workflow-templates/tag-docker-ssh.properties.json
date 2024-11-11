@@ -1,0 +1,10 @@
+{
+    "name": "Tag, docker and ssh deploy",
+    "description": "Create and publish a SemVer GitHub Tag, Build the docker image(s) for the hub and deploy that via SSH using a docker-compose file",
+    "iconName": "octicon rocket",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        "(.*\\/)?Dockerfile(\\.{1}[a-zA-Z]*)?",
+        ".*docker-compose(-?[a-zA-Z1-9_]*)*.(yml|yaml)"
+    ]
+}

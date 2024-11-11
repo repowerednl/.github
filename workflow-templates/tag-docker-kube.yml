@@ -1,0 +1,65 @@
+name: GitHub Tag, Docker publish build, SSH Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+      - qa #TODO(REP-2853): temporarily until the rollback workflow is in place
+
+jobs:
+  tag:
+    permissions:
+      contents: write
+    uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
+
+  # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
+
+  docker:
+    uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
+    needs: tag
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
+      # dockerfile_name: # Optional, defaults to 'Dockerfile'
+      # build_argument_one: # Optional, no default; from GitHub Variables
+      # build_argument_two: # Optional, no default; from GitHub Variables
+      # build_argument_three: # Optional, no default; from GitHub Variables
+    secrets:
+      docker_hub_access_token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      # Optional (Current maximum of secrets that can be set =  6 secrets. Can be expanded)
+      # docker_secret_1:
+      # docker_secret_2:
+      # docker_secret_3:
+      # docker_secret_4:
+      # docker_secret_5:
+      # docker_secret_6:
+
+  github-environment:
+    uses: Repowered/.github/.github/workflows/determine-environment.yml@main
+
+# TODO(REP-2945): Move this step to the repository infra
+# Should only be active for repower-django (add job to 'needs' in deploy-verify)
+#  run-migrations:
+#    uses: Repowered/.github/.github/workflows/run-kube-migration.yml@main
+#    needs: tag
+#    with:
+#      tag: ${{ needs.tag.outputs.tag }}
+
+  deploy-verify:
+    uses: Repowered/.github/.github/workflows/kube-deploy-verify.yml@main
+    needs: [github-environment, docker]
+    with:
+      # If there are multiple deployments for a single docker image, the container names can be specified here
+      # Example:
+      # Dockerfile 'hello-world' is responsible for the following deployments: foo, bar
+      # the corresponding container_names are: "['foo', 'bar']"
+      container_names: # A JSON list string i.e. "['my name']"
+      docker_image_tag: ${{ needs.docker.outputs.image_tag }}
+      environment: ${{ needs.github-environment.outputs.environment }}
+    secrets:
+      digital_ocean_access_token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
+      infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
+      infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+      infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}

@@ -1,0 +1,94 @@
+name: Docker build and push
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      tag:
+        description: The Semantic Versioning tag (generated in a different workflow)
+        type: string
+        required: true
+      docker_hub_username:
+        required: true
+        type: string
+      # Optional
+      dockerfile_name:
+        type: string
+        required: false
+        default: Dockerfile
+      build_argument_one:
+        required: false
+        type: string
+        description: A build argument for the Dockerfile
+      build_argument_two:
+        required: false
+        type: string
+        description: A build argument for the Dockerfile
+      build_argument_three:
+        required: false
+        type: string
+        description: A build argument for the Dockerfile
+    outputs:
+      image_tag:
+        description: "The docker image tag following the structure: <docker hub username>/<repository>[-<name>]:<semver version>"
+        value: ${{ jobs.generate-image-tag.outputs.image_tag }}
+    secrets:
+      docker_hub_access_token:
+        required: true
+      docker_secret_1:
+      docker_secret_2:
+      docker_secret_3:
+      docker_secret_4:
+      docker_secret_5:
+      docker_secret_6:
+
+jobs:
+  generate-image-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.docker-image-tag.outputs.IMAGE_TAG }}
+    steps:
+      # Sets the docker image tag according to the file system structure of Dockerhub with versioning
+      # Examples:
+      # - standard Dockerfile: thehubusername/repositoryfoobar:v1.0.1.beta.3
+      # - with name (i.e. Dockerfile.foobar): thehubusername/repositoryfoobar-helloworld:v1.0.1.beta.3
+      # - Repowered example: repowered/platform-django:v1.0.1.beta.3
+      - name: Set docker image tag for '${{ inputs.dockerfile_name }}'
+        id: docker-image-tag
+        env:
+          hub_repo: ${{ inputs.docker_hub_username }}/${{ github.event.repository.name }}
+        run: |
+          DOCKERFILE=${{ inputs.dockerfile_name }}
+          DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
+          echo "IMAGE_TAG=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: generate-image-tag
+    steps:
+      #  Log in to the desired docker hub space
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ inputs.docker_hub_username }}
+          password: ${{ secrets.docker_hub_access_token }}
+
+      # Build the Dockerfile(s) with the image tag in the correct format and push to the hub
+      - name: Build ${{ inputs.dockerfile_name }} and push with tag
+        uses: docker/build-push-action@v6
+        with:
+          context: "{{defaultContext}}:./"
+          file: ${{ inputs.dockerfile_name }}
+          push: true
+          tags: ${{ needs.generate-image-tag.outputs.image_tag }}
+          build-args: |
+            ARG_1=${{ inputs.build_argument_one }}
+            ARG_2=${{ inputs.build_argument_two }}
+            ARG_3=${{ inputs.build_argument_three }}
+          secrets: |
+              first=${{ secrets.docker_secret_1 }}
+              second=${{ secrets.docker_secret_2 }}
+              third=${{ secrets.docker_secret_3 }}
+              fourth=${{ secrets.docker_secret_4 }}
+              fifth=${{ secrets.docker_secret_5 }}
+              sixth=${{ secrets.docker_secret_6 }}

@@ -1,0 +1,11 @@
+{
+    "name": "Pytests, Django migration check and Sonar with test coverage",
+    "description": "Runs the python unit tests (pytests) with coverage, checks for django migrations and analyses the quality via sonarcloud",
+    "iconName": "octicon check-circle",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        ".*.py",
+        "poetry.lock",
+        "pyproject.toml"
+    ]
+}

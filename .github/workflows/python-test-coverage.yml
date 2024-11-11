@@ -1,0 +1,135 @@
+name: Django Tests with Migration Check and Coverage
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      postgres_db:
+        type: string
+        required: true
+      postgres_user:
+        type: string
+        required: true
+      postgres_host:
+        type: string
+        required: true
+      file_paths_to_cache:
+        type: string
+        required: true
+      # Provided by caller workflow
+      python_version:
+        type: string
+        required: true
+      poetry_version:
+        type: string
+        required: true
+      # Optional
+      working_directory:
+        type: string
+        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here
+        default: ./
+      num_test_processes:
+        type: number
+        description: The number of parallel test processes
+        default: 2
+    secrets:
+      postgres_password:
+        required: true
+      private_pypi_url:
+        required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+
+jobs:
+  unit-tests-with-coverage:
+    name: Django Tests With Postgres and Coverage
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Python, Cache and Poetry
+        uses: test-org-fanna/.github/composite-actions/python-poetry-cache@main
+        with:
+          python_version: ${{ inputs.python_version }}
+          poetry_version: ${{ inputs.poetry_version }}
+          working_directory: ${{ inputs.working_directory }}
+          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+          private_pypi_url: ${{ secrets.private_pypi_url }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Run tests with coverage (${{ inputs.num_test_processes }} parallel test procs)
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          if [ ${{ env.IS_STANDARD_BRANCH }} == 'true' ]; then
+            TEST_MON_FLAG=--testmon-noselect;
+          else
+            TEST_MON_FLAG=--testmon;
+          fi
+            echo "Running pytest with flag $TEST_MON_FLAG and ${{ inputs.num_test_processes }} parallel processes"
+          poetry run pytest -v \
+            "$TEST_MON_FLAG" --durations=5 -n ${{vars.PARALLEL_TEST_PROCS}} \
+            --cov-report=term --cov-report=xml --cov=. --cov-append \
+            --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output test_report.md
+        env:
+          CI: true
+          IS_STANDARD_BRANCH: ${{ endsWith( GITHUB.REF, 'main') || endsWith( GITHUB.REF, 'dev')
+            || contains( GITHUB.REF, 'release/') || contains( GITHUB.REF, 'hotfix/') }}
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_HOST: ${{ inputs.postgres_host }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+          POSTGRES_PORT: 5432
+
+      - name: Show test failures in the job summary
+        working-directory: ${{ inputs.working_directory }}
+        if: failure()
+        run: |
+          if [ -f test_report.md ]; then
+            echo "<h2>:x: Tests Failed</h2>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat test_report.md >> $GITHUB_STEP_SUMMARY
+          fi      
+
+      - name: Coverage comment
+        id: coverage-comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_PATH: ${{ inputs.working_directory }}
+          MINIMUM_ORANGE: 80
+
+      - name: Store Coverage Information
+        uses: actions/upload-artifact@v4
+        if: steps.coverage-comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        with:
+          name: python-coverage-comment-action
+          path: python-coverage-comment-action.txt
+
+      - name: Archive 'coverage.xml' report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage.xml
+          path: ${{ inputs.working_directory }}/coverage.xml
+          if-no-files-found: 'error'

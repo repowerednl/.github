@@ -1,0 +1,101 @@
+name: Alembic Migration Check
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      postgres_db:
+        type: string
+        required: true
+      postgres_user:
+        type: string
+        required: true
+      postgres_host:
+        type: string
+        required: true
+      file_paths_to_cache:
+        type: string
+        required: true
+      # Giving from caller workflow matrix
+      python_version:
+        type: string
+        required: true
+      poetry_version:
+        type: string
+        required: true
+      # Optional
+      working_directory:
+        type: string
+        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here
+        default: ./
+    secrets:
+      postgres_password:
+        required: true
+      private_pypi_url:
+        required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+
+jobs:
+  test-migrations:
+    name: Alembic Migration Check
+    runs-on: ubuntu-latest
+
+    services:
+      # This service requires that variables and secrets are defined on GitHub (see README)
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Python, Cache and Poetry
+        uses: test-org-fanna/.github/composite-actions/python-poetry-cache@main
+        with:
+          python_version: ${{ inputs.python_version }}
+          poetry_version: ${{ inputs.poetry_version }}
+          working_directory: ${{ inputs.working_directory }}
+          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+          private_pypi_url: ${{ secrets.private_pypi_url }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Check Alembic Migrations
+        working-directory: ${{ inputs.working_directory }}
+        id: migration-check
+        run: |
+          poetry run alembic upgrade head
+          echo "migration_msg=$(poetry run alembic check)" >> "$GITHUB_OUTPUT"
+          poetry run alembic check
+        env:
+          CI: true
+          SQL_DATABASE: ${{ inputs.postgres_db }}
+          SQL_USER: ${{ inputs.postgres_user }}
+          SQL_HOST: ${{ inputs.postgres_host }}
+          SQL_PASSWORD: ${{ secrets.postgres_password }}
+          SQL_PORT: 5432
+
+      - name: Output Migration Failures
+        if:  failure()
+        run: |
+          echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
+          
+        

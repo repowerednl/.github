@@ -1,0 +1,23 @@
+#TODO(REP-2945): Move migration Job to infra
+name: Run Kubernetes migration Job
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      tag:
+        type: string
+        required: true
+
+jobs:
+  migraties:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install envsubst
+        run: sudo apt-get update && sudo apt-get -y install gettext-base
+      - name: Run migrations job
+        run: cat migrations_job.yml | envsubst | kubectl apply -f -
+        env:
+          VERSION: ${{ inputs.tag }}
+      - name: Verify migrations are successful
+        run: kubectl wait --for=condition=complete --timeout=300s job/django-migrations-${{inputs.tag}}
