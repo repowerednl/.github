@@ -62,8 +62,6 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
           HOST: ${{ inputs.host }}
-          # Optional extra domain to reroute traffic from. Currently limited to 1. Can be expanded
-          # (Note: Needed for energyshift.repowered.nl because they have different frontend styling but the service is the same)
           EXTRA_DOMAIN: ${{ inputs.extra_reroute_domain }}
         with:
           host: ${{ inputs.host }}
