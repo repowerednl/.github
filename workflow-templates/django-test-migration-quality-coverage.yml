@@ -73,3 +73,5 @@ jobs:
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
     secrets:
       sonar_token: ${{ secrets.SONAR_TOKEN }}
+      github_token: ${{ secrets.GITHUB_TOKEN }}
+
