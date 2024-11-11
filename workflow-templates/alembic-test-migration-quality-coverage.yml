@@ -30,7 +30,7 @@ jobs:
         ./coverage.xml
         ./.venv
         /home/runner/.local/
-      # working_directory: # Optional, defaults to '.'
+      # working_directory: # Optional, defaults to './'. The last slash needs to be included
       # num_test_processes: # Optional, defaults to 2
     secrets:
       postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
