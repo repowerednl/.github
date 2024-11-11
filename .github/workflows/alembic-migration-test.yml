@@ -13,6 +13,9 @@ on:
       postgres_host:
         type: string
         required: true
+      file_paths_to_cache:
+        type: string
+        required: true
       # Giving from caller workflow matrix
       python_version:
         type: string
@@ -61,36 +64,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup python ${{ inputs.python_version }}
-        uses: actions/setup-python@v5
+      - name: Python, Cache and Poetry
+        uses: test-org-fanna/.github/composite-actions/python-poetry-cache@main
         with:
-          python-version: ${{ inputs.python_version }}
-
-      - name: Load cache
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ inputs.working_directory }}/.venv
-            /home/runner/.local/
-          key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install Poetry
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ inputs.poetry_version }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Configure Poetry and install packages
-        working-directory: ${{ inputs.working_directory }}
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          poetry config repositories.repowered ${{ secrets.private_pypi_url}}
-          poetry config http-basic.repowered ${{ secrets.private_pypi_user }} ${{ secrets.private_pypi_password}}
-          poetry install --no-interaction --no-root --no-ansi
+          python_version: ${{ inputs.python_version }}
+          poetry_version: ${{ inputs.poetry_version }}
+          working_directory: ${{ inputs.working_directory }}
+          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+          private_pypi_url: ${{ secrets.private_pypi_url }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
 
       - name: Check Alembic Migrations
         working-directory: ${{ inputs.working_directory }}

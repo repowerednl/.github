@@ -11,6 +11,9 @@ on:
       docker_image_tag:
         type: string
         required: true
+      environment:
+        type: string
+        required: true
     secrets:
       digital_ocean_access_token:
         required: true
