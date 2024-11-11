@@ -3,6 +3,11 @@ name: Run Yarn commands (install, check-updates, lint, prettier, test with cover
 on:
   workflow_dispatch:
   push:
+    branches-ignore:
+      - main
+  pull_request:
+    types:
+      - closed
 
 jobs:
   yarn-check-lint-prettier-test-publish:
@@ -10,7 +15,7 @@ jobs:
       contents: write
     uses: Repowered/.github/.github/workflows/yarn-check-lint-prettier-test-publish.yml@main
     with:
-      should_publish: false
+      should_publish: false # Replace with ${{ endsWith( GITHUB.REF, 'main') }} to enable publishing
       should_test: true
       # prettier_check_content: # Optional, defaults to "{json-server,src}/**/*.{js,vue,json,html,css,md}"
       # node_version: # Optional, defaults to "20"
