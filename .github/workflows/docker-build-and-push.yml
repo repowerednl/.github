@@ -77,21 +77,14 @@ jobs:
       - name: Build ${{ inputs.dockerfile_name }} and push with tag
         uses: docker/build-push-action@v6
         with:
-          build-args: |
-            ARG_1=${{ inputs.build_argument_one }}
-            ARG_2=${{ inputs.build_argument_two }}
-            ARG_3=${{ inputs.build_argument_three }}
           context: "{{defaultContext}}:./"
           file: ${{ inputs.dockerfile_name }}
           push: true
           tags: ${{ needs.generate-image-tag.outputs.image_tag }}
-<<<<<<< HEAD
           build-args: |
             ARG_1=${{ inputs.build_argument_one }}
             ARG_2=${{ inputs.build_argument_two }}
             ARG_3=${{ inputs.build_argument_three }}
-=======
->>>>>>> REP-2767-create-and-use-organization-wide-template-workflows
           secrets: |
               first=${{ secrets.docker_secret_1 }}
               second=${{ secrets.docker_secret_2 }}
