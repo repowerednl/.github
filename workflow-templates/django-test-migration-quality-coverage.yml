@@ -1,8 +1,14 @@
 name: Run Django Unit Test with Coverage, Check the Migration, Run Sonar and Create Coverage Comment
 
 on:
-  workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
   pull_request:
+    types:
+      - closed
+    branches-ignore:
+      - main
 
 jobs:
   pytest-with-coverage:
