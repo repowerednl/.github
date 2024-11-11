@@ -29,6 +29,9 @@ jobs:
       tag: ${{ needs.tag.outputs.tag }}
       docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
       # dockerfile_name: # Optional, defaults to 'Dockerfile'
+      # build_argument_one: # Optional, no default; from GitHub Variables
+      # build_argument_two: # Optional, no default; from GitHub Variables
+      # build_argument_three: # Optional, no default; from GitHub Variables
     secrets:
       docker_hub_access_token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       # Optional (Current maximum of secrets that can be set =  6 secrets. Can be expanded)
@@ -64,4 +67,8 @@ jobs:
       container_names: # A JSON list string i.e. "['my name']"
       docker_image_tag: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ needs.github-environment.outputs.environment }}
-    secrets: inherit
+    secrets:
+      digital_ocean_access_token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
+      infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
+      infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+      infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}

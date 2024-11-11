@@ -1,4 +1,6 @@
 name: Determine GitHub environment
+# Since reusable workflows cannot handle environments they need to be retrieved separately:
+# https://docs.github.com/en/enterprise-cloud@latest/actions/sharing-automations/reusing-workflows#limitations
 
 on:
   workflow_call:

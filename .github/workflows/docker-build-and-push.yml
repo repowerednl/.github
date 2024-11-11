@@ -3,17 +3,31 @@ name: Docker build and push
 on:
   workflow_call:
     inputs:
+      # Required
       tag:
         description: The Semantic Versioning tag (generated in a different workflow)
         type: string
         required: true
+      docker_hub_username:
+        required: true
+        type: string
+      # Optional
       dockerfile_name:
         type: string
         required: false
         default: Dockerfile
-      docker_hub_username:
-        required: true
+      build_argument_one:
+        required: false
         type: string
+        description: A build argument for the Dockerfile
+      build_argument_two:
+        required: false
+        type: string
+        description: A build argument for the Dockerfile
+      build_argument_three:
+        required: false
+        type: string
+        description: A build argument for the Dockerfile
     outputs:
       image_tag:
         description: "The docker image tag following the structure: <docker hub username>/<repository>[-<name>]:<semver version>"
@@ -66,18 +80,19 @@ jobs:
       # Build the Dockerfile(s) with the image tag in the correct format and push to the hub
       - name: Build ${{ inputs.dockerfile_name }} and push with tag
         uses: docker/build-push-action@v6
-        # Add ALL the secret(s) (if any) to the environment variable using a multi-line value and enable them below
-        env:
-          SECRETS: "|
-              FIRST_SECRET=${{ secrets.docker_secret_1 }}
-              SECOND_SECRET=${{ secrets.docker_secret_2 }}
-              THIRD_SECRET=${{ secrets.docker_secret_3 }}
-              FOURTH_SECRET=${{ secrets.docker_secret_5 }}
-              FIFTH_SECRET=${{ secrets.docker_secret_4 }}
-              SIXTH_SECRET=${{ secrets.docker_secret_6 }}"
         with:
           context: "{{defaultContext}}:./"
           file: ${{ inputs.dockerfile_name }}
           push: true
           tags: ${{ needs.generate-image-tag.outputs.image_tag }}
-          secrets: ${{ env.SECRETS }}
+          build-args: |
+            ARG_1=${{ inputs.build_argument_one }}
+            ARG_2=${{ inputs.build_argument_two }}
+            ARG_3=${{ inputs.build_argument_three }}
+          secrets: |
+              first=${{ secrets.docker_secret_1 }}
+              second=${{ secrets.docker_secret_2 }}
+              third=${{ secrets.docker_secret_3 }}
+              fourth=${{ secrets.docker_secret_4 }}
+              fifth=${{ secrets.docker_secret_5 }}
+              sixth=${{ secrets.docker_secret_6 }}
