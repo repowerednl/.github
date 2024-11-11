@@ -4,7 +4,7 @@
     "iconName": "octicon rocket",
     "categories": ["Repowered"],
     "filePatterns": [
-        "(.*\\/)?Dockerfile(\\.{1}[^.].*)?",
-        ".*docker-compose(-?[a-zA-Z]*)*.(yml|yaml)"
+        "(.*\\/)?Dockerfile(\\.{1}[a-zA-Z1-9_]*)?",
+        ".*docker-compose(-?[a-zA-Z1-9_]*)*.(yml|yaml)"
     ]
 }

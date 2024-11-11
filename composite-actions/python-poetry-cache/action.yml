@@ -1,0 +1,64 @@
+name: Poetry Setup including Cache with configurable files
+description: This composite action loads the cache that can be configured for multiple files, installs poetry with configurations and it's packages if not found on the cache.
+
+inputs:
+  file_paths_to_cache:
+    required: false
+    description: The poetry installation is in '/home/runner/.local/' and the '.venv' is for the poetry packages
+    default: |
+      .venv
+      /home/runner/.local/
+  python_version:
+    required: false
+    default: 3.11.2
+  poetry_version:
+    required: false
+    default: 1.8.4
+  working_directory:
+    required: false
+    description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here. The last slash needs to be included
+    default: ./
+  private_pypi_url:
+    required: true
+  private_pypi_user:
+    required: true
+  private_pypi_password:
+    required: true
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup python ${{ inputs.python_version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    - name: Load cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.file_paths_to_cache }}
+        key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install Poetry ${{ inputs.poetry_version }}
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ inputs.poetry_version }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+
+    - name: Configure Poetry and install packages
+      working-directory: ${{ inputs.working_directory }}
+      shell: bash
+      if: steps.cache.outputs.cache-hit != 'true'
+      env:
+        PRIVATE_PYPI_URL: ${{ inputs.private_pypi_url}}
+        PRIVATE_PYPI_USER: ${{ inputs.private_pypi_user}}
+        PRIVATE_PYPI_PASSWORD: ${{ inputs.private_pypi_password}}
+      run: |
+        poetry config repositories.repowered $PRIVATE_PYPI_URL
+        poetry config http-basic.repowered $PRIVATE_PYPI_USER $PRIVATE_PYPI_PASSWORD
+        poetry install --no-interaction --no-root --no-ansi
