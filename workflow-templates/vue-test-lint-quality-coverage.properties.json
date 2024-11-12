@@ -6,7 +6,6 @@
     "filePatterns": [
         "package.json",
         "yarn.lock",
-        ".yarnrc.yml",
         ".prettierrc*",
         "*eslint*",
         "vite.config*",
