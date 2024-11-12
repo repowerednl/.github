@@ -1,0 +1,113 @@
+name: Yarn install, eslint, prettier and optionally publish and/or test with coverage
+
+on:
+  workflow_call:
+    inputs:
+      should_publish:
+        required: true
+        type: boolean
+        description: Whether or not yarn should build and publish the package
+      should_test:
+        required: true
+        type: boolean
+        description: Whether or not yarn should run tests with coverage
+      prettier_check_content:
+        required: false
+        type: string
+        default: "{json-server,src}/**/*.{js,vue,json,html,css,md}"
+      node_version:
+        required: false
+        type: string
+        default: "20"
+      working_directory:
+        required: false
+        type: string
+        description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
+        default: ./
+    secrets:
+      npm_auth_token:
+        required: true
+
+jobs:
+  yarn-check-lint-prettier-test-publish:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      NPM_AUTH_TOKEN: ${{ secrets.npm_auth_token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with yarn cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'yarn'
+          cache-dependency-path: ${{ inputs.working_directory }}/yarn.lock
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: yarn install --immutable
+
+      - name: Check for outdated dependencies
+        working-directory: ${{ inputs.working_directory }}
+        continue-on-error: true
+        run: |
+          OUTDATED_CHECK=$(yarn run ncu)
+          echo "$OUTDATED_CHECK"
+          if [[ $(echo "$OUTDATED_CHECK" | tail -n 1) != "All dependencies match the latest package versions :)" ]]; then
+            echo "<h1>:arrow_heading_up: Outdated dependencies found </h1>" >> $GITHUB_STEP_SUMMARY
+            echo "It is recommended to run 'yarn run ncu -u' for fast and non-interactive upgrades \
+              or 'yarn upgrade-interactive' to manually select upgrades</h3>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details>" >> $GITHUB_STEP_SUMMARY
+            (echo "$OUTDATED_CHECK" | tail -n +3 | head -n -1) >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+            echo "::warning:: outdated dependencies detected"
+          fi
+
+      - name: Yarn lint
+        working-directory: ${{ inputs.working_directory }}
+        run: yarn lint
+
+      - name: Yarn prettier check
+        working-directory: ${{ inputs.working_directory }}
+        run: yarn prettier --check ${{ inputs.prettier_check_content }}
+
+      - name: Yarn tests with markdown and coverage
+        working-directory: ${{ inputs.working_directory }}
+        if: ${{ inputs.should_test }}
+        run: yarn test:coverage
+
+      - name: Show test failures in the job summary
+        working-directory: ${{ inputs.working_directory }}
+        if: failure()
+        # Clean up the test report with 'sed' since we're only interested in the summary and failures
+        run: |
+          sed -n '/## ✅/q;p' test_report.md > report_summary.md && \
+            sed -n '/## ❌/,/^## /{ /^## ✅/!p }' test_report.md >> report_summary.md
+          cat report_summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Show coverage report in the job summary
+        if: ${{ inputs.should_test }}
+        working-directory: vue-test
+        # Clean up the test report with 'sed' since we're only interested in the summary without links to the original file
+        run: |
+          sed -n '/<table class="coverage-summary">/,/<\/table>/p' coverage/index.html >> test.html
+          sed -i 's|<a href="[^"]*">\(.*\)</a>|<p>\1</p>|g' test.html
+          echo "<h1>Coverage report</h1>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat test.html >> $GITHUB_STEP_SUMMARY
+
+      - name: Archive 'coverage.xml' report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage.xml
+          path: ${{ inputs.working_directory }}/coverage/clover.xml
+          if-no-files-found: 'error'
+
+      - name: Yarn build and publish
+        working-directory: ${{ inputs.working_directory }}
+        if: ${{ inputs.should_publish }}
+        run: yarn build && yarn npm publish
