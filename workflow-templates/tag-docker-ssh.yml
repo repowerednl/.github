@@ -19,6 +19,18 @@ jobs:
       contents: write
     uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
 
+
+  # Only for the front-end; delete this job if you don't have a 'package.json'
+  bump:
+    permissions:
+      contents: write
+    uses: Repowered/.github/.github/workflows/bump-package-json.yml@main
+    needs: tag
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      # node_version: # Optional, defaults to "20"
+      # working_directory: # Optional, defaults to './'.
+
   # Repeat steps below if there are multiple Dockerfiles and/or docker-compose files
 
   docker:

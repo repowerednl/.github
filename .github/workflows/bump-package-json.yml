@@ -1,0 +1,41 @@
+name: Update package.json with a given tag
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+        description: "The Semantic Versioning GitHub tag used for version control"
+      working_directory:
+        required: false
+        type: string
+        description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
+        default: ./
+      node_version:
+        required: false
+        type: string
+        default: "20"
+
+jobs:
+  update-package-json:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "no-reply@repowered.nl"
+
+      - name: Bump package.json version with tag
+        working-directory: ${{ inputs.working_directory }}
+        run: yarn version --no-git-tag-version --new-version ${{ inputs.tag }}
