@@ -21,14 +21,14 @@ jobs:
   quality-control-sonar:
     name: Quality checks via SonarCloud with coverage report
 
-  steps:
-    - name: Download coverage artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ inputs.coverage_report_name }}
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.coverage_report_name }}
 
-    - name: SonarCloud analysis
-      uses: SonarSource/sonarcloud-github-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.sonar_token }}
-        GITHUB_TOKEN: ${{ secrets.github_token }}
+      - name: SonarCloud analysis
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          GITHUB_TOKEN: ${{ secrets.github_token }}
