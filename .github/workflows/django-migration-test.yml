@@ -83,7 +83,6 @@ jobs:
           poetry run python manage.py makemigrations --dry-run
         env:
           CI: true
-          ENV: TEST
           SQL_DATABASE: ${{ inputs.postgres_db }}
           SQL_USER: ${{ inputs.postgres_user }}
           SQL_HOST: ${{ inputs.postgres_host }}
