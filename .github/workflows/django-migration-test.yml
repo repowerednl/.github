@@ -76,10 +76,11 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
 
       - name: Check Django Migrations
+        id: migration-check
         working-directory: ${{ inputs.working_directory }}
         run: |
-          MIGRATION_MSG=$(poetry run python manage.py makemigrations --dry-run 2>&1 )
-          if [[ "$MIGRATION_MSG" != 'No changes detected' ]]; then
+          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run)" >> "$GITHUB_OUTPUT"
+          if [[ "$migration_msg" != 'No changes detected' ]]; then
             echo "<h2>:no_entry_sign: Migration check failed </h2>" >> $GITHUB_STEP_SUMMARY
             echo "<h3>The message:</h3>" >> $GITHUB_STEP_SUMMARY
             echo "$MIGRATION_MSG" >> $GITHUB_STEP_SUMMARY
@@ -92,3 +93,11 @@ jobs:
           SQL_HOST: ${{ inputs.postgres_host }}
           SQL_PASSWORD: ${{ secrets.postgres_password }}
           SQL_PORT: 5432
+
+      - name: Output Migration Failures
+        if:  failure()
+        run: |
+          echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
