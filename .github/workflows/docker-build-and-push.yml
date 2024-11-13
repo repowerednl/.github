@@ -46,7 +46,7 @@ jobs:
   generate-image-tag:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.docker-image-tag.outputs.IMAGE_TAG }}
+      image_tag: ${{ steps.docker-image-tag.outputs.image_tag }}
     steps:
       # Sets the docker image tag according to the file system structure of Dockerhub with versioning
       # Examples:
@@ -60,7 +60,11 @@ jobs:
         run: |
           DOCKERFILE=${{ inputs.dockerfile_name }}
           DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
-          echo "IMAGE_TAG=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          if [ ${{ github.ref == 'refs/heads/main' }} ]; then
+            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }},latest" >> $GITHUB_OUTPUT
+          else
+            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          fi
 
   build-and-push:
     runs-on: ubuntu-latest

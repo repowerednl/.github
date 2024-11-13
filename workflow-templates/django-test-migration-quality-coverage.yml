@@ -1,8 +1,14 @@
 name: Run Pytest with Coverage, Check the Django Migration and run the Sonar Analysis
 
 on:
-  workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
   pull_request:
+    types:
+      - closed
+    branches-ignore:
+      - main
 
 jobs:
   pytest-with-coverage:
