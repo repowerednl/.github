@@ -16,8 +16,8 @@ on:
         required: true
 
 jobs:
-  runs-on: ubuntu-latest
   quality-control-sonar:
+    runs-on: ubuntu-latest
     name: Quality checks via SonarCloud with coverage report
     steps:
       - name: Download coverage artifact
