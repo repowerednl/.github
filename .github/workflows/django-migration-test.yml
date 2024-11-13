@@ -78,7 +78,9 @@ jobs:
       - name: Check Django Migrations
         id: migration-check
         working-directory: ${{ inputs.working_directory }}
-        run: echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run)" >> "$GITHUB_OUTPUT"
+          poetry run python manage.py makemigrations --dry-run
         env:
           CI: true
           SQL_DATABASE: ${{ inputs.postgres_db }}
