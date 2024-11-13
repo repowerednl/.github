@@ -1,0 +1,26 @@
+name: Should deploy
+
+on:
+  workflow_call:
+    outputs:
+      should_deploy:
+        description: "Checks the GitHub context for deployment triggers. It only triggers if the proceeding workflow succeeds. 
+          After that it checks whether it is either a merge push event of a pr event with [deploy] in its title"
+        value: ${{ jobs.check-deployment-trigger.outputs.should_deploy }}
+
+jobs:
+  check-deployment-trigger:
+    name: Determine the GitHub environment
+    runs-on: ubuntu-latest
+    should_deploy:
+      env_name: ${{ steps.check-triggers.outputs.should_deploy }}
+    steps:
+      - name: Check deployment triggers
+        id: check-triggers
+        run: |
+          IS_TEST_WORKFLOW_SUCCESS=$(contains(github.event.workflow_run.conclusion, 'success'))
+          echo "Succesful workflow?: $IS_TEST_WORKFLOW_SUCCESS"
+          ON_PUSH_MERGE_COMMIT=$(contains(github.event.head_commit.message, '[merge]'))
+          ON_PR_DEPLOY_TITLE=$(contains(github.event.pull_request.title, '[deploy]'))
+          SHOULD_DEPLOY=$($IS_TEST_WORKFLOW_SUCCESS && ($ON_PUSH_MERGE_COMMIT || $ON_PR_DEPLOY_TITLE))
+          echo "should_deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
