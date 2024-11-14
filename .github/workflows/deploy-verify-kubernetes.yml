@@ -14,15 +14,20 @@ on:
       environment:
         type: string
         required: true
+      # Optional
+      with_infisical_configuration:
+        type: boolean
+        required: false
+        default: false
     secrets:
       digital_ocean_access_token:
         required: true
       infisical_client_id:
-        required: true
+        required: false
       infisical_client_client_secret:
-        required: true
+        required: false
       infisical_client_project_id:
-        required: true
+        required: false
 
 jobs:
   deploy-verify:
@@ -43,7 +48,7 @@ jobs:
         run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
       - name: Update kubernetes secrets
-        continue-on-error: true
+        if: ${{ inputs.with_infisical_configuration == true }}
         run: |
           kubectl delete secret infisical-secrets --ignore-not-found=true
           kubectl create secret generic infisical-secrets \
