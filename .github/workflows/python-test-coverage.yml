@@ -1,4 +1,4 @@
-name: Django Tests with Migration Check and Coverage
+name: Pytest with Coverage, Report and Job summary
 
 on:
   workflow_call:
