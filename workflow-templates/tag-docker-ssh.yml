@@ -17,14 +17,14 @@ jobs:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     permissions:
       contents: write
-    uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
 
   # Only for the front-end; delete this job if you don't have a 'package.json'
   bump:
     permissions:
       contents: write
-    uses: Repowered/.github/.github/workflows/bump-package-json.yml@main
+    uses: repowerednl/.github/.github/workflows/bump-package-json.yml@main
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
@@ -35,7 +35,7 @@ jobs:
 
   docker:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
-    uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
+    uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
@@ -56,12 +56,12 @@ jobs:
 
   environment:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
-    uses: Repowered/.github/.github/workflows/determine-environment.yml@main
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
   deploy:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     needs: [ environment, docker, tag ]
-    uses: Repowered/.github/.github/workflows/deploy-docker-compose.yml@main
+    uses: repowerednl/.github/.github/workflows/deploy-docker-compose.yml@main
     with:
       environment: ${{ needs.environment.outputs.environment }}
       tag: ${{ needs.tag.outputs.tag }}

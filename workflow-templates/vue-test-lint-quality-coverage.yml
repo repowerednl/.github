@@ -13,7 +13,7 @@ jobs:
   yarn-check-lint-prettier-test-publish:
     permissions:
       contents: write
-    uses: Repowered/.github/.github/workflows/yarn-check-lint-prettier-test-publish.yml@main
+    uses: repowerednl/.github/.github/workflows/yarn-check-lint-prettier-test-publish.yml@main
     with:
       should_publish: false # Replace with ${{ endsWith( GITHUB.REF, 'main') }} to enable publishing
       should_test: true
@@ -26,7 +26,7 @@ jobs:
 
   sonar-cloud:
     needs: yarn-check-lint-prettier-test-publish
-    uses: Repowered/.github/.github/workflows/quality-control-sonar.yml@main
+    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # working_directory: # Optional, defaults to './'
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
