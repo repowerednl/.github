@@ -116,7 +116,7 @@ jobs:
         id: coverage-comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
 
@@ -131,5 +131,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage.xml
-          path: ${{ inputs.working_directory }}/coverage.xml
+          path: ${{ inputs.working_directory }}coverage.xml
           if-no-files-found: 'error'
