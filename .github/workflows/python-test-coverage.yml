@@ -44,7 +44,7 @@ on:
 
 jobs:
   unit-tests-with-coverage:
-    name: Django Tests With Postgres and Coverage
+    name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
     permissions:
       contents: write
