@@ -120,7 +120,7 @@ jobs:
         id: coverage-comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
 
