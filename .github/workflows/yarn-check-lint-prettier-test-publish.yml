@@ -23,7 +23,7 @@ on:
         required: false
         type: string
         description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
-        default: ./
+        default: .
     secrets:
       npm_auth_token:
         required: true

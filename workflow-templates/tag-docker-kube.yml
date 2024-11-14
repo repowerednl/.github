@@ -28,7 +28,7 @@ jobs:
     with:
       tag: ${{ needs.tag.outputs.tag }}
       # node_version: # Optional, defaults to "20"
-      # working_directory: # Optional, defaults to './'.
+      # working_directory: # Optional, defaults to '.'.
 
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 

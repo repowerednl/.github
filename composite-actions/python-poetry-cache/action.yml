@@ -16,8 +16,8 @@ inputs:
     default: 1.8.4
   working_directory:
     required: false
-    description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here. The last slash needs to be included
-    default: ./
+    description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here.
+    default: .
   private_pypi_url:
     required: true
   private_pypi_user:

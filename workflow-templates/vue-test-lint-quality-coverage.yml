@@ -19,7 +19,7 @@ jobs:
       should_test: true
       # prettier_check_content: # Optional, defaults to "{json-server,src}/**/*.{js,vue,json,html,css,md}"
       # node_version: # Optional, defaults to "20"
-      # working_directory: # Optional, defaults to './'
+      # working_directory: # Optional, defaults to '.'
     secrets:
       npm_auth_token: ${{ secrets.NPM_AUTH_TOKEN }}
 
@@ -28,7 +28,7 @@ jobs:
     needs: yarn-check-lint-prettier-test-publish
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
-      # working_directory: # Optional, defaults to './'
+      # working_directory: # Optional, defaults to '.'
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
     secrets:
       sonar_token: ${{ secrets.SONAR_TOKEN }}
