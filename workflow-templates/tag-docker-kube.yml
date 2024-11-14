@@ -17,13 +17,13 @@ jobs:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     permissions:
       contents: write
-    uses: Repowered/.github/.github/workflows/generate-github-tag.yml@main
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
   # Only for the front-end; delete this job if you don't have a 'package.json'
   bump:
     permissions:
       contents: write
-    uses: Repowered/.github/.github/workflows/bump-package-json.yml@main
+    uses: repowerednl/.github/.github/workflows/bump-package-json.yml@main
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
@@ -34,7 +34,7 @@ jobs:
 
   docker:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
-    uses: Repowered/.github/.github/workflows/docker-build-and-push.yml@main
+    uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
@@ -55,20 +55,20 @@ jobs:
 
   github-environment:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
-    uses: Repowered/.github/.github/workflows/determine-environment.yml@main
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
 # TODO(REP-2945): Move this step to the repository infra
 # Should only be active for repower-django (add job to 'needs' in deploy-verify)
 #  run-migrations:
 #    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
-#    uses: Repowered/.github/.github/workflows/run-kube-migration.yml@main
+#    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
 #    needs: tag
 #    with:
 #      tag: ${{ needs.tag.outputs.tag }}
 
   deploy-verify:
     if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
-    uses: Repowered/.github/.github/workflows/kube-deploy-verify.yml@main
+    uses: repowerednl/.github/.github/workflows/kube-deploy-verify.yml@main
     needs: [github-environment, docker]
     with:
       # If there are multiple deployments for a single docker image, the container names can be specified here

@@ -12,7 +12,7 @@ on:
 
 jobs:
   pytest-with-coverage:
-    uses: Repowered/.github/.github/workflows/python-test-coverage.yml@main
+    uses: repowerednl/.github/.github/workflows/python-test-coverage.yml@main
     permissions:
       contents: write
     strategy:
@@ -45,7 +45,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   alembic-migration-test:
-    uses: Repowered/.github/.github/workflows/alembic-migration-test.yml@main
+    uses: repowerednl/.github/.github/workflows/alembic-migration-test.yml@main
     strategy:
       matrix:
         # Make sure that the configured python versions are available here.
@@ -73,7 +73,7 @@ jobs:
 
   sonar-cloud:
     needs: pytest-with-coverage
-    uses: Repowered/.github/.github/workflows/quality-control-sonar.yml@main
+    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # working_directory: # Optional, defaults to './'. The last slash needs to be included
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
