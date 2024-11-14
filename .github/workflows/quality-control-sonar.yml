@@ -14,6 +14,8 @@ on:
       # Required
       sonar_token:
         required: true
+      github_token:
+        required: true
 
 jobs:
   quality-control-sonar:
@@ -29,4 +31,4 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.sonar_token }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.github_token }}
