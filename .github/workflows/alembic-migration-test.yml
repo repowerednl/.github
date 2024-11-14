@@ -79,9 +79,9 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         id: migration-check
         run: |
-          echo "upgrade_msg=$(poetry run alembic upgrade head)" >> "$GITHUB_OUTPUT"
+          echo "upgrade_msg=$(poetry run alembic upgrade head)" >> $GITHUB_OUTPUT
           poetry run alembic upgrade head
-          echo "migration_msg=$(poetry run alembic check)" >> "$GITHUB_OUTPUT"
+          echo "migration_msg=$(poetry run alembic check)" >> $GITHUB_OUTPUT
           poetry run alembic check
         env:
           CI: true
