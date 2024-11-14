@@ -79,6 +79,7 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         id: migration-check
         run: |
+          echo "upgrade_msg=$(poetry run alembic upgrade head)" >> "$GITHUB_OUTPUT"
           poetry run alembic upgrade head
           echo "migration_msg=$(poetry run alembic check)" >> "$GITHUB_OUTPUT"
           poetry run alembic check
@@ -96,6 +97,9 @@ jobs:
           echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "<h3>Upgrade failed due to:</h3>" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.migration-check.outputs.upgrade_msg }}" >> $GITHUB_STEP_SUMMARY
+          echo "<h3>Migration check failed due to:</h3>" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
           
         
