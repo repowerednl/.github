@@ -79,8 +79,10 @@ jobs:
         id: migration-check
         working-directory: ${{ inputs.working_directory }}
         run: |
-          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run)" >> "$GITHUB_OUTPUT"
-          poetry run python manage.py makemigrations --dry-run
+          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run )" >> "$GITHUB_OUTPUT"
+          if [[ "$migration_msg" != 'No changes detected' ]]; then
+            exit 1
+          fi
         env:
           CI: true
           SQL_DATABASE: ${{ inputs.postgres_db }}
@@ -92,7 +94,9 @@ jobs:
       - name: Output Migration Failures
         if:  failure()
         run: |
-          echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
+          if [[ ${{ steps.migration-check.outputs.migration_msg }} != 'No changes detected' ]]; then
+            echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
+          fi
