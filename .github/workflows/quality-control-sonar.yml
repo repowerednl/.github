@@ -7,13 +7,6 @@ on:
       coverage_report_name:
         type: string
         default: coverage.xml
-      working_directory:
-        type: string
-        default: .
-    secrets:
-      # Required
-      sonar_token:
-        required: true
 
 jobs:
   quality-control-sonar:
@@ -28,5 +21,5 @@ jobs:
       - name: SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@master
         env:
-          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

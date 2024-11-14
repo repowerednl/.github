@@ -28,10 +28,7 @@ jobs:
     needs: yarn-check-lint-prettier-test-publish
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
-      # working_directory: # Optional, defaults to '.'
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
-    secrets:
-      sonar_token: ${{ secrets.SONAR_TOKEN }}
-      github_token: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
 
 
