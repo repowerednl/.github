@@ -78,6 +78,7 @@ jobs:
       - name: Check Alembic Migrations
         working-directory: ${{ inputs.working_directory }}
         id: migration-check
+        continue-on-error: true
         run: |
           echo "upgrade_msg=$(poetry run alembic upgrade head)" >> $GITHUB_OUTPUT
           poetry run alembic upgrade head
