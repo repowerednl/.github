@@ -90,7 +90,7 @@ jobs:
 
       - name: Show coverage report in the job summary
         if: ${{ inputs.should_test }}
-        working-directory: vue-test
+        working-directory: ${{ inputs.working_directory }}
         # Clean up the test report with 'sed' since we're only interested in the summary without links to the original file
         run: |
           sed -n '/<table class="coverage-summary">/,/<\/table>/p' coverage/index.html >> test.html
