@@ -66,10 +66,6 @@ jobs:
 # TODO(REP-2945): Move this step to the repository infra
 # Should only be active for repower-django (add job to 'needs' in deploy-verify)
 #  run-migrations:
-#    if: >
-#      ((github.event_name == 'push') ||
-#      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') ||
-#      (github.event_name == 'workflow_run' && contains(github.event.workflow_run.conclusion, 'success') && contains(github.event.workflow_run.head_commit.message, '[deploy]')))
 #    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
 #    needs: tag
 #    with:
