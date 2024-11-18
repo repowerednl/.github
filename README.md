@@ -4,9 +4,9 @@ This is a special repository for the default community health files. The files w
 
 This repository should contain the following files:
 - [ ] CODE_OF_CONDUCT.md
-- [x] CONTRIBUTING.md _needs updating (merging from other sources_
+- [x] CONTRIBUTING.md _needs updating (merging from other )_
 - [ ] GOVERNANCE.md
-- [ ] Issue and pull request templates and config.yml
+- [x] Issue and pull request templates
 - [ ] SECURITY.md
 - [ ] SUPPORT.md
 
@@ -14,6 +14,4 @@ This repository should contain the following files:
 To have consistent workflows that can easily be maintained, templates have been created under the folder `workflow_templates' that are reusable. 
 - For creating such a template here: [Create template](https://docs.github.com/en/actions/sharing-automations/creating-workflow-templates-for-your-organization)
 - For using such a template in a repository: [Use template](https://docs.github.com/en/actions/writing-workflows/using-workflow-templates)
-
-### The analysis workflow
-The analysis workflow consists of the following steps:
+- For testing such a template including explanations: [workflow-tests](https://github.com/repowerednl/workflow-tests)
