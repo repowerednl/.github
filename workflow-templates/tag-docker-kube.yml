@@ -1,20 +1,24 @@
 name: GitHub Tag, Docker publish build, SSH Deploy
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-      - qa #TODO(REP-2853): temporarily until the rollback workflow is in place
   pull_request:
     branches:
       - main
-      - dev
-      - qa #TODO(REP-2853): temporarily until the rollback workflow is in place
+  push:
+    branches:
+      - main
+  workflow_run:
+    workflows:
+!      - # The name of your test workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
+    types:
+      - completed
 
 jobs:
   tag:
-    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
+    if: >
+      ((github.event_name == 'push') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') ||
+      (github.event_name == 'workflow_run' && contains(github.event.workflow_run.conclusion, 'success') && contains(github.event.workflow_run.head_commit.message, '[deploy]')))
     permissions:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
@@ -33,7 +37,6 @@ jobs:
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
   docker:
-    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
     needs: tag
     with:
@@ -54,20 +57,21 @@ jobs:
       # docker_secret_6:
 
   github-environment:
-    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
+    if: >
+      ((github.event_name == 'push') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') ||
+      (github.event_name == 'workflow_run' && contains(github.event.workflow_run.conclusion, 'success') && contains(github.event.workflow_run.head_commit.message, '[deploy]')))
     uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
 # TODO(REP-2945): Move this step to the repository infra
 # Should only be active for repower-django (add job to 'needs' in deploy-verify)
 #  run-migrations:
-#    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
 #    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
 #    needs: tag
 #    with:
 #      tag: ${{ needs.tag.outputs.tag }}
 
   deploy-verify:
-    if: ${{ contains(github.event.head_commit.message, '[merge]') || contains(github.event.pull_request.title, '[deploy]') }}
     uses: repowerednl/.github/.github/workflows/kube-deploy-verify.yml@main
     needs: [github-environment, docker]
     with:

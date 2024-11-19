@@ -2,11 +2,9 @@ name: Run Pytest with Coverage, Check the Alembic Migration and run the Sonar An
 
 on:
   push:
-    branches-ignore:
-      - main
+    branches:
+      - dev
   pull_request:
-    types:
-      - closed
     branches-ignore:
       - main
 

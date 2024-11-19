@@ -1,13 +1,12 @@
-name: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish)  and run the Sonar Analysis
+name: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis
 
 on:
-  workflow_dispatch:
   push:
+    branches:
+      - dev
+  pull_request:
     branches-ignore:
       - main
-  pull_request:
-    types:
-      - closed
 
 jobs:
   yarn-check-lint-prettier-test-publish:
