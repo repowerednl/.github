@@ -38,4 +38,4 @@ jobs:
 
       - name: Bump package.json version with tag
         working-directory: ${{ inputs.working_directory }}
-        run: yarn version --no-git-tag-version --new-version ${{ inputs.tag }}
+        run: export NPM_AUTH_TOKEN=${{ secrets.NPM_AUTH_TOKEN }} && yarn version --no-git-tag-version --new-version ${{ inputs.tag }}
