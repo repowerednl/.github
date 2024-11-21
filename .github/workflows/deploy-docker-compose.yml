@@ -4,10 +4,6 @@ on:
   workflow_call:
     inputs:
       # Required
-      host:
-        type: string
-        required: true
-        description: The hostname of the server
       environment:
         type: string
         required: true
@@ -31,9 +27,6 @@ on:
         type: string
         required: false
         default: docker-compose.yml
-    secrets:
-      ssh_private_key:
-        required: true
 
 jobs:
   scp-docker-compose:
@@ -45,9 +38,9 @@ jobs:
       - name: Copy docker-compose file via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ inputs.host }}
+          host: ${{ vars.host }}
           username: ${{ inputs.server_username }}
-          key: ${{ secrets.ssh_private_key }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: ${{ inputs.docker-compose_file_path }}
           target: ${{ inputs.docker-compose_remote_dir }}
 
@@ -61,12 +54,12 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           TAG: ${{ inputs.tag }}
-          HOST: ${{ inputs.host }}
+          HOST: ${{ vars.host }}
           EXTRA_DOMAIN: ${{ inputs.extra_reroute_domain }}
         with:
-          host: ${{ inputs.host }}
+          host: ${{ vars.host }}
           username: ${{ inputs.server_username }}
-          key: ${{ secrets.ssh_private_key }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: TAG,HOST,EXTRA_DOMAIN
           script: |
             docker system prune --all --force
