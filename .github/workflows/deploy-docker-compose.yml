@@ -11,6 +11,10 @@ on:
         type: string
         required: true
       # Optional
+      should_scp:
+        type: boolean
+        required: false
+        default: false
       extra_reroute_domain:
         type: string
         required: false
@@ -31,6 +35,7 @@ on:
 jobs:
   scp-docker-compose:
     name: Secure copy docker-compose to server
+    if: ${{ inputs.should_scp }}
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
