@@ -60,8 +60,8 @@ jobs:
         run: |
           DOCKERFILE=${{ inputs.dockerfile_name }}
           DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
-          if [ ${{ github.ref == 'refs/heads/main' }} ]; then
-            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }},latest" >> $GITHUB_OUTPUT
+          if [ ${{ github.ref == 'main' }} ]; then
+            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }} , ${{ env.hub_repo }}${DOCKERFILE_NAME}:latest" >> $GITHUB_OUTPUT
           else
             echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
           fi
@@ -78,7 +78,7 @@ jobs:
           password: ${{ secrets.docker_hub_access_token }}
 
       # Build the Dockerfile(s) with the image tag in the correct format and push to the hub
-      - name: Build ${{ inputs.dockerfile_name }} and push with tag
+      - name: Build '${{ inputs.dockerfile_name }}' and push with tag '${{ inputs.tag }}'
         uses: docker/build-push-action@v6
         with:
           context: "{{defaultContext}}:./"
