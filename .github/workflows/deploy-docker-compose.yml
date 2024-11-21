@@ -38,7 +38,7 @@ jobs:
       - name: Copy docker-compose file via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ vars.host }}
+          host: ${{ vars.HOST }}
           username: ${{ inputs.server_username }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: ${{ inputs.docker-compose_file_path }}
@@ -54,10 +54,10 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           TAG: ${{ inputs.tag }}
-          HOST: ${{ vars.host }}
+          HOST: ${{ vars.HOST }}
           EXTRA_DOMAIN: ${{ inputs.extra_reroute_domain }}
         with:
-          host: ${{ vars.host }}
+          host: ${{ vars.HOST }}
           username: ${{ inputs.server_username }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: TAG,HOST,EXTRA_DOMAIN
