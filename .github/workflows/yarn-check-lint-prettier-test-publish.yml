@@ -14,7 +14,7 @@ on:
       prettier_check_content:
         required: false
         type: string
-        default: "{json-server,src}/**/*.{js,vue,json,html,css,md}"
+        default: "'{json-server,src}/**/*.{js,vue,json,html,css,md}'"
       node_version:
         required: false
         type: string
