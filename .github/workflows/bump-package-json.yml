@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,7 +37,6 @@ jobs:
         run: |
           git config --global user.name "CI"
           git config --global user.email "no-reply@repowered.nl"
-          git checkout ${{ github.ref_name }}
 
       - name: Bump package.json version to ${{ inputs.tag }}
         working-directory: ${{ inputs.working_directory }}
