@@ -71,7 +71,6 @@ jobs:
       environment: ${{ needs.environment.outputs.environment }}
       tag: ${{ needs.tag.outputs.tag }}
       # extra_reroute_domain: Optional, no default
-      # should_scp: Optional, defaults to false
       # server_username: Optional, defaults to 'root'
       # docker-compose_remote_dir: Optional, defaults to '/root'
       # docker-compose_file_path: Optional, defaults to 'docker-compose.yml'
