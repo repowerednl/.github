@@ -83,7 +83,7 @@ jobs:
         id: migration-check
         working-directory: ${{ inputs.working_directory }}
         run: |
-          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run )" >> "$GITHUB_OUTPUT"
+          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run )" >> $GITHUB_OUTPUT
           if [ "$migration_msg" != 'No changes detected' ]; then
             exit 1
           fi

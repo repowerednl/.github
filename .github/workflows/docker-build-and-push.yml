@@ -60,7 +60,7 @@ jobs:
         run: |
           DOCKERFILE=${{ inputs.dockerfile_name }}
           DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
-          if [ ${{ github.head_ref == 'main' }} ]; then
+          if [ ${{ contains(github.ref,'main') }} == true ]; then
             echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }} , ${{ env.hub_repo }}${DOCKERFILE_NAME}:latest" >> $GITHUB_OUTPUT
           else
             echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
