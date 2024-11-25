@@ -28,6 +28,10 @@ on:
         type: string
         description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here.
         default: .
+      django_settings_environment:
+        type: string
+        description: Retrieval of settings can be done based on an environment identifier
+        default: TEST
     secrets:
       postgres_password:
         required: true
@@ -85,6 +89,7 @@ jobs:
           fi
         env:
           CI: true
+          ENV: ${{ inputs.django_settings_environment }}
           SQL_DATABASE: ${{ inputs.postgres_db }}
           SQL_USER: ${{ inputs.postgres_user }}
           SQL_HOST: ${{ inputs.postgres_host }}
