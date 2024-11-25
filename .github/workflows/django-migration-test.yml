@@ -99,7 +99,7 @@ jobs:
       - name: Output Migration Failures
         if:  failure()
         run: |
-          if [ "${{ steps.migration-check.outputs.migration_msg }}" != 'No changes detected' ]; then
+          if [ ${{ contains(steps.migration-check.outputs.migration_msg, 'No changes detected') }} == 'false' ]; then
             echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
