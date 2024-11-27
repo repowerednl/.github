@@ -11,10 +11,6 @@ on:
         type: string
         required: true
       # Optional
-      extra_reroute_domain:
-        type: string
-        required: false
-        description: Optional extra domain to reroute traffic from. Needed for energyshift.repowered.nl because they have different frontend styling but the service is the same. Currently limited to 1. Can be expanded
       docker-compose_remote_dir:
         type: string
         required: false
@@ -55,7 +51,7 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
           HOST: ${{ vars.HOST }}
-          EXTRA_DOMAIN: ${{ inputs.extra_reroute_domain }}
+          EXTRA_DOMAIN: ${{ vars.EXTRA_REROUTE_DOMAIN }}
         with:
           host: ${{ vars.HOST }}
           username: ${{ inputs.server_username }}
