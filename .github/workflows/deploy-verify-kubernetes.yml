@@ -61,3 +61,26 @@ jobs:
 
       - name: Verify ${{matrix.container_name}} deployment
         run: kubectl rollout status deployment/${{matrix.container_name}}-deployment
+
+  deploy-summary:
+    name: Deployment outcome
+    needs: [ deploy-verify ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          if ${{ contains(needs.deploy-verify.result, 'success') }}; then
+            echo "<h2>:white_check_mark: Deployment successful </h2>" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "<h2>:x: Deployment failed </h2>" >> $GITHUB_STEP_SUMMARY
+          fi
+          {
+            echo ""
+            echo "Branch: $BRANCH"
+            echo "Image tag: ${{ inputs.docker_image_tag }}"
+            echo "Environment: ${{ inputs.environment }}"
+            echo "By: ${{ github.actor }}"
+          } >> $GITHUB_STEP_SUMMARY
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+      - hotfix**
   pull_request:
     branches-ignore:
       - main
@@ -63,6 +64,7 @@ jobs:
         .venv
         /home/runner/.local/
       # working_directory: # Optional, defaults to '.'
+      # django_settings_environment: # Optional, defaults to TEST
     secrets:
       postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
       private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}

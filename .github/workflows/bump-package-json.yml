@@ -19,12 +19,15 @@ on:
 
 jobs:
   update-package-json:
+    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,6 +39,9 @@ jobs:
           git config --global user.name "CI"
           git config --global user.email "no-reply@repowered.nl"
 
-      - name: Bump package.json version with tag
+      - name: Bump package.json version to ${{ inputs.tag }}
         working-directory: ${{ inputs.working_directory }}
-        run: yarn version --no-git-tag-version --new-version ${{ inputs.tag }}
+        # (22-11-2024) Do not use the yarn version commands here
+        # https://github.com/yarnpkg/berry/issues/4424
+        run: npm version ${{ inputs.tag }} --no-git-tag-version
+

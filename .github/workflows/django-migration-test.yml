@@ -28,6 +28,10 @@ on:
         type: string
         description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here.
         default: .
+      django_settings_environment:
+        type: string
+        description: Retrieval of settings can be done based on an environment identifier
+        default: TEST
     secrets:
       postgres_password:
         required: true
@@ -79,12 +83,16 @@ jobs:
         id: migration-check
         working-directory: ${{ inputs.working_directory }}
         run: |
-          echo "migration_msg=$(poetry run python manage.py makemigrations --dry-run )" >> "$GITHUB_OUTPUT"
-          if [ "$migration_msg" != 'No changes detected' ]; then
+          MIGRATION_MSG=$(poetry run python manage.py makemigrations --dry-run)
+          echo 'migration_msg<<EOF' >> $GITHUB_OUTPUT
+          echo "$MIGRATION_MSG" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+          if ! echo "$MIGRATION_MSG" | grep -q "No changes detected"; then
             exit 1
           fi
         env:
           CI: true
+          ENV: ${{ inputs.django_settings_environment }}
           SQL_DATABASE: ${{ inputs.postgres_db }}
           SQL_USER: ${{ inputs.postgres_user }}
           SQL_HOST: ${{ inputs.postgres_host }}
@@ -94,7 +102,7 @@ jobs:
       - name: Output Migration Failures
         if:  failure()
         run: |
-          if [ "${{ steps.migration-check.outputs.migration_msg }}" != 'No changes detected' ]; then
+          if [ ${{ contains(steps.migration-check.outputs.migration_msg, 'No changes detected') }} == false ]; then
             echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

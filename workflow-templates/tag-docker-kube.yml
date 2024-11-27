@@ -1,9 +1,6 @@
 name: GitHub Tag, Docker publish build, SSH Deploy
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
@@ -13,12 +10,10 @@ on:
     types:
       - completed
 
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch }} by @${{ github.actor }}
+
 jobs:
   tag:
-    if: >
-      ((github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') ||
-      (github.event_name == 'workflow_run' && contains(github.event.workflow_run.conclusion, 'success') && contains(github.event.workflow_run.head_commit.message, '[deploy]')))
     permissions:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
@@ -57,10 +52,6 @@ jobs:
       # docker_secret_6:
 
   github-environment:
-    if: >
-      ((github.event_name == 'push') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') ||
-      (github.event_name == 'workflow_run' && contains(github.event.workflow_run.conclusion, 'success') && contains(github.event.workflow_run.head_commit.message, '[deploy]')))
     uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
 # TODO(REP-2945): Move this step to the repository infra

@@ -87,7 +87,7 @@ jobs:
       - name: Run tests with coverage (${{ inputs.num_test_processes }} parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          if [ ${{ env.IS_STANDARD_BRANCH }} == 'true' ]; then
+          if [ ${{ env.IS_STANDARD_BRANCH }} == true ]; then
             TEST_MON_FLAG=--testmon-noselect;
           else
             TEST_MON_FLAG=--testmon;

@@ -66,3 +66,26 @@ jobs:
             DOCKER_COMPOSE_PATH=${{ inputs.docker-compose_remote_dir }}/${{ inputs.docker-compose_file_path }}
             docker-compose -f $DOCKER_COMPOSE_PATH pull 
             docker-compose -f $DOCKER_COMPOSE_PATH up -d --force-recreate
+
+  deploy-summary:
+    name: Deployment outcome
+    needs: [ deploy-docker-compose ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Summary
+      run: |
+        if ${{ contains(needs.deploy-docker-compose.result, 'success') }}; then
+          echo "<h2>:white_check_mark: Deployment successful </h2>" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "<h2>:x: Deployment failed </h2>" >> $GITHUB_STEP_SUMMARY
+        fi
+        {
+          echo ""
+          echo "Branch: $BRANCH"
+          echo "Tag: ${{ inputs.tag }}"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "By: ${{ github.actor }}"
+        } >> $GITHUB_STEP_SUMMARY
+      env:
+        BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
