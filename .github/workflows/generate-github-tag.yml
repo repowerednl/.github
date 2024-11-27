@@ -9,15 +9,19 @@ on:
 
 jobs:
   generate-tag:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.github-tag.outputs.tag }}
+    if: ${{ github.event_name == 'push' || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') || contains(github.event.workflow_run.head_commit.message, '[deploy]'))) }}
     steps:
       # Checkout the repository with all commit history
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v4
         with:
           fetch-depth: '0'
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # Automatically bump and tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag
@@ -26,5 +30,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
-          RELEASE_BRANCHES: main, dev
-          PRERELEASE: ${{ github.event_name == 'pull_request' }}
+          RELEASE_BRANCHES: dev
+          DEFAULT_BUMP: patch
+          PRERELEASE: ${{ (!contains(github.event.workflow_run.head_branch, 'dev') || contains(github.event.workflow_run.pull_requests[0].base.ref, 'main')) && contains(github.event.workflow_run.head_commit.message, '[deploy]') }}
