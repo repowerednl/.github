@@ -19,6 +19,7 @@ jobs:
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
   # Only for the front-end; delete this job if you don't have a 'package.json'
+  # If you do, add bump to the 'needs' section -> needs: [tag, bump]
   bump:
     permissions:
       contents: write
