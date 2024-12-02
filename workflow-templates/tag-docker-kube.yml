@@ -1,4 +1,4 @@
-name: GitHub Tag, Docker publish build, SSH Deploy
+name: GitHub Tag, Docker publish build, Kubernetes Deploy
 
 on:
   push:
