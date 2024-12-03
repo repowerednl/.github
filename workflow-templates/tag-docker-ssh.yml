@@ -32,13 +32,16 @@ jobs:
       # working_directory: # Optional, defaults to '.'.
 
   # Repeat steps below if there are multiple Dockerfiles and/or docker-compose files
+  github-environment:
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
   docker:
     uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
-    needs: tag
+    needs: [tag, github-environment]
     with:
       tag: ${{ needs.tag.outputs.tag }}
       docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
+      environment: ${{ needs.github-environment.outputs.environment }}
       # dockerfile_name: # Optional, defaults to 'Dockerfile'
       # build_argument_one: # Optional, no default; from GitHub Variables
       # build_argument_two: # Optional, no default; from GitHub Variables
@@ -53,14 +56,11 @@ jobs:
       # docker_secret_5:
       # docker_secret_6:
 
-  environment:
-    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
-
   deploy:
-    needs: [ environment, docker, tag ]
+    needs: [ docker, tag ]
     uses: repowerednl/.github/.github/workflows/deploy-docker-compose.yml@main
     with:
-      environment: ${{ needs.environment.outputs.environment }}
+      environment: ${{ needs.docker.outputs.environment }}
       tag: ${{ needs.tag.outputs.tag }}
       # server_username: Optional, defaults to 'root'
       # docker-compose_remote_dir: Optional, defaults to '/root'
