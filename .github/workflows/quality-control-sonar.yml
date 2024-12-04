@@ -22,11 +22,6 @@ jobs:
         with:
           name: ${{ inputs.coverage_report_name }}
 
-      - name: Display structure of downloaded files
-        run: |
-          ls -alhR 
-          pwd
-
       - name: SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@master
         env:
