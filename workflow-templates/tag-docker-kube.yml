@@ -7,8 +7,8 @@ on:
   workflow_run:
     workflows:
 !      - # The name of your test workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
-    types:
-      - completed
+  types:
+    - completed
 
 run-name: Deploy branch ${{ github.event.workflow_run.head_branch }} by @${{ github.actor }}
 
@@ -19,7 +19,7 @@ jobs:
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
   # Only for the front-end; delete this job if you don't have a 'package.json'
-  # If you do, add bump to the 'needs' section -> needs: [tag, bump]
+  # If you do, add bump to the 'needs' section for docker -> needs: [tag, bump]
   bump:
     permissions:
       contents: write
@@ -32,12 +32,16 @@ jobs:
 
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
+  github-environment:
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+
   docker:
     uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
-    needs: tag
+    needs: [ tag, github-environment ]
     with:
       tag: ${{ needs.tag.outputs.tag }}
       docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
+      environment: ${{ needs.github-environment.outputs.environment }}
       # dockerfile_name: # Optional, defaults to 'Dockerfile'
       # build_argument_one: # Optional, no default; from GitHub Variables
       # build_argument_two: # Optional, no default; from GitHub Variables
@@ -52,20 +56,17 @@ jobs:
       # docker_secret_5:
       # docker_secret_6:
 
-  github-environment:
-    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
-
-# TODO(REP-2945): Move this step to the repository infra
-# Should only be active for repower-django (add job to 'needs' in deploy-verify)
-#  run-migrations:
-#    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
-#    needs: tag
-#    with:
-#      tag: ${{ needs.tag.outputs.tag }}
+  # TODO(REP-2945): Move this step to the repository infra
+  # Should only be active for repower-django (add job to 'needs' in deploy-verify)
+  #  run-migrations:
+  #    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
+  #    needs: tag
+  #    with:
+  #      tag: ${{ needs.tag.outputs.tag }}
 
   deploy-verify:
     uses: repowerednl/.github/.github/workflows/kube-deploy-verify.yml@main
-    needs: [github-environment, docker]
+    needs: [ docker ]
     with:
       # If there are multiple deployments for a single docker image, the container names can be specified here
       # Example:
@@ -73,7 +74,7 @@ jobs:
       # the corresponding container_names are: "['foo', 'bar']"
       container_names: # A JSON list string i.e. "['my name']"
       docker_image_tag: ${{ needs.docker.outputs.image_tag }}
-      environment: ${{ needs.github-environment.outputs.environment }}
+      environment: ${{ needs.docker.outputs.environment }}
       # with_infisical_configuration: # Optional, defaults to false
     secrets:
       digital_ocean_access_token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}

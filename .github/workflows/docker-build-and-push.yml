@@ -11,6 +11,10 @@ on:
       docker_hub_username:
         required: true
         type: string
+      environment:
+        description: The environment the docker image is build for
+        type: string
+        required: true
       # Optional
       dockerfile_name:
         type: string
@@ -31,7 +35,10 @@ on:
     outputs:
       image_tag:
         description: "The docker image tag following the structure: <docker hub username>/<repository>[-<name>]:<semver version>"
-        value: ${{ jobs.generate-image-tag.outputs.image_tag }}
+        value: ${{ jobs.generate-image-tag-set-environment.outputs.image_tag }}
+      environment:
+        description: propagate the environment used in the docker build to (an)other job(s)
+        value: ${{ jobs.generate-image-tag-set-environment.outputs.environment }}
     secrets:
       docker_hub_access_token:
         required: true
@@ -43,10 +50,11 @@ on:
       docker_secret_6:
 
 jobs:
-  generate-image-tag:
+  generate-image-tag-set-environment:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.docker-image-tag.outputs.image_tag }}
+      image_tag: ${{ steps.docker-image-tag-env.outputs.image_tag }}
+      environment: ${{ steps.docker-image-tag-env.outputs.environment }}
     steps:
       # Sets the docker image tag according to the file system structure of Dockerhub with versioning
       # Examples:
@@ -54,7 +62,7 @@ jobs:
       # - with name (i.e. Dockerfile.foobar): thehubusername/repositoryfoobar-helloworld:v1.0.1.beta.3
       # - Repowered example: repowered/platform-django:v1.0.1.beta.3
       - name: Set docker image tag for '${{ inputs.dockerfile_name }}'
-        id: docker-image-tag
+        id: docker-image-tag-env
         env:
           hub_repo: ${{ inputs.docker_hub_username }}/${{ github.event.repository.name }}
         run: |
@@ -65,6 +73,7 @@ jobs:
           else
             echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
           fi
+          echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
 
   build-and-push:
     runs-on: ubuntu-latest
