@@ -6,9 +6,9 @@ on:
       - main
   workflow_run:
     workflows:
-!      - # The name of your test workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
-  types:
-    - completed
+!      - # The actual name of your TEST workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
+    types:
+      - completed
 
 run-name: Deploy branch ${{ github.event.workflow_run.head_branch }} by @${{ github.actor }}
 
