@@ -33,6 +33,8 @@ jobs:
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
   github-environment:
+    permissions:
+      pull-requests: read
     uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
   docker:
