@@ -13,6 +13,8 @@ jobs:
   determine-environment:
     name: Determine the GitHub environment
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     outputs:
       env_name: ${{ steps.retrieve-environment.outputs.env_name }}
     steps:
