@@ -33,6 +33,8 @@ jobs:
 
   # Repeat steps below if there are multiple Dockerfiles and/or docker-compose files
   github-environment:
+    permissions:
+      pull-requests: read
     uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
 
   docker:
