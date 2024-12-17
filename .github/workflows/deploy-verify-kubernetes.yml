@@ -56,8 +56,15 @@ jobs:
           --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
           --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
 
-      - name: Deploy ${{matrix.container_name}}
-        run: kubectl set image deployment/${{matrix.container_name}}-deployment ${{matrix.container_name}}=${{inputs.docker_image_tag}}
+      - name: Deploy ${{ matrix.container_name }}
+        run: | 
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "Production deployment. Restarting the deployment with the updated 'latest' tag"
+            kubectl rollout restart deployment ${{ matrix.container_name }}-deployment
+          else
+            echo "Non-production deployment. Updating image to ${{ inputs.docker_image_tag }} and restarting"
+            kubectl set image deployment/${{ matrix.container_name }}-deployment ${{ matrix.container_name }}=${{ inputs.docker_image_tag }}
+          fi
 
       - name: Verify ${{matrix.container_name}} deployment
         run: kubectl rollout status deployment/${{matrix.container_name}}-deployment
