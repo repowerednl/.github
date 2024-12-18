@@ -19,11 +19,11 @@ jobs:
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
-          token: ${{ secrets.digital_ocean_access_token }}
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Save DigitalOcean kubeconfig with short-lived credentials
         env:
-          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 100 }}
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
         run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
       - uses: actions/checkout@v4

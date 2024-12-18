@@ -65,6 +65,7 @@ jobs:
   #    needs: tag
   #    with:
   #      tag: ${{ needs.tag.outputs.tag }}
+  #    secrets: inherit
 
   deploy-verify:
     uses: repowerednl/.github/.github/workflows/deploy-verify-kubernetes.yml@main
