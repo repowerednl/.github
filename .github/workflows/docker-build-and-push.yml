@@ -92,6 +92,7 @@ jobs:
       # Build the Dockerfile(s) with the image tag in the correct format and push to the hub
       - name: Build '${{ inputs.dockerfile_name }}' and push with tag '${{ inputs.tag }}'
         uses: docker/build-push-action@v6
+        environment: ${{ inputs.environment }}
         with:
           context: "{{defaultContext}}:./"
           file: ${{ inputs.dockerfile_name }}
