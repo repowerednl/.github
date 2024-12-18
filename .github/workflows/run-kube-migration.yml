@@ -16,6 +16,16 @@ jobs:
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
 
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.digital_ocean_access_token }}
+
+      - name: Save DigitalOcean kubeconfig with short-lived credentials
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 100 }}
+        run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+
       - uses: actions/checkout@v4
 
       - name: Run migrations job
