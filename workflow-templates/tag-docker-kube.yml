@@ -67,7 +67,7 @@ jobs:
   #      tag: ${{ needs.tag.outputs.tag }}
 
   deploy-verify:
-    uses: repowerednl/.github/.github/workflows/kube-deploy-verify.yml@main
+    uses: repowerednl/.github/.github/workflows/deploy-verify-kubernetes.yml@main
     needs: [ docker ]
     with:
       # If there are multiple deployments for a single docker image, the container names can be specified here
