@@ -62,9 +62,10 @@ jobs:
   # Should only be active for repower-django (add job to 'needs' in deploy-verify)
   #  run-migrations:
   #    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
-  #    needs: tag
+  #    needs: [tag, github-environment]
   #    with:
   #      tag: ${{ needs.tag.outputs.tag }}
+  #      environment: ${{ inputs.environment }}
   #    secrets: inherit
 
   deploy-verify:
