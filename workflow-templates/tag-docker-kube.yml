@@ -80,7 +80,7 @@ jobs:
       environment: ${{ needs.docker.outputs.environment }}
       # with_infisical_configuration: # Optional, defaults to false
     secrets:
-      digital_ocean_access_token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
+      digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       # infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
       # infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
       # infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
