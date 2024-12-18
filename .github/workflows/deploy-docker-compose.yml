@@ -10,6 +10,10 @@ on:
       tag:
         type: string
         required: true
+      # TODO: https://repowerednl.atlassian.net/browse/REP-3273
+      frontend_tag:
+        type: string
+        required: true
       # Optional
       docker-compose_remote_dir:
         type: string
@@ -50,6 +54,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           TAG: ${{ inputs.tag }}
+          FRONTEND_TAG: ${{ inputs.frontend_tag }}
           HOST: ${{ vars.HOST }}
           EXTRA_DOMAIN: ${{ vars.EXTRA_REROUTE_DOMAIN }}
         with:
@@ -80,6 +85,7 @@ jobs:
           echo ""
           echo "Branch: $BRANCH"
           echo "Tag: ${{ inputs.tag }}"
+          echo "Frontend tag: ${{ inputs.frontend_tag }}"
           echo "Environment: ${{ inputs.environment }}"
           echo "By: ${{ github.actor }}"
         } >> $GITHUB_STEP_SUMMARY
