@@ -15,9 +15,13 @@ jobs:
     steps:
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
+
+      - uses: actions/checkout@v4
+
       - name: Run migrations job
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
+
       - name: Verify migrations are successful
         run: kubectl wait --for=condition=complete --timeout=300s job/django-migrations-${{inputs.tag}}
