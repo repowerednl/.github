@@ -17,6 +17,7 @@ jobs:
       pull-requests: read
     outputs:
       env_name: ${{ steps.retrieve-environment.outputs.env_name }}
+    if: ${{ github.event_name == 'push' || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') || contains(github.event.workflow_run.head_commit.message, '[deploy]'))) }}
     steps:
       - name: Retrieve environment
         id: retrieve-environment
