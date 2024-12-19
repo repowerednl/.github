@@ -62,5 +62,5 @@ jobs:
 
       - name: Verify migrations are successful
         env:
-          timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300s }}
-        run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }} job/django-migrations-${{inputs.tag}}
+          timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
+        run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
