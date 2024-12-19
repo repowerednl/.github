@@ -8,10 +8,14 @@ on:
       tag:
         type: string
         required: true
+      environment:
+        type: string
+        required: true
 
 jobs:
   migraties:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
@@ -24,7 +28,7 @@ jobs:
       - name: Save DigitalOcean kubeconfig with short-lived credentials
         env:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
-        run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
       - uses: actions/checkout@v4
 
