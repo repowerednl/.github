@@ -11,6 +11,15 @@ on:
       environment:
         type: string
         required: true
+    secrets:
+      digital_ocean_access_token:
+        required: true
+      infisical_client_id:
+        required: false
+      infisical_client_client_secret:
+        required: false
+      infisical_client_project_id:
+        required: false
 
 jobs:
   migraties:
@@ -32,10 +41,26 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Update kubernetes secrets
+        run: |
+          kubectl delete secret infisical-secrets --ignore-not-found=true
+          if ! kubectl get secret infisical-secrets > /dev/null 2>&1; then
+            echo "Secret not found. Creating it now..."
+            kubectl create secret generic infisical-secrets \
+              --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
+              --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
+              --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
+            echo "Secret created successfully."
+          else
+            echo "Secret already exists. It was created in another job"
+          fi
+
       - name: Run migrations job
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
 
       - name: Verify migrations are successful
-        run: kubectl wait --for=condition=complete --timeout=300s job/django-migrations-${{inputs.tag}}
+        env:
+          timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300s }}
+        run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }} job/django-migrations-${{inputs.tag}}

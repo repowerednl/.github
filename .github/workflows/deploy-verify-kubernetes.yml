@@ -14,20 +14,9 @@ on:
       environment:
         type: string
         required: true
-      # Optional
-      with_infisical_configuration:
-        type: boolean
-        required: false
-        default: false
     secrets:
       digital_ocean_access_token:
         required: true
-      infisical_client_id:
-        required: false
-      infisical_client_client_secret:
-        required: false
-      infisical_client_project_id:
-        required: false
 
 jobs:
   deploy-verify:
@@ -46,21 +35,6 @@ jobs:
         env:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
         run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
-
-      - name: Update kubernetes secrets
-        if: ${{ inputs.with_infisical_configuration == true }}
-        run: |
-          kubectl delete secret infisical-secrets --ignore-not-found=true
-          if ! kubectl get secret infisical-secrets > /dev/null 2>&1; then
-            echo "Secret not found. Creating it now..."
-            kubectl create secret generic infisical-secrets \
-              --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
-              --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
-              --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
-            echo "Secret created successfully."
-          else
-            echo "Secret already exists. It was created in another job"
-          fi
 
       - name: Deploy ${{ matrix.container_name }}
         run: | 
