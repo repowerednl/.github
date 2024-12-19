@@ -51,10 +51,16 @@ jobs:
         if: ${{ inputs.with_infisical_configuration == true }}
         run: |
           kubectl delete secret infisical-secrets --ignore-not-found=true
-          kubectl create secret generic infisical-secrets \
-          --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
-          --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
-          --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
+          if ! kubectl get secret infisical-secrets > /dev/null 2>&1; then
+            echo "Secret not found. Creating it now..."
+            kubectl create secret generic infisical-secrets \
+              --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
+              --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
+              --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
+            echo "Secret created successfully."
+          else
+            echo "Secret already exists. It was created in another job"
+          fi
 
       - name: Deploy ${{ matrix.container_name }}
         run: | 
