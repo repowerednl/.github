@@ -9,8 +9,11 @@ on:
 !      - # The actual name of your TEST workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
     types:
       - completed
+  pull_request:
+    types:
+      - labeled
 
-run-name: Deploy branch ${{ github.event.workflow_run.head_branch }} by @${{ github.actor }}
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || 'main' }} by @${{ github.actor }}
 
 jobs:
   tag:
