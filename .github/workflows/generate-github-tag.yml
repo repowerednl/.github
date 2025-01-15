@@ -36,5 +36,5 @@ jobs:
           RELEASE_BRANCHES: dev
           DEFAULT_BUMP: patch
           PRERELEASE: ${{ (!contains(github.event.workflow_run.head_branch, 'dev') 
-            || (contains(github.event.workflow_run.pull_requests[0].base.ref, 'main')) && contains(github.event.workflow_run.head_commit.message, '[deploy]')) 
-            || (contains(github.event.workflow_run.pull_requests[0].base.ref, 'main')) && github.event.label.name == 'deploy') }}
+            || (contains(github.event.workflow_run.pull_requests[0].base.ref, 'main') && contains(github.event.workflow_run.head_commit.message, '[deploy]')) 
+            || (contains(github.event.workflow_run.pull_requests[0].base.ref, 'main') && github.event.label.name == 'deploy') }}
