@@ -9,8 +9,11 @@ on:
 !      - # The name of your test workflow (example: Run Pytest with Coverage, Check the Alembic Migration and run the Sonar Analysis)
     types:
       - completed
+  pull_request:
+    types:
+      - labeled
 
-run-name: Deploy branch ${{ github.event.workflow_run.head_branch }} by @${{ github.actor }}
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || 'main' }} by @${{ github.actor }}
 
 jobs:
   tag:
