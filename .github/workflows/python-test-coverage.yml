@@ -105,6 +105,7 @@ jobs:
           name: ${{ github.head_ref || github.ref_name }}/coverage${{ matrix.group }}
           path: .coverage
           if-no-files-found: 'error'
+          include-hidden-files: true
 
   coverage:
     needs: pytest-with-coverage
