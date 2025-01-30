@@ -28,6 +28,7 @@ on:
         type: string
         description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here
         default: .
+      # @Deprecated: the package xdist is no longer used in this workflow
       num_test_processes:
         type: number
         description: The number of parallel test processes
@@ -43,13 +44,13 @@ on:
         required: true
 
 jobs:
-  unit-tests-with-coverage:
+  pytest-with-coverage:
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: write
-      actions: read
+    strategy:
+      matrix:
+        # Make sure to change the '--splits' parameter when this group is changed
+        group: [1, 2, 3, 4, 5, 6]
 
     services:
       postgres:
@@ -73,7 +74,7 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
-      - name: Python, Cache and Poetry
+      - name: (Cached) Python and Poetry
         uses: repowerednl/.github/composite-actions/python-poetry-cache@main
         with:
           python_version: ${{ inputs.python_version }}
@@ -84,39 +85,62 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
 
-      - name: Run tests with coverage (${{ inputs.num_test_processes }} parallel test procs)
+      - name: Run tests with coverage parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          if [ ${{ env.IS_STANDARD_BRANCH }} == true ]; then
-            TEST_MON_FLAG=--testmon-noselect;
-          else
-            TEST_MON_FLAG=--testmon;
-          fi
-            echo "Running pytest with flag $TEST_MON_FLAG and ${{ inputs.num_test_processes }} parallel processes"
-          poetry run pytest -v \
-            "$TEST_MON_FLAG" --durations=5 -n ${{inputs.num_test_processes}} \
-            --cov-report=term --cov-report=xml --cov=. --cov-append \
-            --md-report --md-report-flavor gfm --md-report-exclude-outcomes passed skipped xpassed --md-report-output test_report.md
+          poetry run pytest -v --cov --splits 6 --group ${{ matrix.group }} --durations=5
         env:
+          pytest_github_report: true
+          pytest_use_blanks: true
           CI: true
-          IS_STANDARD_BRANCH: ${{ endsWith( GITHUB.REF, 'main') || endsWith( GITHUB.REF, 'dev')
-            || contains( GITHUB.REF, 'release/') || contains( GITHUB.REF, 'hotfix/') }}
           POSTGRES_DB: ${{ inputs.postgres_db }}
           POSTGRES_USER: ${{ inputs.postgres_user }}
           POSTGRES_HOST: ${{ inputs.postgres_host }}
           POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
           POSTGRES_PORT: 5432
 
-      - name: Show test failures in the job summary
-        working-directory: ${{ inputs.working_directory }}
-        if: failure()
+      - name: Upload partial coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.head_ref || github.ref_name }}/coverage${{ matrix.group }}
+          path: .coverage
+          if-no-files-found: 'error'
+
+  coverage:
+    needs: pytest-with-coverage
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: (Cached) Python and Poetry
+        uses: repowerednl/.github/composite-actions/python-poetry-cache@main
+        with:
+          python_version: ${{ inputs.python_version }}
+          poetry_version: ${{ inputs.poetry_version }}
+          working_directory: ${{ inputs.working_directory }}
+          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+          private_pypi_url: ${{ secrets.private_pypi_url }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Download all artifacts from branch
+        # Download coverage1, coverage2, etc. of the current branch
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.head_ref || github.ref_name }}
+
+      - name: Run coverage
         run: |
-          if [ -f test_report.md ]; then
-            echo "<h2>:x: Tests Failed</h2>" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            cat test_report.md >> $GITHUB_STEP_SUMMARY
-          fi      
+          coverage combine ${{ github.head_ref || github.ref_name }}/coverage*/.coverage*
+          coverage report
+          coverage xml
 
       - name: Coverage comment
         id: coverage-comment
@@ -125,13 +149,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
-
-      - name: Store Coverage Information
-        uses: actions/upload-artifact@v4
-        if: steps.coverage-comment.outputs.COMMENT_FILE_WRITTEN == 'true'
-        with:
-          name: python-coverage-comment-action
-          path: python-coverage-comment-action.txt
 
       - name: Archive 'coverage.xml' report
         uses: actions/upload-artifact@v4
