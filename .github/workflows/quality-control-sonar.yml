@@ -23,7 +23,7 @@ jobs:
           name: ${{ inputs.coverage_report_name }}
 
       - name: SonarCloud analysis
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
