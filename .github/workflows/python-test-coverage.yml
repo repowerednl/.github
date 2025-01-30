@@ -44,6 +44,10 @@ on:
         required: true
 
 jobs:
+  permissions:
+    pull-requests: write
+    contents: write
+    actions: read
   pytest-with-coverage:
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
@@ -109,10 +113,6 @@ jobs:
   coverage:
     needs: pytest-with-coverage
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: write
-      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
