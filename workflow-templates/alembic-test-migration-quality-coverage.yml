@@ -13,7 +13,9 @@ jobs:
   pytest-with-coverage:
     uses: repowerednl/.github/.github/workflows/python-test-coverage.yml@main
     permissions:
+      pull-requests: write
       contents: write
+      actions: read
     strategy:
       matrix:
         # Make sure that the configured python versions are available here.

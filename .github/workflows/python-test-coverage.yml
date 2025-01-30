@@ -44,10 +44,6 @@ on:
         required: true
 
 jobs:
-  permissions:
-    pull-requests: write
-    contents: write
-    actions: read
   pytest-with-coverage:
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
