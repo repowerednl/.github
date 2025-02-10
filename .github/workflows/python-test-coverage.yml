@@ -90,14 +90,14 @@ jobs:
       - name: Download test durations
         uses: actions/download-artifact@v4
         with:
-          path: ${{ github.head_ref || github.ref_name }}/.test_durations
+          path: .test_durations
 
       - name: Run tests with coverage parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          poetry run pytest -v --cov --splits 4 --group ${{ matrix.group }} --store-durations
           ls -alh
-          pwd
+          poetry --version
+          poetry run pytest -v --cov --splits 4 --group ${{ matrix.group }} --store-durations
         env:
           pytest_github_report: true
           pytest_use_blanks: true
@@ -150,7 +150,7 @@ jobs:
         uses: actions/download-artifact@v4
 
       - name: Combine test durations
-        uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@combine-durations
+        uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@main
         with:
           durations_path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
 
