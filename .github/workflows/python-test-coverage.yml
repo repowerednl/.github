@@ -107,17 +107,16 @@ jobs:
           POSTGRES_PORT: 5432
 
       - name: Upload partial coverage and test durations
-        working-directory: ${{ inputs.working_directory }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.head_ref || github.ref_name }}/group${{ matrix.group }}
           path: |
-            .coverage
-            .test_durations
+            ${{ inputs.working_directory }}/.coverage
+            ${{ inputs.working_directory }}/.test_durations
           if-no-files-found: 'error'
           include-hidden-files: true
 
-  coverage:
+  combine-and-report:
     needs: pytest-with-coverage
     runs-on: ubuntu-latest
     steps:
