@@ -1,0 +1,14 @@
+name: Combine durations
+description: Combine pytest-split durations from multiple groups
+
+inputs:
+  durations-path:
+    description: The path to the durations file (must match `--durations-path` given when running pytest)
+    required: false
+    default: .test_durations
+
+runs:
+  using: "composite"
+  steps:
+    - name: Combine durations
+      run: python3 combine_durations.py ${{ inputs.durations-path }}
