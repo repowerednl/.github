@@ -1,5 +1,6 @@
 import json
 import sys
+from glob import glob
 from pathlib import Path
 from typing import Dict
 
@@ -39,13 +40,14 @@ def save_json_file(path: Path, data: Dict[str, float]) -> Path:
     return path
 
 
-def main(durations_path_partial: str) -> None:
+def main(working_directory: str) -> None:
     """Main function to update durations JSON file."""
-    durations_path = Path(durations_path_partial)
-    previous_durations = load_json_file(durations_path)
-    split_paths = Path("").glob(f"{durations_path.name}")
-    updated_durations = merge_durations(previous_durations, split_paths)
-    save_json_file(durations_path, updated_durations)
+    all_durations_filepath = Path(".test_durations")
+    current_durations = load_json_file(all_durations_filepath)
+
+    group_paths = [Path(group_filepath) for group_filepath in glob(working_directory)]
+    updated_durations = merge_durations(current_durations, group_paths)
+    save_json_file(all_durations_filepath, updated_durations)
 
 
 if __name__ == "__main__":
