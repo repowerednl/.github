@@ -109,7 +109,7 @@ jobs:
       - name: Upload partial coverage and test durations
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.head_ref || github.ref_name }}/group${{ matrix.group }}
+          name: ${{ github.head_ref || github.ref_name }}-group${{ matrix.group }}
           path: |
             ${{ inputs.working_directory }}/.coverage
             ${{ inputs.working_directory }}/.test_durations
@@ -139,8 +139,6 @@ jobs:
       - name: Download all artifacts from branch
         # Download coverage1, coverage2, etc. of the current branch
         uses: actions/download-artifact@v4
-        with:
-          path: ${{ github.head_ref || github.ref_name }}
 
       - name: temp run
         run: |
