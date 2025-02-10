@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         # Make sure to change the '--splits' parameter when this group is changed
-        group: [1, 2, 3, 4, 5, 6]
+        group: [1, 2, 3, 4]
 
     services:
       postgres:
@@ -85,10 +85,17 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
 
+      - name: Download test durations
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.head_ref || github.ref_name }}/.test_durations
+
       - name: Run tests with coverage parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          poetry run pytest -v --cov --splits 6 --group ${{ matrix.group }} --durations=5
+          poetry run pytest -v --cov --splits 4 --group ${{ matrix.group }} --store-durations
+          ls -alh
+          pwd
         env:
           pytest_github_report: true
           pytest_use_blanks: true
@@ -99,11 +106,14 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
           POSTGRES_PORT: 5432
 
-      - name: Upload partial coverage
+      - name: Upload partial coverage and test durations
+        working-directory: ${{ inputs.working_directory }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.head_ref || github.ref_name }}/coverage${{ matrix.group }}
-          path: .coverage
+          name: ${{ github.head_ref || github.ref_name }}/group${{ matrix.group }}
+          path: |
+            .coverage
+            .test_durations
           if-no-files-found: 'error'
           include-hidden-files: true
 
@@ -133,23 +143,35 @@ jobs:
         with:
           path: ${{ github.head_ref || github.ref_name }}
 
-      - name: Run coverage
+      - name: temp run
         run: |
-          coverage combine ${{ github.head_ref || github.ref_name }}/coverage*/.coverage*
-          coverage report
-          coverage xml
+          ls -alh
+          pwd
 
-      - name: Coverage comment
-        id: coverage-comment
-        uses: py-cov-action/python-coverage-comment-action@v3
-        with:
-          GITHUB_TOKEN: ${{ github.token }}
-          COVERAGE_PATH: ${{ inputs.working_directory }}
-          MINIMUM_ORANGE: 80
+#      - name: Combine test durations
+#        uses: repowerednl/.github/composite-actions/combine_durations@combine-durations
+#        with:
+#          durations_path: ${{ github.head_ref || github.ref_name }}/group*/.test_durations
 
-      - name: Archive 'coverage.xml' report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage.xml
-          path: ${{ inputs.working_directory }}/coverage.xml
-          if-no-files-found: 'error'
+#      - name: Combine coverage and create report
+#        run: |
+#          coverage combine ${{ github.head_ref || github.ref_name }}-coverage*
+#          coverage report
+#          coverage xml
+#
+#      - name: Coverage comment
+#        id: coverage-comment
+#        uses: py-cov-action/python-coverage-comment-action@v3
+#        with:
+#          GITHUB_TOKEN: ${{ github.token }}
+#          COVERAGE_PATH: ${{ inputs.working_directory }}
+#          MINIMUM_ORANGE: 80
+#
+#      - name: Upload 'coverage.xml' report and combined test_durations
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: ${{ github.head_ref || github.ref_name }}
+#          path: |
+#            coverage.xml
+#            .test_durations
+#          if-no-files-found: 'error'
