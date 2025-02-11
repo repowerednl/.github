@@ -160,20 +160,20 @@ jobs:
           poetry run coverage combine ${{ github.head_ref || github.ref_name }}-group*/.coverage
           poetry run coverage report
           poetry run coverage xml
-#
-#      - name: Coverage comment
-#        id: coverage-comment
-#        uses: py-cov-action/python-coverage-comment-action@v3
-#        with:
-#          GITHUB_TOKEN: ${{ github.token }}
-#          COVERAGE_PATH: ${{ inputs.working_directory }}
-#          MINIMUM_ORANGE: 80
-#
-#      - name: Upload 'coverage.xml' report and combined test_durations
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: ${{ github.head_ref || github.ref_name }}
-#          path: |
-#            coverage.xml
-#            .test_durations
-#          if-no-files-found: 'error'
+
+      - name: Coverage comment
+        id: coverage-comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_PATH: ${{ inputs.working_directory }}
+          MINIMUM_ORANGE: 80
+
+      - name: Upload 'coverage.xml' report and combined test_durations
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.head_ref || github.ref_name }}
+          path: |
+            coverage.xml
+            .test_durations
+          if-no-files-found: 'error'
