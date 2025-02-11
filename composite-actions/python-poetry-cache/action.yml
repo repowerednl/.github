@@ -67,7 +67,7 @@ runs:
         poetry install --no-interaction --no-root --no-ansi
 
     - name: Save cache once
-      if: ${{ inputs.save_cache == true }}
+      if: ${{ inputs.save_cache == true && steps.cache.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v4
       with:
         path: ${{ inputs.file_paths_to_cache }}
