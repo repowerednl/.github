@@ -12,4 +12,4 @@ runs:
   steps:
     - name: Combine durations
       shell: bash
-      run: python3 combine_durations.py ${{ inputs.durations-path }}
+      run: python3 ${{ github.action_path }}/combine_durations.py ${{ inputs.durations-path }}
