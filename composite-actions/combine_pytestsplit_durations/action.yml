@@ -11,4 +11,5 @@ runs:
   using: "composite"
   steps:
     - name: Combine durations
+      shell: bash
       run: python3 combine_durations.py ${{ inputs.durations-path }}
