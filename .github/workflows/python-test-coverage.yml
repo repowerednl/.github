@@ -97,7 +97,7 @@ jobs:
         run: |
           ls -alh
           poetry --version
-          poetry run pytest -v --cov --splits 4 --group ${{ matrix.group }} --store-durations
+          poetry run coverage run -m pytest -v --splits 4 --group ${{ matrix.group }} --store-durations
         env:
           pytest_github_report: true
           pytest_use_blanks: true
@@ -153,11 +153,6 @@ jobs:
         uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
         with:
           durations_path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
-
-      - name: temp run
-        run: |
-          ls -aR
-          cat .test_durations
 
       - name: Combine coverage and create report
         run: |
