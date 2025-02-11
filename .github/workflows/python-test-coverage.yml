@@ -44,84 +44,84 @@ on:
         required: true
 
 jobs:
-#  pytest-with-coverage:
-#    name: Pytest With Postgres and Coverage
-#    runs-on: ubuntu-latest
-#    strategy:
-#      matrix:
-#        # Make sure to change the '--splits' parameter when this group is changed
-#        group: [1, 2, 3, 4]
-#
-#    services:
-#      postgres:
-#        image: postgres:17-alpine
-#        env:
-#          POSTGRES_DB: ${{ inputs.postgres_db }}
-#          POSTGRES_USER: ${{ inputs.postgres_user }}
-#          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
-#        # Set health checks to wait until postgres has started
-#        options: >-
-#          --health-cmd pg_isready
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#        ports:
-#          - 5432:5432
-#
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-#
-#      - name: (Cached) Python and Poetry
-#        id: cache
-#        uses: repowerednl/.github/composite-actions/python-poetry-cache@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
-#        with:
-#          python_version: ${{ inputs.python_version }}
-#          poetry_version: ${{ inputs.poetry_version }}
-#          working_directory: ${{ inputs.working_directory }}
-#          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
-#          private_pypi_url: ${{ secrets.private_pypi_url }}
-#          private_pypi_user: ${{ secrets.private_pypi_user }}
-#          private_pypi_password: ${{ secrets.private_pypi_password }}
-#          save_cache: ${{ matrix.group == 1 }}
-#
-#      - name: Download test durations
-#        uses: actions/download-artifact@v4
-#        with:
-#          path: .test_durations
-#
-#      - name: Run tests with coverage parallel test procs)
-#        working-directory: ${{ inputs.working_directory }}
-#        run: |
-#          poetry run coverage run -m pytest -v --splits 4 --group ${{ matrix.group }} --store-durations
-#        env:
-#          pytest_github_report: true
-#          pytest_use_blanks: true
-#          CI: true
-#          POSTGRES_DB: ${{ inputs.postgres_db }}
-#          POSTGRES_USER: ${{ inputs.postgres_user }}
-#          POSTGRES_HOST: ${{ inputs.postgres_host }}
-#          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
-#          POSTGRES_PORT: 5432
-#
-#      - name: Upload partial coverage and test durations
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: ${{ github.head_ref || github.ref_name }}-group${{ matrix.group }}
-#          path: |
-#            ${{ inputs.working_directory }}/.coverage
-#            ${{ inputs.working_directory }}/.test_durations
-#          if-no-files-found: 'error'
-#          include-hidden-files: true
-#
-#      - name: Save cache once
-#        if: steps.cache.outputs.cache-hit != 'true' && matrix.group == 1
-#        uses: actions/cache/save@v4
-#        with:
-#          path: ${{ inputs.file_paths_to_cache }}
-#          key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
+  pytest-with-coverage:
+    name: Pytest With Postgres and Coverage
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Make sure to change the '--splits' parameter when this group is changed
+        group: [1, 2, 3, 4]
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: (Cached) Python and Poetry
+        id: cache
+        uses: repowerednl/.github/composite-actions/python-poetry-cache@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
+        with:
+          python_version: ${{ inputs.python_version }}
+          poetry_version: ${{ inputs.poetry_version }}
+          working_directory: ${{ inputs.working_directory }}
+          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+          private_pypi_url: ${{ secrets.private_pypi_url }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+          save_cache: ${{ matrix.group == 1 }}
+
+      - name: Download test durations
+        uses: actions/download-artifact@v4
+        with:
+          path: .test_durations
+
+      - name: Run tests with coverage parallel test procs)
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          poetry run coverage run -m pytest -v --splits 4 --group ${{ matrix.group }} --store-durations
+        env:
+          pytest_github_report: true
+          pytest_use_blanks: true
+          CI: true
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_HOST: ${{ inputs.postgres_host }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+          POSTGRES_PORT: 5432
+
+      - name: Upload partial coverage and test durations
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.head_ref || github.ref_name }}-group${{ matrix.group }}
+          path: |
+            ${{ inputs.working_directory }}/.coverage
+            ${{ inputs.working_directory }}/.test_durations
+          if-no-files-found: 'error'
+          include-hidden-files: true
+
+      - name: Save cache once
+        if: steps.cache.outputs.cache-hit != 'true' && matrix.group == 1
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ inputs.file_paths_to_cache }}
+          key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
 
   combine-and-report:
     needs: pytest-with-coverage
