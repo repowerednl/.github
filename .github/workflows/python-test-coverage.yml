@@ -95,8 +95,6 @@ jobs:
       - name: Run tests with coverage parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          ls -alh
-          poetry --version
           poetry run coverage run -m pytest -v --splits 4 --group ${{ matrix.group }} --store-durations
         env:
           pytest_github_report: true
@@ -152,13 +150,13 @@ jobs:
       - name: Combine test durations
         uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
         with:
-          durations_path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
+          durations-path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
 
       - name: Combine coverage and create report
         run: |
-          coverage combine ${{ github.head_ref || github.ref_name }}-group*/.coverage
-          coverage report
-          coverage xml
+          poetry run coverage combine ${{ github.head_ref || github.ref_name }}-group*/.coverage
+          poetry run coverage report
+          poetry run coverage xml
 #
 #      - name: Coverage comment
 #        id: coverage-comment
