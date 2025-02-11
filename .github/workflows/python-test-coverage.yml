@@ -153,6 +153,7 @@ jobs:
           durations-path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
 
       - name: Combine coverage and create report
+        working-directory: ${{ inputs.working_directory }}
         run: |
           poetry run coverage combine ${{ github.head_ref || github.ref_name }}-group*/.coverage
           poetry run coverage report
