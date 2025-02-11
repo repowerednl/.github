@@ -150,7 +150,7 @@ jobs:
         uses: actions/download-artifact@v4
 
       - name: Combine test durations
-        uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@main
+        uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
         with:
           durations_path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
 
