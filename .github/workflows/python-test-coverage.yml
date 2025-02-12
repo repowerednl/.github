@@ -28,11 +28,13 @@ on:
         type: string
         description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here
         default: .
+      # @Deprecated: the package xdist is no longer used in this workflow
       num_test_processes:
         type: number
         description: The number of parallel test processes
         default: 2
-        deprecationMessage: the package xdist is no longer used in this workflow
+      # Use below when it is possible for workflows (now only available for actions): https://github.com/orgs/community/discussions/58855
+      #  deprecationMessage: the package xdist is no longer used in this workflow
     secrets:
       postgres_password:
         required: true
