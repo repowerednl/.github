@@ -28,11 +28,11 @@ on:
         type: string
         description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here
         default: .
-      # @Deprecated: the package xdist is no longer used in this workflow
       num_test_processes:
         type: number
         description: The number of parallel test processes
         default: 2
+        deprecationMessage: the package xdist is no longer used in this workflow
     secrets:
       postgres_password:
         required: true
@@ -95,7 +95,9 @@ jobs:
       - name: Run tests with coverage parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          poetry run coverage run -m pytest -v --splits 4 --group ${{ matrix.group }} --store-durations
+          ls -alh
+          cat .test-durations
+          poetry run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} --store-durations
         env:
           pytest_github_report: true
           pytest_use_blanks: true
@@ -149,14 +151,25 @@ jobs:
         with:
           path: ${{ inputs.working_directory }}
 
+      - name: temp run
+        run: |
+          ls -alh
+          cat .test-durations
+          cd ${{ inputs.working_directory }}
+          ls -alh
+          cat .test-durations
+
       - name: Combine test durations
         uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
         with:
           durations-path: ${{ github.head_ref || github.ref_name }}-group*/.test_durations
+          #TODO: check if correct durations file is there and it is correctly combined
 
       - name: Combine coverage and create report
         working-directory: ${{ inputs.working_directory }}
         run: |
+          ls -alh
+          cat .test-durations
           poetry run coverage combine ${{ github.head_ref || github.ref_name }}-group*/.coverage
           poetry run coverage report
           poetry run coverage xml
