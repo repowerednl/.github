@@ -20,6 +20,10 @@ on:
         type: string
         required: false
         default: Dockerfile
+      context:
+        type: string
+        required: false
+        default: "{{defaultContext}}:./"
       build_argument_one:
         required: false
         type: string
@@ -94,7 +98,7 @@ jobs:
       - name: Build '${{ inputs.dockerfile_name }}' and push with tag '${{ inputs.tag }}'
         uses: docker/build-push-action@v6
         with:
-          context: "{{defaultContext}}:./"
+          context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile_name }}
           push: true
           tags: ${{ needs.generate-image-tag-set-environment.outputs.image_tag }}
