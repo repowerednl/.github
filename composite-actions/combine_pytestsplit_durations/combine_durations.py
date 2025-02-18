@@ -40,13 +40,18 @@ def save_json_file(path: Path, data: Dict[str, float]) -> Path:
     return path
 
 
-def main(working_directory: str) -> None:
+def main(test_durations_group_paths: str) -> None:
     """Main function to update durations JSON file."""
     all_durations_filepath = Path(".test_durations")
     current_durations = load_json_file(all_durations_filepath)
 
-    group_paths = [Path(group_filepath) for group_filepath in glob(working_directory)]
+    group_paths = [Path(group_filepath) for group_filepath in glob(test_durations_group_paths)]
+    print(f"Found the following group path to combine: {group_paths.__str__()}\n")
+    if len(group_paths) < 1:
+        raise FileNotFoundError("No test durations found for groups so there is nothing to combine")
+
     updated_durations = merge_durations(current_durations, group_paths)
+    print(f"Combined test durations: {updated_durations}")
     save_json_file(all_durations_filepath, updated_durations)
 
 
