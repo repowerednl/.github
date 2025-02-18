@@ -8,6 +8,9 @@ inputs:
     default: |
       .venv
       /home/runner/.local/
+  save_cache:
+    required: false
+    default: true
   python_version:
     required: false
     default: 3.11.2
@@ -36,7 +39,7 @@ runs:
 
     - name: Load cache
       id: cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: ${{ inputs.file_paths_to_cache }}
         key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
@@ -62,3 +65,10 @@ runs:
         poetry config repositories.repowered $PRIVATE_PYPI_URL
         poetry config http-basic.repowered $PRIVATE_PYPI_USER $PRIVATE_PYPI_PASSWORD
         poetry install --no-interaction --no-root --no-ansi
+
+    - name: Save cache once
+      if: ${{ inputs.save_cache == true && steps.cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ inputs.file_paths_to_cache }}
+        key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
