@@ -51,8 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Make sure to change the '--splits' parameter when this group is changed
-        group: [1, 2, 3, 4, 5, 6]
+        group: [1, 2, 3, 4, 5, 6, 7, 8]
 
     services:
       postgres:
@@ -163,6 +162,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.head_ref || github.ref_name }}
-          path: |
-            ${{ inputs.working_directory }}/coverage.xml
+          path: coverage.xml
           if-no-files-found: 'error'
