@@ -89,15 +89,10 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
           save_cache: ${{ matrix.group == 1 }}
 
-      - name: Download test durations
-        uses: actions/download-artifact@v4
-        with:
-          name: .test_durations
-
       - name: Run tests with coverage parallel test procs)
         working-directory: ${{ inputs.working_directory }}
         run: |
-          poetry run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} --store-durations
+          poetry run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }}
         env:
           pytest_github_report: true
           pytest_use_blanks: true
@@ -108,13 +103,12 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
           POSTGRES_PORT: 5432
 
-      - name: Upload partial coverage and test durations
+      - name: Upload partial coverage
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.head_ref || github.ref_name }}-group${{ matrix.group }}
           path: |
             ${{ inputs.working_directory }}/.coverage
-            ${{ inputs.working_directory }}/.test_durations
           if-no-files-found: 'error'
           include-hidden-files: true
 
@@ -150,12 +144,6 @@ jobs:
           path: ${{ inputs.working_directory }}
           pattern: ${{ github.head_ref || github.ref_name }}-group*
 
-      - name: Combine test durations
-        continue-on-error: true
-        uses: repowerednl/.github/composite-actions/combine_pytestsplit_durations@main
-        with:
-          durations-path: ${{ inputs.working_directory }}${{ github.head_ref || github.ref_name }}-group*/.test_durations
-
       - name: Combine coverage and create report
         working-directory: ${{ inputs.working_directory }}
         run: |
@@ -171,11 +159,10 @@ jobs:
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
 
-      - name: Upload 'coverage.xml' report and combined test_durations
+      - name: Upload 'coverage.xml' report
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.head_ref || github.ref_name }}
           path: |
             ${{ inputs.working_directory }}coverage.xml
-            ${{ inputs.working_directory }}.test_durations
           if-no-files-found: 'error'
