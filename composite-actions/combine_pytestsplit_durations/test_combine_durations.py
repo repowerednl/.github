@@ -1,14 +1,28 @@
 import json
-from pytest import fixture, raises
+from pytest import fixture, raises, mark
 from pathlib import Path
-from combine_durations import load_json_file, merge_durations, save_json_file
+from combine_durations import load_json_file, merge_durations, save_json_file, main
 
 
 @fixture
 def temp_durations_file(tmp_path):
-    file_path = tmp_path / "durations.json"
+    file_path = tmp_path / ".test_durations"
     file_path.write_text(json.dumps({"task1": 1.2, "task2": 2.5}))
     return file_path
+
+
+@fixture
+def temp_group_durations(tmp_path):
+    path_group_1 = tmp_path / "group1"
+    path_group_1.mkdir()
+    file_path_group_1 = path_group_1 / ".test_durations"
+    file_path_group_1.write_text(json.dumps({"task1": 1.3, "task2": 2.5}))
+    path_group_2 = tmp_path / "group2"
+    path_group_2.mkdir()
+    file_path_group_2 = path_group_2 / ".test_durations"
+    file_path_group_2.write_text(json.dumps({"task3": 2.1, "task4": 2.2}))
+    # Return the pattern for all the group paths
+    return tmp_path.__str__() + "/group*/.test_durations"
 
 
 def test_load_json_file(temp_durations_file):
@@ -54,3 +68,14 @@ def test_save_json_file(tmp_path):
     data = {"task1": 4.5, "task2": 2.1}
     save_json_file(file_path, data)
     assert json.loads(file_path.read_text()) == data
+
+
+def test_no_group_durations(temp_durations_file, tmp_path):
+    group_test_durations_path = tmp_path.__str__() + "/group*/.test_durations"
+    with raises(FileNotFoundError):
+        main(group_test_durations_path)
+
+
+@mark.skip(reason="Integration test wil create and actual .test_durations file with combined data")
+def integration_test(temp_group_durations):
+    main(temp_group_durations)
