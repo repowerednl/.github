@@ -161,6 +161,5 @@ jobs:
       - name: Upload 'coverage.xml' report
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.head_ref || github.ref_name }}
           path: coverage.xml
           if-no-files-found: 'error'
