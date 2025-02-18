@@ -162,4 +162,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: coverage.xml
+          name: coverage.xml
           if-no-files-found: 'error'
