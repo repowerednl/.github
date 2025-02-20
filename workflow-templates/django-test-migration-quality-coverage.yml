@@ -31,6 +31,7 @@ jobs:
       poetry_version: ${{ matrix.poetry_version }}
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
+      # test_groups: "[1, 2]" #Optional, defaults to "[1,2,3,4,5,6,7,8]"
       file_paths_to_cache: |
         .venv
         /home/runner/.local/
