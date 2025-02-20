@@ -110,11 +110,12 @@ jobs:
       - name: Upload partial coverage
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.head_ref || github.ref_name }}-group${{ matrix.group }}
+          name: group${{ matrix.group }}
           path: |
             ${{ inputs.working_directory }}/.coverage
           if-no-files-found: 'error'
           include-hidden-files: true
+          overwrite: true
 
       - name: Save cache once
         if: steps.cache.outputs.cache-hit != 'true' && matrix.group == 1
@@ -146,12 +147,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ inputs.working_directory }}
-          pattern: ${{ github.head_ref || github.ref_name }}-group*
+          pattern: group*
 
       - name: Combine coverage and create report
         working-directory: ${{ inputs.working_directory }}
         run: |
-          poetry run coverage combine ${{ github.head_ref || github.ref_name }}-group*/.coverage
+          poetry run coverage combine group*/.coverage
           poetry run coverage report
           poetry run coverage xml
 
