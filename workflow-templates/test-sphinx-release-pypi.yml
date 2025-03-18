@@ -9,7 +9,7 @@ on:
 
 jobs:
   pytest-simple-with-coverage:
-    uses: repowerednl/.github/.github/workflows/python-test-coverage-simple.yml@REP-3986-Create-reusable-workflow-for-publishing-python-package
+    uses: repowerednl/.github/.github/workflows/python-test-coverage-simple.yml@main
     permissions:
       pull-requests: write
       contents: write
@@ -37,7 +37,7 @@ jobs:
 
   deploy-sphinx-documentation:
     if: ${{ github.head_ref || github.ref_name }} == 'main'
-    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@REP-3986-Create-reusable-workflow-for-publishing-python-package
+    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
       poetry_version: "1.8.4"
@@ -55,7 +55,7 @@ jobs:
 
   release:
     if: ${{ github.head_ref || github.ref_name }} == 'main'
-    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@REP-3986-Create-reusable-workflow-for-publishing-python-package
+    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
       poetry_version: "1.8.4"
