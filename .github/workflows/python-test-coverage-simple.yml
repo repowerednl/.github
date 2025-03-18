@@ -39,7 +39,6 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: (Cached) Python and Poetry
-        id: cache
         uses: repowerednl/.github/composite-actions/python-poetry-cache@main
         with:
           python_version: ${{ inputs.python_version }}
