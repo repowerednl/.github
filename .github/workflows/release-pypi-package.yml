@@ -34,7 +34,6 @@ jobs:
       with:
         python_version: ${{ inputs.python_version }}
         poetry_version: ${{ inputs.poetry_version }}
-        working_directory: ${{ inputs.working_directory }}
         file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
         private_pypi_url: ${{ secrets.private_pypi_url }}
         private_pypi_user: ${{ secrets.private_pypi_user }}
