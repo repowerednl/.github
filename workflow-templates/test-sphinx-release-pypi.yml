@@ -55,7 +55,7 @@ jobs:
 
   release:
     if: ${{ github.head_ref || github.ref_name }} == 'main'
-    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
+    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
     with:
       python_version: "3.11.2"
       poetry_version: "1.8.4"
