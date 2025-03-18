@@ -1,0 +1,50 @@
+name: Release PyPi package
+
+on:
+  workflow_call:
+    inputs:
+      file_paths_to_cache:
+        type: string
+        required: true
+      # Provided by caller workflow
+      python_version:
+        type: string
+        required: true
+      poetry_version:
+        type: string
+        required: true
+    secrets:
+      private_pypi_url:
+        required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+      publish_pypi_url:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: (Cached) Python and Poetry
+      id: cache
+      uses: repowerednl/.github/composite-actions/python-poetry-cache@main
+      with:
+        python_version: ${{ inputs.python_version }}
+        poetry_version: ${{ inputs.poetry_version }}
+        file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+        private_pypi_url: ${{ secrets.private_pypi_url }}
+        private_pypi_user: ${{ secrets.private_pypi_user }}
+        private_pypi_password: ${{ secrets.private_pypi_password }}
+        publish_pypi_url: ${{ secrets.publish_pypi_url }}
+
+    - name: Update version
+      run: poetry version ${{ github.event.release.tag_name }}
+
+    - name: Build and publish
+      run: |
+        poetry publish --build --no-interaction --repository repowered-pub

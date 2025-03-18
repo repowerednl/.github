@@ -26,7 +26,7 @@ on:
       # Optional
       working_directory:
         type: string
-        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here
+        description: Whenever the app (i.e. manage.py) is not in the root, the location can be specified here
         default: .
       test_groups:
         type: string
@@ -82,7 +82,7 @@ jobs:
 
       - name: (Cached) Python and Poetry
         id: cache
-        uses: repowerednl/.github/composite-actions/python-poetry-cache@REP-3541-Sonarcloud-coverage-rate-is-too-low-and-failing-on-every-PR
+        uses: repowerednl/.github/composite-actions/python-poetry-cache@main
         with:
           python_version: ${{ inputs.python_version }}
           poetry_version: ${{ inputs.poetry_version }}
@@ -116,13 +116,6 @@ jobs:
           if-no-files-found: 'error'
           include-hidden-files: true
           overwrite: true
-
-      - name: Save cache once
-        if: steps.cache.outputs.cache-hit != 'true' && matrix.group == 1
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ inputs.file_paths_to_cache }}
-          key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
 
   combine-and-report:
     needs: pytest-with-coverage

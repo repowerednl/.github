@@ -1,0 +1,81 @@
+name: Deploy sphinx documentation
+
+on:
+  workflow_call:
+    inputs:
+      file_paths_to_cache:
+        type: string
+        required: true
+      # Provided by caller workflow
+      python_version:
+        type: string
+        required: true
+      poetry_version:
+        type: string
+        required: true
+      docs_target:
+        description: The directory where the package's documentation is stored (usually /home/repowered/docs/<package name>/
+        type: string
+        required: true
+#        default: /home/repowered/docs/rephrase/
+      # Optional
+      docs_host:
+        type: string
+        required: false
+        default: docs.repowered.nl
+      docs_port:
+        type: number
+        required: false
+        default: 22
+      docs_user:
+        type: string
+        required: false
+        default: repowered
+      docs_source:
+        type: string
+        required: false
+        default: docs/_build/html
+    secrets:
+      private_pypi_url:
+        required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+      docs_ssh_private_key:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: (Cached) Python and Poetry
+        id: cache
+        uses: repowerednl/.github/composite-actions/python-poetry-cache@main
+        with:
+          python_version: ${{ inputs.python_version }}
+          poetry_version: ${{ inputs.poetry_version }}
+          file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
+          private_pypi_url: ${{ secrets.private_pypi_url }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Build documentation
+        run: |
+          cd docs
+          poetry run make html
+
+      - name: Deploy documentation
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ inputs.docs_host }}
+          port: ${{ inputs.docs_port }}
+          username: ${{ inputs.docs_user }}
+          key: ${{ secrets.docs_ssh_private_key }}
+          source: ${{ inputs.docs_source }}
+          target: ${{ inputs.docs_target }}
+          strip_components: 3  # remove the docs/_build/html part from the path
