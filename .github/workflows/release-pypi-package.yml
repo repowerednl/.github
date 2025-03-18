@@ -20,6 +20,8 @@ on:
         required: true
       private_pypi_password:
         required: true
+      publish_pypi_url:
+        required: true
 
 jobs:
   deploy:
@@ -38,6 +40,7 @@ jobs:
         private_pypi_url: ${{ secrets.private_pypi_url }}
         private_pypi_user: ${{ secrets.private_pypi_user }}
         private_pypi_password: ${{ secrets.private_pypi_password }}
+        publish_pypi_url: ${{ secrets.publish_pypi_url }}
 
     - name: Update version
       run: poetry version ${{ github.event.release.tag_name }}
