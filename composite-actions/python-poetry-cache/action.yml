@@ -64,7 +64,7 @@ runs:
       run: |
         poetry config repositories.repowered $PRIVATE_PYPI_URL
         poetry config http-basic.repowered $PRIVATE_PYPI_USER $PRIVATE_PYPI_PASSWORD
-        poetry install --no-interaction --no-root --no-ansi
+        poetry install --all-extras --no-interaction --no-root --no-ansi
 
     - name: Save cache once
       if: ${{ inputs.save_cache == true && steps.cache.outputs.cache-hit != 'true' }}
