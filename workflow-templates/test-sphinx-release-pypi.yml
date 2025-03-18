@@ -68,3 +68,4 @@ jobs:
       private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+      publish_pypi_url: ${{ secrets.PRIVATE_PYPI_PUBLISH_URL}}
