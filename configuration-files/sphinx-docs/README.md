@@ -2,7 +2,7 @@
 
 In order to have proper documentation for our packages, we use [Sphinx](https://www.sphinx-doc.org/en/master/). Here you find the configuration files and its setup.
 
-In the workflow-template for publishing packages [template](https://github.com/repowerednl/.github/blob/main/workflow-templates/test-sphinx-release-pypi.yml), the generation and deployment of the sphinx-docs to `packages.repowered.nl` is already setup for you.
+In the workflow-template for publishing packages [template](https://github.com/repowerednl/.github/blob/main/workflow-templates/test-sphinx-release-pypi.yml), the generation and deployment of the sphinx-docs to `docs.repowered.nl` is already setup for you.
 
 ## Initial setup
 
