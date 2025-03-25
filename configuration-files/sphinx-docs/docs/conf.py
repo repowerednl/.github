@@ -23,7 +23,7 @@ project = project.replace(" ", "").capitalize()
 print("Building documentation for project: '" + project + "'")
 
 copyright = str(datetime.today().year) + ", REpowered B.V"
-author = "the Repowered team"
+author = "the Repowered team but mostly Alfred"
 with open(os.path.join("..", "pyproject.toml"), "rb") as f:
     release = tomllib.load(f)["tool"]["poetry"]["version"]
 
