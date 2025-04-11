@@ -30,6 +30,10 @@ inputs:
   publish_pypi_url:
     required: false
     default: ''
+  poetry_no_root:
+    required: false
+    description: Whenever the poetry install should be run with the --no-root flag
+    default: true
 
 runs:
   using: "composite"
@@ -62,12 +66,18 @@ runs:
       run: |
         poetry config repositories.repowered ${{ inputs.private_pypi_url }}
         poetry config http-basic.repowered ${{ inputs.private_pypi_user }} ${{ inputs.private_pypi_password }}
-        if [[ "${{ inputs.publish_pypi_url }}" != '' ]]; then  
+        if [[ "${{ inputs.publish_pypi_url }}" != '' ]]; then
           echo "Configuring poetry publishing"
           poetry config repositories.repowered-pub ${{ inputs.publish_pypi_url }}
           poetry config http-basic.repowered-pub ${{ inputs.private_pypi_user }} ${{ inputs.private_pypi_password }}
         fi
-        poetry install --all-extras --no-interaction --no-root --no-ansi
+        if [[ "${{ inputs.poetry_no_root }}" == 'true' ]]; then
+          echo "Installing poetry packages without root"
+          poetry install --all-extras --no-interaction --no-root --no-ansi
+        else
+          echo "Installing repository as a package"
+          poetry install --all-extras --no-interaction --no-ansi
+        fi
 
     - name: Save cache once
       if: ${{ inputs.save_cache == true && steps.cache.outputs.cache-hit != 'true' }}
