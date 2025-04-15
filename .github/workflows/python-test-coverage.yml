@@ -23,6 +23,10 @@ on:
       poetry_version:
         type: string
         required: true
+      poetry_no_root:
+        type: boolean
+        description: Whenever the poetry install should be run with the --no-root flag
+        default: true
       # Optional
       working_directory:
         type: string
@@ -86,6 +90,7 @@ jobs:
         with:
           python_version: ${{ inputs.python_version }}
           poetry_version: ${{ inputs.poetry_version }}
+          poetry_no_root: ${{ inputs.poetry_no_root }}
           working_directory: ${{ inputs.working_directory }}
           file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
           private_pypi_url: ${{ secrets.private_pypi_url }}
@@ -129,6 +134,7 @@ jobs:
         with:
           python_version: ${{ inputs.python_version }}
           poetry_version: ${{ inputs.poetry_version }}
+          poetry_no_root: ${{ inputs.poetry_no_root }}
           working_directory: ${{ inputs.working_directory }}
           file_paths_to_cache: ${{ inputs.file_paths_to_cache }}
           private_pypi_url: ${{ secrets.private_pypi_url }}
