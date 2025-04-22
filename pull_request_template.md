@@ -1,17 +1,22 @@
-#major: ..
+## Version bump 
+#patch/#minor/#major: ...
 
-#minor: ..
-
-#patch: ...
-
-### Summary
+## Summary
 ...
+
+### Jira ticket
+https://repowerednl.atlassian.net/browse/PLAT-
 
 ### Media / Screenshot
 ...
 
-### TODO
-- [ ] _Backfill added migrations field_
+## Checks
+- [ ] I have added unit tests
+- [ ] I have tested this locally
+- [ ] I have added a migration (if the data model changed)
+- [ ] I have backfilled data for new/updated fields (if applicable)
 
-### Jira ticket
-- https://repowerednl.atlassian.net/browse/PLAT-
+### TODO
+- [ ] ...
+
+
