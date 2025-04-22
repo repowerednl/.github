@@ -14,4 +14,4 @@
 - [ ] _Backfill added migrations field_
 
 ### Jira ticket
-- https://repowerednl.atlassian.net/browse/REP-
+- https://repowerednl.atlassian.net/browse/PLAT-
