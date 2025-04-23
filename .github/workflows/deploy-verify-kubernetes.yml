@@ -39,7 +39,7 @@ jobs:
       - name: Deploy ${{ matrix.container_name }}
         run: | 
           if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "Production deployment. Release image is ${{ inputs.docker_image_tag }} which is now also set to 'latest'
+            echo "Production deployment. Release image is ${{ inputs.docker_image_tag }} which is now also set to 'latest'"
           else
             echo "Non-production deployment. Updating image to ${{ inputs.docker_image_tag }} and restarting"
           fi
