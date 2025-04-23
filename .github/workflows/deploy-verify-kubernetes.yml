@@ -39,11 +39,12 @@ jobs:
       - name: Deploy ${{ matrix.container_name }}
         run: | 
           if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "Production deployment. Release image is ${{ inputs.docker_image_tag }} which is now also set to 'latest'"
+            echo "Production deployment. Release image tags are: ${{ inputs.docker_image_tag }}."
+            VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
           else
             echo "Non-production deployment. Updating image to ${{ inputs.docker_image_tag }} and restarting"
           fi
-          kubectl set image deployment/${{ matrix.container_name }}-deployment ${{ matrix.container_name }}=${{ inputs.docker_image_tag }}
+          kubectl set image deployment/${{ matrix.container_name }}-deployment ${{ matrix.container_name }}=$VERSIONED_TAG
 
       - name: Verify ${{matrix.container_name}} deployment
         run: kubectl rollout status deployment/${{matrix.container_name}}-deployment
