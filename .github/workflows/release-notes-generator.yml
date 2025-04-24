@@ -10,7 +10,7 @@ on:
 
 jobs:
   release:
-    if: contains(${{ github.ref }}, "main")
+    if: ${{ github.event.pull_request.base.ref == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout tagged commit
