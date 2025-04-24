@@ -21,6 +21,13 @@ jobs:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
+  # This job will only run if ran from the main branch
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
   # Only for the front-end; delete this job if you don't have a 'package.json'
   # If you do, add bump to the 'needs' section for docker -> needs: [tag, bump]
   bump:
