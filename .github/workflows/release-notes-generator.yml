@@ -10,23 +10,16 @@ on:
 
 jobs:
   release:
+    if: contains(${{ github.ref }}, "main")
     runs-on: ubuntu-latest
-
     steps:
-      - name: Ensure workflow is running on main
-        run: |
-            if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
-                echo "Running on branch: ${{ github.ref }}"
-                echo "This workflow can only be run on the main branch."
-                exit 1
-            fi
       - name: Checkout tagged commit
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Generate GitHub Release
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v6
         with:
           tag: ${{ inputs.tag }}
           name: ${{ github.event.repository.name }} ${{ inputs.tag }}
