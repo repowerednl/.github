@@ -40,10 +40,10 @@ jobs:
         run: | 
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             echo "Production deployment. Release image tags are: ${{ inputs.docker_image_tag }}."
-            VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
           else
             echo "Non-production deployment. Updating image to ${{ inputs.docker_image_tag }} and restarting"
           fi
+          VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
           kubectl set image deployment/${{ matrix.container_name }}-deployment ${{ matrix.container_name }}=$VERSIONED_TAG
 
       - name: Verify ${{matrix.container_name}} deployment
