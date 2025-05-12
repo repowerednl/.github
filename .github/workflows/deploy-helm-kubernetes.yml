@@ -1,0 +1,95 @@
+name: Deploy the docker image on Kubernetes and verify the deployment
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      deployment_name-values_file:
+        description: "The name for the deployment (when empty it uses the repo name) and the corresponding helm values filename (defaults to 'values.yml)"
+        required: false
+        default: [{"name": "", "file": "values.yml"}]
+      docker_image_tag:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      helm_deployment_version:
+        type: string
+        required: true
+    secrets:
+      digital_ocean_access_token:
+        required: true
+
+jobs:
+  deploy-helm:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        include: ${{ fromJson(inputs.deployment_name-values_file) }}
+    permissions:
+      packages: read
+      contents: read
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.digital_ocean_access_token }}
+
+      - name: Save DigitalOcean kubeconfig with short-lived credentials
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} dev-cluster
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Helm Deployment to Kubernetes
+        env:
+          name: ${{ matrix.name || github.event.repository.name }}
+          version: ${{ inputs.helm_deployment_version }}
+        run: |
+          # Get the current deployed Helm version
+          HELM_VERSION=$(helm list -n ${{ env.name }} -o json | jq -r '.[0].app_version')
+
+          # Check if the deployment values have changed
+          VALUES_UPDATED=false
+          git diff --name-only HEAD~1 | grep -q ${{ matrix.file }} && VALUES_UPDATED=true
+
+          # Check if current Helm version matches the target version
+          if [[ "$HELM_VERSION" == ${{ env.version }} && "$VALUES_UPDATED" == false ]]; then
+            echo "Setting the new image: ${{ inputs.docker_image_tag }}" 
+            DRY_RUN=$(helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --namespace ${{ env.name }} --reuse-values --set image=${{ inputs.docker_image_tag }} --dry-run)
+            echo "The dry-run was successful. Deploying now"
+            helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --namespace ${{ env.name }} --reuse-values --set image=${{ inputs.docker_image_tag }}
+          else
+            # Set the namespace creation flag if it's an initial deployment
+            if [[ "$HELM_VERSION" == "null" ]]; then
+              CREATE_NAMESPACE_COMMAND="--create-namespace"
+            else
+              CREATE_NAMESPACE_COMMAND=""
+            fi
+
+            # Login to repowered container registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
+
+            # Perform dry-run installation for the deployment
+            DRY_RUN=$(helm install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --version ${{ env.version }} --namespace ${{ env.name }} $CREATE_NAMESPACE_COMMAND \
+              --values ${{ matrix.file }} --dry-run)
+            echo "The dry-run for the new deployment in namespace ${{ env.name }} was successful. Deploying now"
+            helm install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --version ${{ env.version }} --namespace ${{ env.name }} $CREATE_NAMESPACE_COMMAND \
+              --values ${{ matrix.file }}
+          fi
+          # Output deployment status to the GitHub summary
+          echo ':chart: Helm Status Output' >> $GITHUB_STEP_SUMMARY
+          helm status ${{ env.name }} -n ${{ env.name }} >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,96 @@
+name: GitHub Tag, Docker publish build, Kubernetes Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_run:
+    workflows:
+!      - # The actual name of your TEST workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
+    types:
+      - completed
+  pull_request:
+    types:
+      - labeled
+
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || 'main' }} by @${{ github.actor }}
+
+jobs:
+  tag:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
+
+  # This job will only run if ran from the main branch
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
+  # Only for the front-end; delete this job if you don't have a 'package.json'
+  # If you do, add bump to the 'needs' section for docker -> needs: [tag, bump]
+  bump:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/bump-package-json.yml@main
+    needs: tag
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
+  github-environment:
+    permissions:
+      pull-requests: read
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+
+  # Repeat the steps docker + deploy-helm if there are multiple Dockerfiles/Helm values
+
+  docker:
+    uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
+    needs: [ tag, github-environment ]
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
+      environment: ${{ needs.github-environment.outputs.environment }}
+      # dockerfile_name: # Optional, defaults to 'Dockerfile'
+      # build_argument_one: # Optional, no default; from GitHub Variables
+      # build_argument_two: # Optional, no default; from GitHub Variables
+      # build_argument_three: # Optional, no default; from GitHub Variables
+    secrets:
+      docker_hub_access_token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      # Optional (Current maximum of secrets that can be set =  6 secrets. Can be expanded)
+      # docker_secret_1:
+      # docker_secret_2:
+      # docker_secret_3:
+      # docker_secret_4:
+      # docker_secret_5:
+      # docker_secret_6:
+
+#   TODO(REP-2945): Move this step to the repository infra
+#   Should only be active for repower-django (add job to 'needs' in deploy-verify)
+    run-migrations:
+      uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
+      needs: [tag, github-environment]
+      with:
+        tag: ${{ needs.tag.outputs.tag }}
+        environment: ${{ needs.github-environment.outputs.environment }}
+      secrets:
+        digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
+        infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+        infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
+
+  deploy-helm:
+    uses: repowerednl/.github/.github/workflows/deploy-helm-kubernetes.yml@main
+    needs: [ docker ]
+    with:
+      docker_image_tag: ${{ needs.docker.outputs.image_tag }}
+      environment: ${{ needs.docker.outputs.environment }}
+      helm_deployment_version: ${{ vars.HELM_DEPLOYMENT_VERSION }} # i.e. the chart's version that should be used. See https://github.com/repowerednl/repower-infra/pkgs/container/helm-charts%2Fdeployment
+      # If there are multiple deployments for a single docker image, the deployment names and values files can be specified here
+      # Example:
+      # Dockerfile 'hello-world' is responsible for the following deployments: foo, bar
+      # the corresponding deployment_name-values_file object is: "[{"name": "foo", "file": "foo_values.yml"}, {"name": "bar", "file": "bar_values.yml"}]"
+      # deployment_name-values_file: # A JSON list objects string; defaults to "[{"name": "", "file": "values.yml"}]" where name results in the repo name
+    secrets:
+      digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
