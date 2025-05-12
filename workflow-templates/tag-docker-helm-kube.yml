@@ -67,7 +67,7 @@ jobs:
       # docker_secret_6:
 
 #   TODO(REP-2945): Move this step to the repository infra
-#   Should only be active for repower-django (add job to 'needs' in deploy-verify)
+#   Should only be active for apps with a database (add job to 'needs' in deploy-helm)
     run-migrations:
       uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
       needs: [tag, github-environment]
