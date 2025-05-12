@@ -67,9 +67,6 @@ jobs:
           # Check if current Helm version matches the target version
           if [[ "$HELM_VERSION" == ${{ env.version }} && "$VALUES_UPDATED" == false ]]; then
             echo "Setting the new image: ${{ inputs.docker_image_tag }}" 
-            DRY_RUN=$(helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --namespace ${{ env.name }} --reuse-values --set image=${{ inputs.docker_image_tag }} --dry-run)
-            echo "The dry-run was successful. Deploying now"
             helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace ${{ env.name }} --reuse-values --set image=${{ inputs.docker_image_tag }}
           else
@@ -83,12 +80,7 @@ jobs:
             # Login to repowered container registry
             echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
 
-            # Perform dry-run installation for the deployment
-            DRY_RUN=$(helm install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --version ${{ env.version }} --namespace ${{ env.name }} $CREATE_NAMESPACE_COMMAND \
-              --values ${{ matrix.file }} --dry-run)
-            echo "The dry-run for the new deployment in namespace ${{ env.name }} was successful. Deploying now"
-            helm install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
+            helm upgrade --install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version ${{ env.version }} --namespace ${{ env.name }} $CREATE_NAMESPACE_COMMAND \
               --values ${{ matrix.file }}
           fi
