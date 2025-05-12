@@ -50,23 +50,26 @@ jobs:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          fetch-depth: 2
 
       - name: Helm Deployment to Kubernetes
+        id: helm-deployment
         env:
           name: ${{ matrix.name || github.event.repository.name }}
           version: ${{ inputs.helm_deployment_version }}
         run: |
           # Get the current deployed Helm version
           HELM_VERSION=$(helm list -n ${{ env.name }} -o json | jq -r '.[0].app_version')
+          echo "helm_version=$HELM_VERSION" >> $GITHUB_OUTPUT
 
           # Check if the deployment values have changed
           VALUES_UPDATED=false
           git diff --name-only HEAD~1 | grep -q ${{ matrix.file }} && VALUES_UPDATED=true
+          echo "values_updated=$VALUES_UPDATED" >> $GITHUB_OUTPUT
 
           # Check if current Helm version matches the target version
           if [[ "$HELM_VERSION" == ${{ env.version }} && "$VALUES_UPDATED" == false ]]; then
-            echo "Setting the new image: ${{ inputs.docker_image_tag }}" 
+            echo "Setting the new image: ${{ inputs.docker_image_tag }}"
             helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace ${{ env.name }} --reuse-values --set image=${{ inputs.docker_image_tag }}
           else
@@ -79,11 +82,26 @@ jobs:
 
             # Login to repowered container registry
             echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
-
+            echo "Upgrading or installing the deployment"
             helm upgrade --install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version ${{ env.version }} --namespace ${{ env.name }} $CREATE_NAMESPACE_COMMAND \
               --values ${{ matrix.file }}
           fi
-          # Output deployment status to the GitHub summary
-          echo ':chart: Helm Status Output' >> $GITHUB_STEP_SUMMARY
+
+      - name: Helm deployment status as summary
+        env:
+          name: ${{ matrix.name || github.event.repository.name }}
+          version: ${{ inputs.helm_deployment_version }}
+        run: |         
+          echo "<h2> :chart: Helm Status Output </h2>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           helm status ${{ env.name }} -n ${{ env.name }} >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image used: ${{ inputs.docker_image_tag }} " >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.helm-deployment.outputs.helm_version }} == "null"]; then
+            echo ":new: This was an initial deployment" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "Updated values? ${{ steps.helm-deployment.outputs.values_updated }} " >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.helm-deployment.outputs.helm_version }} != "${{ env.version }}" ]; then
+            echo "New Helm version used: ${{ env.version }}" >> $GITHUB_STEP_SUMMARY
+          fi
