@@ -7,15 +7,6 @@ on:
         required: true
         type: string
         description: "The Semantic Versioning GitHub tag used for version control"
-      working_directory:
-        required: false
-        type: string
-        description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
-        default: ./
-      node_version:
-        required: false
-        type: string
-        default: "20"
 
 jobs:
   update-package-json:
@@ -29,19 +20,27 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Automated Version Bump
+        uses: phips28/gh-action-bump-version@v11.0.7
+        id: version-bump
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          node-version: ${{ inputs.node_version }}
+          major-wording: "#major"
+          minor-wording: "#minor"
+          patch-wording: "#patch"
+          skip-tag:  "true" # Already done in another (reusable) workflow
+          target-branch: "dev"
+          commit-message: "Auto bump version of package.json to {{version}} [skip ci]"
 
-      - name: Setup Git
+      - name: Equality of Version Bump and Git Tag
         run: |
-          git config --global user.name "CI"
-          git config --global user.email "no-reply@repowered.nl"
-
-      - name: Bump package.json version to ${{ inputs.tag }}
-        working-directory: ${{ inputs.working_directory }}
-        # (22-11-2024) Do not use the yarn version commands here
-        # https://github.com/yarnpkg/berry/issues/4424
-        run: npm version ${{ inputs.tag }} --no-git-tag-version
+          if [ "${{ steps.version-bump.outputs.newTag }}" != "${{ inputs.tag }}" ]; then
+            echo ":x: Version bump tag and GitHub tag do not match!" >> $GITHUB_STEP_SUMMARY
+            echo "Version bump tag: ${{ steps.version-bump.outputs.newTag }}" >> $GITHUB_STEP_SUMMARY
+            echo "GitHub pushed tag: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "Please contact the DevOps creator for this error " >> $GITHUB_STEP_SUMMARY
+          else
+            echo ":white_check_mark: Version bump tag and GitHub tag match: ${{ inputs.tag }}." >> $GITHUB_STEP_SUMMARY
+          fi
 
