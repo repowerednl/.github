@@ -1,4 +1,4 @@
-name: Deploy the docker image on Kubernetes and verify the deployment
+name: Do a Helm deployment
 
 on:
   workflow_call:

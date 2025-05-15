@@ -1,4 +1,4 @@
-name: GitHub Tag, Docker publish build, Kubernetes Deploy
+name: GitHub Tag, Docker publish build, Helm deployment
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
     types:
       - labeled
 
-run-name: Deploy branch ${{ github.event.workflow_run.head_branch || 'main' }} by @${{ github.actor }}
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || github.head_ref || 'main' }} by @${{ github.actor }}
 
 jobs:
   tag:
