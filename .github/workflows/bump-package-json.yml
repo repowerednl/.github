@@ -18,7 +18,8 @@ jobs:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          fetch-depth: '0'
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Automated Version Bump
         uses: phips28/gh-action-bump-version@v11.0.7
@@ -30,7 +31,6 @@ jobs:
           minor-wording: "#minor"
           patch-wording: "#patch"
           skip-tag:  "true" # Already done in another (reusable) workflow
-          target-branch: "dev"
           commit-message: "Auto bump version of package.json to {{version}} [skip ci]"
 
       - name: Equality of Version Bump and Git Tag
