@@ -31,7 +31,7 @@ jobs:
         run: |
           # Extract context
           BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}"
-          COMMIT_MSG="${{ github.event.workflow_run.head_commit.message || '' }}"
+          COMMIT_MSG=$(echo '${{ toJson(github.event.workflow_run.head_commit.message) }}' | jq -r .)
           LABEL="${{ github.event.label.name || '' }}"
           EVENT_NAME="${{ github.event_name }}"
           PR_HEAD="${{ github.event.pull_request.head.ref || '' }}"
