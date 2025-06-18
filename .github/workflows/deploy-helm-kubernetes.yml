@@ -21,7 +21,7 @@ on:
         type: string
         description: "The name for the deployment (when empty it uses the repo name) and the corresponding helm values filename (defaults to 'values.yml)"
         required: false
-        default: "[{\'name\': \'\', \'file\': \'values.yml\'}]"
+        default: "[{'name': '', 'file': 'values.yml'}]"
     secrets:
       digital_ocean_access_token:
         required: true
