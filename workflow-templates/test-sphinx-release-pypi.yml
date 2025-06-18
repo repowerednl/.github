@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  release:
-    types:
-      - created
   pull_request:
   workflow_dispatch:
 
@@ -51,7 +48,7 @@ jobs:
       tag: ${{ needs.tag.outputs.tag }}
 
   deploy-sphinx-documentation:
-    if: github.event_name == 'release'
+    needs: create-release
     uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
@@ -69,8 +66,8 @@ jobs:
       docs_ssh_private_key: ${{ secrets.DOCS_SSH_PRIVATE_KEY }}
 
   release:
-    if: github.event_name == 'release'
-    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@add-tag-step-pypi-packages
+    needs: [tag, create-release]
+    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
     with:
       tag: ${{ needs.tag.outputs.tag }}
       python_version: "3.11.2"
