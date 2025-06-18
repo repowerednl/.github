@@ -7,6 +7,9 @@ on:
         type: string
         required: true
       # Provided by caller workflow
+      tag:
+        type: string
+        required: true
       python_version:
         type: string
         required: true
@@ -48,7 +51,7 @@ jobs:
         publish_pypi_url: ${{ secrets.publish_pypi_url }}
 
     - name: Update version
-      run: poetry version ${{ github.event.release.tag_name }}
+      run: poetry version ${{ inputs.tag }}
 
     - name: Build and publish
       run: |

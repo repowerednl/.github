@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  release:
+    types:
+      - created
   pull_request:
   workflow_dispatch:
 
@@ -35,9 +38,13 @@ jobs:
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
+  tag:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
+
   deploy-sphinx-documentation:
-    needs: pytest-simple-with-coverage
-    if: contains('main', github.head_ref) || contains('main', github.ref_name)
+    if: github.event_name == 'release'
     uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
@@ -55,10 +62,11 @@ jobs:
       docs_ssh_private_key: ${{ secrets.DOCS_SSH_PRIVATE_KEY }}
 
   release:
-    needs: pytest-simple-with-coverage
-    if: contains('main', github.head_ref) || contains('main', github.ref_name)
-    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
+    needs: tag
+    if: github.event_name == 'release'
+    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@add-tag-step-pypi-packages
     with:
+      tag: ${{ needs.tag.outputs.tag }}
       python_version: "3.11.2"
       poetry_version: "1.8.4"
       poetry_no_root: false
