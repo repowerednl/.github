@@ -43,6 +43,13 @@ jobs:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
+  # This job will only run if ran from the main branch
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
   deploy-sphinx-documentation:
     if: github.event_name == 'release'
     uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
