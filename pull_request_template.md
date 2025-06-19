@@ -5,7 +5,7 @@
 ...
 
 ### Jira ticket
-https://repowerednl.atlassian.net/browse/PLAT-
+[PLAT-]
 
 ### Media / Screenshot
 ...
@@ -18,5 +18,3 @@ https://repowerednl.atlassian.net/browse/PLAT-
 
 ### TODO
 - [ ] ...
-
-
