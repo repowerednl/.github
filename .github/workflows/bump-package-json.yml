@@ -34,14 +34,15 @@ jobs:
 
       - name: Bump Version
         run: |
-          VERSION=${{ inputs.tag }}
-          VERSION=${VERSION#v}  # Remove leading 'v' if present
+          VERSION="${{ inputs.tag }}"
+          VERSION="${VERSION#v}"  # Remove leading 'v' if present
           npm version "$VERSION" --no-git-tag-version
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b bump-version-$VERSION
+          BRANCH="bump-version-$VERSION-$(date +%s)"
+          git checkout -b "$BRANCH"
           git add package.json package-lock.json
-          git commit -m "Automated version bump [skip-ci]"
+          git commit -m "Automated version bump to $VERSION [skip-ci]"
           git push origin HEAD
 
       - name: Create PR for version bump
