@@ -41,7 +41,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           BRANCH="bump-version-$VERSION-$(date +%s)"
           git checkout -b "$BRANCH"
-          git add package.json package-lock.json
+          git add package.json
           git commit -m "Automated version bump to $VERSION [skip-ci]"
           git push origin HEAD
 
@@ -51,4 +51,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Release version bump: ${{ inputs.tag }}"
           body: "Automated version bump [skip-ci]"
-          base: dev
+          base: main
