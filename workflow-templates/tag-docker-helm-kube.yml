@@ -1,4 +1,4 @@
-name: GitHub Tag, Docker publish build, Kubernetes Deploy
+name: GitHub Tag, Docker publish build, Helm deployment
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
     types:
       - labeled
 
-run-name: Deploy branch ${{ github.event.workflow_run.head_branch || 'main' }} by @${{ github.actor }}
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || github.head_ref || 'main' }} by @${{ github.actor }}
 
 jobs:
   tag:
@@ -38,12 +38,12 @@ jobs:
     with:
       tag: ${{ needs.tag.outputs.tag }}
 
-  # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
-
   github-environment:
     permissions:
       pull-requests: read
     uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+
+  # Repeat the steps docker + deploy-helm if there are multiple Dockerfiles/Helm values
 
   docker:
     uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
@@ -67,7 +67,7 @@ jobs:
       # docker_secret_6:
 
 #   TODO(REP-2945): Move this step to the repository infra
-#   Should only be active for apps with a database (add job to 'needs' in deploy-verify)
+#   Should only be active for apps with a database (add job to 'needs' in deploy-helm)
     run-migrations:
       uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
       needs: [tag, github-environment]
@@ -80,16 +80,18 @@ jobs:
         infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
         infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
 
-  deploy-verify:
-    uses: repowerednl/.github/.github/workflows/deploy-verify-kubernetes.yml@main
+  deploy-helm:
+    uses: repowerednl/.github/.github/workflows/deploy-helm-kubernetes.yml@main
     needs: [ docker ]
     with:
-      # If there are multiple deployments for a single docker image, the container names can be specified here
-      # Example:
-      # Dockerfile 'hello-world' is responsible for the following deployments: foo, bar
-      # the corresponding container_names are: "['foo', 'bar']"
-      container_names: # A JSON list string i.e. "['my name']"
       docker_image_tag: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ needs.docker.outputs.environment }}
+      helm_deployment_version: ${{ vars.HELM_DEPLOYMENT_VERSION }} # i.e. the chart's version that should be used. See https://github.com/repowerednl/repower-infra/pkgs/container/helm-charts%2Fdeployment
+      # namespace: # Optional; defaults to the repository name if not set
+      #  If there are multiple deployments for a single docker image, the deployment names and values files can be specified here
+      #  Example:
+      #  Dockerfile 'hello-world' is responsible for the following deployments: foo, bar
+      #  the corresponding deployment_name-values_file object is: "[{"name": "foo", "file": "foo_values.yml"}, {"name": "bar", "file": "bar_values.yml"}]"
+      # deployment_name-values_file: # A JSON list objects string; defaults to "[{"name": "", "file": "values.yml"}]" where name results in the repo name
     secrets:
       digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}

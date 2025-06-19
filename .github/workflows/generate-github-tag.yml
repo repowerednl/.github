@@ -26,7 +26,51 @@ jobs:
           fetch-depth: '0'
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Automatically bump and tag with the latest SemVer formatted version.
+      - name: Set prerelease flag
+        id: set-prerelease-flag
+        run: |
+          # Extract context
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}"
+          COMMIT_MSG=$(echo '${{ toJson(github.event.workflow_run.head_commit.message) }}' | jq -r .)
+          LABEL="${{ github.event.label.name || '' }}"
+          EVENT_NAME="${{ github.event_name }}"
+          PR_HEAD="${{ github.event.pull_request.head.ref || '' }}"
+          PR_BASE="${{ github.event.pull_request.base.ref || '' }}"
+      
+          # Default values
+          IS_PRERELEASE=false
+          REASON=""
+      
+          # Determine if this is a prerelease
+          if [[ "$BRANCH" != "dev" && "$BRANCH" != "main" ]]; then
+            IS_PRERELEASE=true
+            REASON="Branch is \`$BRANCH\`, not dev or main."
+          elif [[ "$COMMIT_MSG" == *"[deploy]"* ]]; then
+            IS_PRERELEASE=true
+            REASON="Commit message contains \`[deploy]\`."
+          elif [[ "$LABEL" == "deploy" ]]; then
+            IS_PRERELEASE=true
+            REASON="Label is \`deploy\`."
+          elif [[ "$EVENT_NAME" == "pull_request" && "$PR_HEAD" == "dev" && "$PR_BASE" == "main" ]]; then
+            IS_PRERELEASE=true
+            REASON="PR from \`dev\` to \`main\`."
+          elif [[ "$EVENT_NAME" == "pull_request" && "$PR_BASE" == "main" && 
+            ( "$PR_HEAD" == "dev" || "$PR_HEAD" == hotfix/* ) ]]; then
+            IS_PRERELEASE=true
+            REASON="PR from \`$PR_HEAD\` to \`main\`."
+          fi
+      
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+      
+          # Step summary output
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            echo "### 🚀 Creating a **prerelease** tag" >> $GITHUB_STEP_SUMMARY
+            echo "**Reason:** $REASON" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 🎉 Creating a **full release** tag" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag
         id: github-tag
         uses: anothrNick/github-tag-action@1
@@ -35,7 +79,7 @@ jobs:
           WITH_V: true
           RELEASE_BRANCHES: main
           DEFAULT_BUMP: patch
-          PRERELEASE: ${{ (!contains(github.event.workflow_run.head_branch, 'dev')
-            || !contains(github.event.workflow_run.head_branch, 'main'))
-            || contains(github.event.workflow_run.head_commit.message, '[deploy]')
-            || github.event.label.name == 'deploy' }}
+          PRERELEASE: ${{ steps.set-prerelease-flag.outputs.is_prerelease == 'true' }}
+
+
+

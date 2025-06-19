@@ -35,9 +35,20 @@ jobs:
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
+  tag:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
+
+  # This job will only run if ran from the main branch
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
   deploy-sphinx-documentation:
-    needs: pytest-simple-with-coverage
-    if: contains('main', github.head_ref) || contains('main', github.ref_name)
+    needs: create-release
     uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
@@ -55,10 +66,10 @@ jobs:
       docs_ssh_private_key: ${{ secrets.DOCS_SSH_PRIVATE_KEY }}
 
   release:
-    needs: pytest-simple-with-coverage
-    if: contains('main', github.head_ref) || contains('main', github.ref_name)
+    needs: [tag, create-release]
     uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
     with:
+      tag: ${{ needs.tag.outputs.tag }}
       python_version: "3.11.2"
       poetry_version: "1.8.4"
       poetry_no_root: false
