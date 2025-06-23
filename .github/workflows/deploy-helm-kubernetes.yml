@@ -21,7 +21,7 @@ on:
         type: string
         description: "The name for the deployment (when empty it uses the repo name) and the corresponding helm values filename (defaults to 'values.yml)"
         required: false
-        default: "[{'name': '', 'file': 'values.yml'}]"
+        default: "[{'name': '', 'vars_filepath': 'VALUES_PATH'}]"
     secrets:
       digital_ocean_access_token:
         required: true
@@ -37,6 +37,11 @@ jobs:
       packages: read
       contents: read
     steps:
+      - name: Set values' filepath dynamically
+        id: set-values
+        run: |
+          echo "VALUES_FILEPATH=${{ vars[matrix.vars_filepath] }}" >> $GITHUB_OUTPUT
+
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
@@ -68,17 +73,17 @@ jobs:
 
           # Check if the deployment values have changed
           VALUES_UPDATED=false
-          git diff --name-only HEAD~1 | grep -q ${{ matrix.file }} && VALUES_UPDATED=true
+          git diff --name-only HEAD~1 | grep -q ${{ steps.set-values.outputs.VALUES_FILEPATH }} && VALUES_UPDATED=true
           echo "values_updated=$VALUES_UPDATED" >> $GITHUB_OUTPUT
 
           # Check if current Helm version matches the target version
-          if [[ "$HELM_VERSION" == ${{ env.version }} && "$VALUES_UPDATED" == false ]]; then
+          if [[ "$HELM_VERSION" = "$VERSION" && "$VALUES_UPDATED" = "false" ]]; then
             echo "Setting the new image: ${{ inputs.docker_image_tag }}"
             helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace ${{ env.ns }} --reuse-values --set image=${{ inputs.docker_image_tag }}
           else
             # Set the namespace creation flag if it's an initial deployment
-            if [[ "$HELM_VERSION" == "null" ]]; then
+            if [[ "$HELM_VERSION" = "null" ]]; then
               CREATE_NAMESPACE_COMMAND="--create-namespace"
             else
               CREATE_NAMESPACE_COMMAND=""
@@ -89,7 +94,7 @@ jobs:
             echo "Upgrading or installing the deployment"
             helm upgrade --install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version ${{ env.version }} --namespace ${{ env.ns }} $CREATE_NAMESPACE_COMMAND \
-              --values ${{ matrix.file }}
+              --values ${{ steps.set-values.outputs.VALUES_FILEPATH }}
           fi
 
       - name: Helm deployment status as summary
@@ -108,5 +113,5 @@ jobs:
           fi
           echo "Updated values? ${{ steps.helm-deployment.outputs.values_updated }} " >> $GITHUB_STEP_SUMMARY
           if [ ${{ steps.helm-deployment.outputs.helm_version }} != "${{ env.version }}" ]; then
-            echo "New Helm version used: ${{ env.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "Helm version used: ${{ env.version }}" >> $GITHUB_STEP_SUMMARY
           fi
