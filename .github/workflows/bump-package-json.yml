@@ -29,7 +29,7 @@ jobs:
       - name: Checkout code on dev
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ github.ref_name }}
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Node.js
@@ -37,8 +37,7 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Bump package.json version
-        working-directory: vue-test
+      - name: Bump package.json version to ${{ inputs.tag }}
         run: |
           VERSION="${{ inputs.tag }}"
           VERSION="${VERSION#v}"  # Remove leading 'v' if present
@@ -51,4 +50,4 @@ jobs:
       - name: Push changes
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: git push origin dev
+        run: git push origin HEAD
