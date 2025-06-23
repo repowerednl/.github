@@ -73,7 +73,7 @@ jobs:
       # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag
         id: github-tag
-        uses: anothrNick/github-tag-action@1
+        uses: anothrNick/github-tag-action@1.71.0 # (7/5/25) Pinned version needed: https://github.com/anothrNick/github-tag-action/issues/341
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
