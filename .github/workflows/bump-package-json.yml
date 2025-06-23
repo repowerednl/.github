@@ -7,9 +7,15 @@ on:
         required: true
         type: string
         description: "The Semantic Versioning GitHub tag used for version control"
+      # Optional
+      node_version:
+        required: false
+        type: string
+        default: "20"
 
 jobs:
   update-package-json:
+    if: ${{ github.ref == 'refs/heads/main' }}
     continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
@@ -21,30 +27,28 @@ jobs:
           fetch-depth: '0'
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Automated Version Bump
-        uses: phips28/gh-action-bump-version@v11.0.7
-        id: version-bump
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          major-wording: "#major"
-          minor-wording: "#minor"
-          patch-wording: "#patch"
-          skip-tag:  "true" # Already done in another (reusable) workflow
-          target-branch: 'dev'
-          commit-message: "Auto bump version of package.json to {{version}} [skip ci]"
+          node-version: ${{ inputs.node_version }}
 
-      - name: Equality of Version Bump and Git Tag
+      - name: Bump Version
         run: |
-          # Strip leading 'v' and pre-release info (if any)
-          TAG="${{ inputs.tag }}"
-          TAG="${TAG#v}"; TAG="${TAG%%-*}"
-          if [ "${{ steps.version-bump.outputs.newTag }}" != "$TAG" ]; then
-            echo ":x: Version bump tag and whole GitHub tag do not match!" >> $GITHUB_STEP_SUMMARY
-            echo "Version bump tag: ${{ steps.version-bump.outputs.newTag }}" >> $GITHUB_STEP_SUMMARY
-            echo "GitHub pushed tag: ${{ inputs.tag }} so whole version: $TAG" >> $GITHUB_STEP_SUMMARY
-            echo "Please contact DevOps for this error " >> $GITHUB_STEP_SUMMARY
-          else
-            echo ":white_check_mark: Version bump tag and whole GitHub tag match: ${{ inputs.tag }}." >> $GITHUB_STEP_SUMMARY
-          fi
+          VERSION="${{ inputs.tag }}"
+          VERSION="${VERSION#v}"  # Remove leading 'v' if present
+          npm version "$VERSION" --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="bump-version-$VERSION-$(date +%s)"
+          git checkout -b "$BRANCH"
+          git add package.json
+          git commit -m "Automated version bump to $VERSION [skip-ci]"
+          git push origin HEAD
 
+      - name: Create PR for version bump
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Release version bump: ${{ inputs.tag }}"
+          body: "Automated version bump [skip-ci]"
+          base: main
