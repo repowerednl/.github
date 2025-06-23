@@ -77,7 +77,7 @@ jobs:
           echo "values_updated=$VALUES_UPDATED" >> $GITHUB_OUTPUT
 
           # Check if current Helm version matches the target version
-          if [[ "$HELM_VERSION" = "$VERSION" && "$VALUES_UPDATED" = "false" ]]; then
+          if [[ "$HELM_VERSION" == "$VERSION" && "$VALUES_UPDATED" == "false" ]]; then
             echo "Setting the new image: ${{ inputs.docker_image_tag }}"
             helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace ${{ env.ns }} --reuse-values --set image=${{ inputs.docker_image_tag }}
