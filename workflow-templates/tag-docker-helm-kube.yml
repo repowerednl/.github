@@ -88,10 +88,11 @@ jobs:
       environment: ${{ needs.docker.outputs.environment }}
       helm_deployment_version: ${{ vars.HELM_DEPLOYMENT_VERSION }} # i.e. the chart's version that should be used. See https://github.com/repowerednl/repower-infra/pkgs/container/helm-charts%2Fdeployment
       # namespace: # Optional; defaults to the repository name if not set
-      #  If there are multiple deployments for a single docker image, the deployment names and values files can be specified here
-      #  Example:
+      #  If there are multiple deployments for a single docker image and/or there are different values per environment,
+      #   the deployment names and values files can be specified here
+      #  Example 1: multiple deployments and multiple environments
       #  Dockerfile 'hello-world' is responsible for the following deployments: foo, bar
-      #  the corresponding deployment_name-values_file object is: "[{"name": "foo", "file": "foo_values.yml"}, {"name": "bar", "file": "bar_values.yml"}]"
-      # deployment_name-values_file: # A JSON list objects string; defaults to "[{"name": "", "file": "values.yml"}]" where name results in the repo name
+      #  the corresponding deployment_name-values_file object is: '[{"name": "foo", "file": "${{ vars.FOO_VALUES_PATH }}"}, {"name": "bar", "file": "vars.BAR_VALUES_PATH"}]'
+      # deployment_name-values_file: # A JSON list objects string; defaults to '[{"name": "", "file": "values.yml"}]' where name results in the repo name
     secrets:
       digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
