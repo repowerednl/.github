@@ -68,12 +68,15 @@ jobs:
           ns: ${{ inputs.namespace || github.event.repository.name }}
         run: |
           # Get the current deployed Helm version
-          HELM_VERSION=$(helm list -n ${{ env.name }} -o json | jq -r '.[0].app_version')
+          HELM_VERSION=$(helm list -n "${{ env.name }}" -o json | jq -r '.[0].chart' | rev | cut -d'-' -f1 | rev)
           echo "helm_version=$HELM_VERSION" >> $GITHUB_OUTPUT
 
-          # Check if the deployment values have changed
-          VALUES_UPDATED=false
-          git diff --name-only HEAD~1 | grep -q ${{ steps.set-values.outputs.VALUES_FILEPATH }} && VALUES_UPDATED=true
+          # Check if values file changed
+          if git diff --name-only HEAD~1 | grep -q "${{ steps.set-values.outputs.VALUES_FILEPATH }}"; then
+            VALUES_UPDATED=true
+          else
+            VALUES_UPDATED=false
+          fi
           echo "values_updated=$VALUES_UPDATED" >> $GITHUB_OUTPUT
 
           # Check if current Helm version matches the target version
