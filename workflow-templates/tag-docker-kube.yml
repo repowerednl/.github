@@ -37,6 +37,9 @@ jobs:
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
