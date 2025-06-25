@@ -15,40 +15,39 @@ on:
 
 jobs:
   update-package-json:
-    if: ${{ github.ref == 'refs/heads/main' }}
-    continue-on-error: true
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout ${{ github.repository }}
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout code on dev
         uses: actions/checkout@v4
         with:
-          fetch-depth: '0'
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.ref_name }}
+          token: ${{ steps.app-token.outputs.token }}
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Bump Version
+      - name: Bump package.json version to ${{ inputs.tag }}
         run: |
           VERSION="${{ inputs.tag }}"
           VERSION="${VERSION#v}"  # Remove leading 'v' if present
           npm version "$VERSION" --no-git-tag-version
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          BRANCH="bump-version-$VERSION-$(date +%s)"
-          git checkout -b "$BRANCH"
-          git add package.json
-          git commit -m "Automated version bump to $VERSION [skip-ci]"
-          git push origin HEAD
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git add package.json || true
+          git commit -m "Automated version bump to $VERSION [skip ci]" || echo "No changes to commit"
 
-      - name: Create PR for version bump
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Release version bump: ${{ inputs.tag }}"
-          body: "Automated version bump [skip-ci]"
-          base: main
+      - name: Push changes
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: git push origin HEAD
