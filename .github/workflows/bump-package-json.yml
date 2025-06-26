@@ -16,7 +16,8 @@ on:
         required: true
         type: string
     secrets:
-      private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      private-key:
+        required: true
 
 jobs:
   update-package-json:
