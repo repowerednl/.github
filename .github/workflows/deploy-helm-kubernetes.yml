@@ -78,12 +78,20 @@ jobs:
             VALUES_UPDATED=false
           fi
           echo "values_updated=$VALUES_UPDATED" >> $GITHUB_OUTPUT
+          
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+              DEPLOYMENT_INFO=$(echo "Production deployment. Release image tags are: ${{ inputs.docker_image_tag }}.")
+          else
+              DEPLOYMENT_INFO=$(echo "Non-production deployment. Image tag is: ${{ inputs.docker_image_tag }}")
+          fi
 
           # Check if current Helm version matches the target version
           if [[ "$HELM_VERSION" == "$VERSION" && "$VALUES_UPDATED" == "false" ]]; then
-            echo "Setting the new image: ${{ inputs.docker_image_tag }}"
+            echo $DEPLOYMENT_INFO
+            VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
+            echo "Setting the new image: $VERSIONED_TAG"
             helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --namespace ${{ env.ns }} --reuse-values --set image=${{ inputs.docker_image_tag }}
+              --namespace ${{ env.ns }} --reuse-values --set image=$VERSIONED_TAG
           else
             # Set the namespace creation flag if it's an initial deployment
             if [[ "$HELM_VERSION" = "null" ]]; then
@@ -94,7 +102,8 @@ jobs:
 
             # Login to repowered container registry
             echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
-            echo "Upgrading or installing the deployment"
+            echo $DEPLOYMENT_INFO
+            echo "Upgrading or installing the deployment with the repo's helm values file (i.e. 'latest' image)"
             helm upgrade --install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version ${{ env.version }} --namespace ${{ env.ns }} $CREATE_NAMESPACE_COMMAND \
               --values ${{ steps.set-values.outputs.VALUES_FILEPATH }}
