@@ -62,12 +62,11 @@ jobs:
 
       - name: Helm Deployment to Kubernetes
         id: helm-deployment
-        env:
-          name: ${{ matrix.name || github.event.repository.name }}
-          ns: ${{ inputs.namespace || github.event.repository.name }}
         run: |
+          DEPLOYMENT_NAME="${{ matrix.name || github.event.repository.name }}"
+          NAMESPACE="${{ inputs.namespace || github.event.repository.name }}"
           # Get the current deployed Helm version
-          CURRENT_HELM_VERSION=$(helm list -n "${{ env.name }}" -o json | jq -r '.[0].chart' | rev | cut -d'-' -f1 | rev)
+          CURRENT_HELM_VERSION=$(helm list -n "$DEPLOYMENT_NAME" -o json | jq -r '.[0].chart' | rev | cut -d'-' -f1 | rev)
           CONFIGURED_HELM_VERSION="${{ inputs.helm_deployment_version }}"
           echo "helm_version=$CURRENT_HELM_VERSION" >> $GITHUB_OUTPUT
 
@@ -90,8 +89,8 @@ jobs:
           if [[ "$CURRENT_HELM_VERSION" == "$CONFIGURED_HELM_VERSION" && "$VALUES_UPDATED" == "false" ]]; then
             echo $DEPLOYMENT_INFO
             echo "Setting the new image: $VERSIONED_TAG"
-            helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --namespace ${{ env.ns }} --reuse-values --set image=$VERSIONED_TAG
+            helm upgrade $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG
           else
             # Set the namespace creation flag if it's an initial deployment
             if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
@@ -104,19 +103,16 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
             echo $DEPLOYMENT_INFO
             echo "Upgrading or installing the deployment with the repo's helm values file and image tag: $VERSIONED_TAG"
-            helm upgrade --install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --version $VERSION --namespace ${{ env.ns }} $CREATE_NAMESPACE_COMMAND \
+            helm upgrade --install $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --version $VERSION --namespace $NAMESPACE $CREATE_NAMESPACE_COMMAND \
               --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG
           fi
 
       - name: Helm deployment status as summary
-        env:
-          name: ${{ matrix.name || github.event.repository.name }}
-          ns: ${{ inputs.namespace || github.event.repository.name }}
         run: |         
           echo "<h2> :chart: Helm Status Output </h2>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          helm status ${{ env.name }} -n ${{ env.ns }} >> $GITHUB_STEP_SUMMARY
+          helm status $DEPLOYMENT_NAME -n $NAMESPACE >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Image used: ${{ inputs.docker_image_tag }} " >> $GITHUB_STEP_SUMMARY
           if [ ${{ steps.helm-deployment.outputs.helm_version }} == "null"]; then
