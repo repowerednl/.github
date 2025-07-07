@@ -64,12 +64,12 @@ jobs:
         id: helm-deployment
         env:
           name: ${{ matrix.name || github.event.repository.name }}
-          version: ${{ inputs.helm_deployment_version }}
           ns: ${{ inputs.namespace || github.event.repository.name }}
         run: |
           # Get the current deployed Helm version
-          HELM_VERSION=$(helm list -n "${{ env.name }}" -o json | jq -r '.[0].chart' | rev | cut -d'-' -f1 | rev)
-          echo "helm_version=$HELM_VERSION" >> $GITHUB_OUTPUT
+          CURRENT_HELM_VERSION=$(helm list -n "${{ env.name }}" -o json | jq -r '.[0].chart' | rev | cut -d'-' -f1 | rev)
+          CONFIGURED_HELM_VERSION="${{ inputs.helm_deployment_version }}"
+          echo "helm_version=$CURRENT_HELM_VERSION" >> $GITHUB_OUTPUT
 
           # Check if values file changed
           if git diff --name-only HEAD~1 | grep -q "${{ steps.set-values.outputs.VALUES_FILEPATH }}"; then
@@ -85,16 +85,16 @@ jobs:
               DEPLOYMENT_INFO=$(echo "Non-production deployment. Image tag is: ${{ inputs.docker_image_tag }}")
           fi
 
+          VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
           # Check if current Helm version matches the target version
-          if [[ "$HELM_VERSION" == "$VERSION" && "$VALUES_UPDATED" == "false" ]]; then
+          if [[ "$CURRENT_HELM_VERSION" == "$CONFIGURED_HELM_VERSION" && "$VALUES_UPDATED" == "false" ]]; then
             echo $DEPLOYMENT_INFO
-            VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
             echo "Setting the new image: $VERSIONED_TAG"
             helm upgrade ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace ${{ env.ns }} --reuse-values --set image=$VERSIONED_TAG
           else
             # Set the namespace creation flag if it's an initial deployment
-            if [[ "$HELM_VERSION" = "null" ]]; then
+            if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
               CREATE_NAMESPACE_COMMAND="--create-namespace"
             else
               CREATE_NAMESPACE_COMMAND=""
@@ -103,16 +103,15 @@ jobs:
             # Login to repowered container registry
             echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
             echo $DEPLOYMENT_INFO
-            echo "Upgrading or installing the deployment with the repo's helm values file (i.e. 'latest' image)"
+            echo "Upgrading or installing the deployment with the repo's helm values file and image tag: $VERSIONED_TAG"
             helm upgrade --install ${{ env.name }} oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --version ${{ env.version }} --namespace ${{ env.ns }} $CREATE_NAMESPACE_COMMAND \
-              --values ${{ steps.set-values.outputs.VALUES_FILEPATH }}
+              --version $VERSION --namespace ${{ env.ns }} $CREATE_NAMESPACE_COMMAND \
+              --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG
           fi
 
       - name: Helm deployment status as summary
         env:
           name: ${{ matrix.name || github.event.repository.name }}
-          version: ${{ inputs.helm_deployment_version }}
           ns: ${{ inputs.namespace || github.event.repository.name }}
         run: |         
           echo "<h2> :chart: Helm Status Output </h2>" >> $GITHUB_STEP_SUMMARY
@@ -124,6 +123,7 @@ jobs:
             echo ":new: This was an initial deployment" >> $GITHUB_STEP_SUMMARY
           fi
           echo "Updated values? ${{ steps.helm-deployment.outputs.values_updated }} " >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.helm-deployment.outputs.helm_version }} != "${{ env.version }}" ]; then
-            echo "Helm version used: ${{ env.version }}" >> $GITHUB_STEP_SUMMARY
+          CONFIGURED_HELM_VERSION="${{ inputs.helm_deployment_version }}"
+          if [ ${{ steps.helm-deployment.outputs.helm_version }} != "$CONFIGURED_HELM_VERSION" ]; then
+            echo "Helm version used: $CONFIGURED_HELM_VERSION" >> $GITHUB_STEP_SUMMARY
           fi
