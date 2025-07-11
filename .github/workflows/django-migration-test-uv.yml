@@ -1,0 +1,99 @@
+name: Django Migration Check
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      postgres_db:
+        type: string
+        required: true
+      postgres_user:
+        type: string
+        required: true
+      postgres_host:
+        type: string
+        required: true
+      # Provided by caller workflow
+      uv_version:
+        type: string
+        required: true
+      # Optional
+      working_directory:
+        type: string
+        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here.
+        default: .
+      django_settings_environment:
+        type: string
+        description: Retrieval of settings can be done based on an environment identifier
+        default: TEST
+    secrets:
+      postgres_password:
+        required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+
+jobs:
+  test-migrations:
+    name: Django Migration Check
+    runs-on: ubuntu-latest
+
+    services:
+      # This service requires that variables and secrets are defined on GitHub (see README)
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Python, Cache and UV
+        uses: repowerednl/.github/.github/composite-actions/python-uv-cache@main
+        with:
+          uv_version: ${{ inputs.uv_version }}
+          working_directory: ${{ inputs.working_directory }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Check Django Migrations
+        id: migration-check
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          MIGRATION_MSG=$(uv run python manage.py makemigrations --dry-run)
+          echo 'migration_msg<<EOF' >> $GITHUB_OUTPUT
+          echo "$MIGRATION_MSG" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+          if ! echo "$MIGRATION_MSG" | grep -q "No changes detected"; then
+            exit 1
+          fi
+        env:
+          CI: true
+          ENV: ${{ inputs.django_settings_environment }}
+          SQL_DATABASE: ${{ inputs.postgres_db }}
+          SQL_USER: ${{ inputs.postgres_user }}
+          SQL_HOST: ${{ inputs.postgres_host }}
+          SQL_PASSWORD: ${{ secrets.postgres_password }}
+          SQL_PORT: 5432
+
+      - name: Output Migration Failures
+        if:  failure()
+        run: |
+          if [ ${{ contains(steps.migration-check.outputs.migration_msg, 'No changes detected') }} == false ]; then
+            echo "<h2>:no_entry_sign: Migration check failed.</h2>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.migration-check.outputs.migration_msg }}" >> $GITHUB_STEP_SUMMARY
+          fi
