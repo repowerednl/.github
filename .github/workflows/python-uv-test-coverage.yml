@@ -37,8 +37,6 @@ on:
     secrets:
       postgres_password:
         required: true
-      private_pypi_url:
-        required: true
       private_pypi_user:
         required: true
       private_pypi_password:
