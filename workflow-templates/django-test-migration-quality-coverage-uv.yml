@@ -37,7 +37,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   django-migration-test:
-    uses: repowerednl/.github/.github/workflows/django-migration-test-uv.yml@main
+    uses: repowerednl/.github/.github/workflows/django-migration-test-uv.yml@add-uv-workflows
     strategy:
       matrix:
         # Make sure that the configured python versions are available here.
