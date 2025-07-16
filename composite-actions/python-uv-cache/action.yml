@@ -13,13 +13,19 @@ inputs:
     required: true
   private_pypi_password:
     required: true
+  enable_cache:
+    required: false
+    description: Whether to enable the cache for uv
+    default: true
 
 runs:
   using: "composite"
   steps:
     - name: Install uv
       uses: astral-sh/setup-uv@v6
-
+      with:
+        version: ${{ inputs.uv_version }}
+        enable-cache: ${{ inputs.enable_cache }}
     - name: "Set up Python"
       uses: actions/setup-python@v6
       with:
