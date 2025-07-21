@@ -1,0 +1,148 @@
+name: Pytest with Coverage, Report and Job summary
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      postgres_db:
+        type: string
+        required: true
+      postgres_user:
+        type: string
+        required: true
+      postgres_host:
+        type: string
+        required: true
+      # Provided by caller workflow
+      uv_version:
+        type: string
+        required: true
+      # Optional
+      working_directory:
+        type: string
+        description: Whenever the app (i.e. manage.py) is not in the root, the location can be specified here
+        default: .
+      test_groups:
+        type: string
+        description: The list input (as a string since arrays are not allowed) with the group names of the test processes
+        default: "[1, 2, 3, 4, 5, 6, 7, 8]"
+        required: false
+      enable_cache:
+        type: boolean
+        description: Whether to enable the cache for uv
+        default: true
+    secrets:
+      postgres_password:
+        required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+
+jobs:
+  pytest-with-coverage:
+    name: Pytest With Postgres and Coverage
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        group: ${{ fromJson(inputs.test_groups) }}
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: UV and Python Setup
+        id: cache
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+        with:
+          uv_version: ${{ inputs.uv_version }}
+          working_directory: ${{ inputs.working_directory }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+          enable_cache: ${{ inputs.enable_cache }}
+
+      - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }}
+        env:
+          pytest_github_report: true
+          pytest_use_blanks: true
+          CI: true
+          POSTGRES_DB: ${{ inputs.postgres_db }}
+          POSTGRES_USER: ${{ inputs.postgres_user }}
+          POSTGRES_HOST: ${{ inputs.postgres_host }}
+          POSTGRES_PASSWORD: ${{ secrets.postgres_password }}
+          POSTGRES_PORT: 5432
+
+      - name: Upload partial coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: group${{ matrix.group }}
+          path: |
+            ${{ inputs.working_directory }}/.coverage
+          if-no-files-found: 'error'
+          include-hidden-files: true
+          overwrite: true
+
+  combine-and-report:
+    needs: pytest-with-coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: UV and Python Setup
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+        with:
+          uv_version: ${{ inputs.uv_version }}
+          working_directory: ${{ inputs.working_directory }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Download all group artifacts from branch
+        # Download coverage1, coverage2, etc. of the current branch
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ inputs.working_directory }}
+          pattern: group*
+
+      - name: Combine coverage and create report
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          uv run coverage combine group*/.coverage
+          uv run coverage report
+          uv run coverage xml
+
+      - name: Coverage comment
+        id: coverage-comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_PATH: ${{ inputs.working_directory }}
+          MINIMUM_ORANGE: 80
+
+      - name: Upload 'coverage.xml' report
+        uses: actions/upload-artifact@v4
+        with:
+          path: coverage.xml
+          name: coverage.xml
+          if-no-files-found: 'error'

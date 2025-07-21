@@ -1,0 +1,39 @@
+name: uv Setup including Cache with configurable files
+description: This composite action loads the cache that can be configured for multiple files, installs uv with configurations and it's packages if not found on the cache.
+
+inputs:
+  uv_version:
+    required: false
+    default: 0.7.20
+  working_directory:
+    required: false
+    description: Whenever the django app (i.e. manage.py) is not in the root; the location can be specified here.
+    default: .
+  private_pypi_user:
+    required: true
+  private_pypi_password:
+    required: true
+  enable_cache:
+    required: false
+    description: Whether to enable the cache for uv
+    default: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Set up Python"
+      uses: actions/setup-python@v4
+      with:
+        python-version-file: "pyproject.toml"
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: ${{ inputs.uv_version }}
+        enable-cache: ${{ inputs.enable_cache }}
+    - name: Install the project
+      working-directory: ${{ inputs.working_directory }}
+      shell: bash
+      run: |
+        export UV_INDEX_REPOWERED_USERNAME=${{ inputs.private_pypi_user }}
+        export UV_INDEX_REPOWERED_PASSWORD=${{ inputs.private_pypi_password }}
+        uv sync --locked --all-extras --dev

@@ -11,10 +11,7 @@ on:
 
 jobs:
   pytest-with-coverage:
-    # For uv, use
     uses: repowerednl/.github/.github/workflows/python-test-coverage-uv.yml@main
-    # For poetry, use:
-    # uses: repowerednl/.github/.github/workflows/python-test-coverage.yml@main
     permissions:
       pull-requests: write
       contents: write
@@ -24,68 +21,38 @@ jobs:
         # Make sure that the configured python versions are available here.
         # These versions are cached on the runner; otherwise setting up python is too slow for the CI
         # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
-        python_version: [ "3.11.2" ]
-        # For uv, use:
         uv_version: [ "1.8.4" ]
-        # For poetry, use:
-        # poetry_version: [ "1.8.4" ]
     with:
       postgres_db: ${{ vars.POSTGRES_DB }}
       postgres_user: ${{ vars.POSTGRES_USER }}
       postgres_host: ${{ vars.POSTGRES_HOST }}
-      python_version: ${{ matrix.python_version }}
-      # For uv, use:
       uv_version: ${{ matrix.uv_version }}
-      # For poetry, use:
-      # poetry_version: ${{ matrix.poetry_version }}
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       # test_groups: "[1, 2]" #Optional, defaults to "[1,2,3,4,5,6,7,8]"
-      file_paths_to_cache: |
-        .venv
-        /home/runner/.local/
       # working_directory: # Optional, defaults to '.'
     secrets:
       postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
-      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   django-migration-test:
-    # For uv, use
     uses: repowerednl/.github/.github/workflows/django-migration-test-uv.yml@main
-    # For poetry, use:
-    # uses: repowerednl/.github/.github/workflows/django-migration-test.yml@main
     strategy:
       matrix:
         # Make sure that the configured python versions are available here.
         # These versions are cached on the runner; otherwise setting up python is too slow for the CI
         # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
-        python_version: [ "3.11.2" ]
-        # For uv, use:
         uv_version: [ "1.8.4" ]
-        # For poetry, use:
-        # poetry_version: [ "1.8.4" ]
-
     with:
       postgres_db: ${{ vars.POSTGRES_DB }}
       postgres_user: ${{ vars.POSTGRES_USER }}
       postgres_host: ${{ vars.POSTGRES_HOST }}
-      python_version: ${{ matrix.python_version }}
-      # For uv, use:
       uv_version: ${{ matrix.uv_version }}
-      # For poetry, use:
-      # poetry_version: ${{ matrix.poetry_version }}
-      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
-      # when configuring a working directory, make sure the cached paths are also up-to-date
-      file_paths_to_cache: |
-        .venv
-        /home/runner/.local/
       # working_directory: # Optional, defaults to '.'
       # django_settings_environment: # Optional, defaults to TEST
     secrets:
       postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
-      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
