@@ -12,7 +12,7 @@ on:
 jobs:
   pytest-with-coverage:
     # For uv, use
-    uses: repowerednl/.github/.github/workflows/python-test-coverage-uv.yml@add-uv-workflows
+    uses: repowerednl/.github/.github/workflows/python-test-coverage-uv.yml@main
     # For poetry, use:
     # uses: repowerednl/.github/.github/workflows/python-test-coverage.yml@main
     permissions:
@@ -25,15 +25,19 @@ jobs:
         # These versions are cached on the runner; otherwise setting up python is too slow for the CI
         # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
         python_version: [ "3.11.2" ]
-        poetry_version: [ "1.8.4" ]
+        # For uv, use:
         uv_version: [ "1.8.4" ]
+        # For poetry, use:
+        # poetry_version: [ "1.8.4" ]
     with:
       postgres_db: ${{ vars.POSTGRES_DB }}
       postgres_user: ${{ vars.POSTGRES_USER }}
       postgres_host: ${{ vars.POSTGRES_HOST }}
       python_version: ${{ matrix.python_version }}
-      poetry_version: ${{ matrix.poetry_version }}
+      # For uv, use:
       uv_version: ${{ matrix.uv_version }}
+      # For poetry, use:
+      # poetry_version: ${{ matrix.poetry_version }}
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       # test_groups: "[1, 2]" #Optional, defaults to "[1,2,3,4,5,6,7,8]"
@@ -49,7 +53,7 @@ jobs:
 
   django-migration-test:
     # For uv, use
-    uses: repowerednl/.github/.github/workflows/django-migration-test-uv.yml@add-uv-workflows
+    uses: repowerednl/.github/.github/workflows/django-migration-test-uv.yml@main
     # For poetry, use:
     # uses: repowerednl/.github/.github/workflows/django-migration-test.yml@main
     strategy:
@@ -58,15 +62,20 @@ jobs:
         # These versions are cached on the runner; otherwise setting up python is too slow for the CI
         # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
         python_version: [ "3.11.2" ]
-        poetry_version: [ "1.8.4" ]
+        # For uv, use:
         uv_version: [ "1.8.4" ]
+        # For poetry, use:
+        # poetry_version: [ "1.8.4" ]
+
     with:
       postgres_db: ${{ vars.POSTGRES_DB }}
       postgres_user: ${{ vars.POSTGRES_USER }}
       postgres_host: ${{ vars.POSTGRES_HOST }}
       python_version: ${{ matrix.python_version }}
-      poetry_version: ${{ matrix.poetry_version }}
+      # For uv, use:
       uv_version: ${{ matrix.uv_version }}
+      # For poetry, use:
+      # poetry_version: ${{ matrix.poetry_version }}
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       file_paths_to_cache: |
