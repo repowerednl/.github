@@ -24,5 +24,8 @@ jobs:
           tag: ${{ inputs.tag }}
           name: ${{ github.event.repository.name }} ${{ inputs.tag }}
           config-name: release-drafter.yml
+          publish: true                                        # publish instead of draft
+          commitish: ${{ github.sha }}                         # ensure tag points to the deployed commit
+          latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
