@@ -1,0 +1,85 @@
+name: Prepull repower-django image (Daemonset)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "GitHub Environment (to pick cluster vars)"
+      namespace:
+        required: true
+        type: string
+        description: "Kubernetes namespace that already has the docker-hub secret"
+      image:
+        required: true
+        type: string
+        description: "Canonical image (docker.io/repowered/repower-django:<tag|tag@digest>)"
+      secrets:
+        digital_ocean_access_token:
+          required: true
+
+jobs:
+  prepull:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 15
+    permissions: { contents: read }
+    
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.digital_ocean_access_token }}
+
+      - name: Get DigitalOcean's kubeconfig with short-lived credentials
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+
+      - name: Install Helm
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.digital_ocean_access_token }}
+
+      - name: Checkout helm-chart
+        uses: actions/checkout@v2
+        with:
+          repository: repowerednl/helm-charts
+          path: repowerednl/helm-charts
+          ref: 'main'
+          fetch-depth: 1
+
+      - name: Helm upgrade --install prepull
+        run: |
+          helm upgrade --install "${{ inputs.helm_release }}" ./helm-charts/prepull \
+            --namespace "${{ inputs.namespace }}" \
+            --set image.repository="${{ inputs.image_repository }}" \
+            --set image.tag="${{ inputs.image_tag }}" \
+            --wait --timeout 10m
+
+      - name: Wait for DaemonSet ready on all nodes
+        run: |
+          DS="${{ inputs.helm_release }}"
+          # Strong readiness check: all desired scheduled are ready
+          kubectl get ds "$DS" -o json \
+            | jq -r '.status.desiredNumberScheduled, .status.numberReady' \
+            | paste -sd ":" - \
+            | awk -F: '{ if ($1 != $2) { print "Not ready: desired="$1 " ready="$2; exit 1 } }'
+          echo "DaemonSet $DS ready on all nodes."
+
+      - name: Verify unique imageID pulled by prepull pods
+        run: |
+          DS="${{ inputs.helm_release }}"
+          kubectl get pods -l app.kubernetes.io/name="${DS}" -o json \
+            | jq -r '.items[].status.initContainerStatuses[].imageID' \
+            | sort | uniq -c
+          # Fail if more than 1 unique imageID (should be exactly one canonical)
+          COUNT=$(kubectl get pods -l app.kubernetes.io/name="${DS}" -o json \
+            | jq -r '.items[].status.initContainerStatuses[].imageID' | sort | uniq | wc -l)
+          test "$COUNT" -eq 1
+
+      - name: Cleanup (Uninstall after using)
+        if: always()
+        run: |
+          helm uninstall "${{ inputs.helm_release }}" || true
