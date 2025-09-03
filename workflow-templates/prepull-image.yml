@@ -15,6 +15,10 @@ on:
         required: true
         type: string
         description: "Canonical image (docker.io/repowered/repower-django:<tag|tag@digest>)"
+      helm_release: # TODO Anyway to get this implicitly?
+        required: false
+        type: string
+        default: repower-django-prepull
       secrets:
         digital_ocean_access_token:
           required: true
