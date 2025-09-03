@@ -54,6 +54,23 @@ jobs:
           ref: 'main'
           fetch-depth: 1
 
+      - name: Parse image into repository and tag
+        id: parse
+        shell: bash
+        run: |
+          IMAGE="${{ inputs.image }}"
+          # Split on the LAST ":" (safe for docker.io without ports). Tag may include @sha256:...
+          REPO="${IMAGE%:*}"
+          TAG="${IMAGE##*:}"
+          if [[ "$REPO" == "$IMAGE" ]]; then
+            echo "Image must include a tag (e.g., repo:tag) — got: $IMAGE" >&2
+            exit 1
+          fi
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using repository=$REPO"
+          echo "Using tag=$TAG"
+
       - name: Helm upgrade --install prepull
         run: |
           helm upgrade --install "${{ inputs.helm_release }}" ./helm-charts/prepull \
