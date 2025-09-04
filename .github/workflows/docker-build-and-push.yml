@@ -68,7 +68,7 @@ jobs:
       - name: Set docker image tag for '${{ inputs.dockerfile_name }}'
         id: docker-image-tag-env
         env:
-          hub_repo: ${{ inputs.docker_hub_username }}/${{ github.event.repository.name }}
+          hub_repo: docker.io/${{ inputs.docker_hub_username }}/${{ github.event.repository.name }}
         run: |
           DOCKERFILE=${{ inputs.dockerfile_name }}
           DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
