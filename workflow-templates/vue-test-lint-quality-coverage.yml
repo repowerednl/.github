@@ -22,7 +22,7 @@ jobs:
       # node_version: # Optional, defaults to "20"
       # working_directory: # Optional, defaults to '.'
     secrets:
-      npm_auth_token: ${{ secrets.NPM_AUTH_TOKEN }}
+      packages_auth_token: ${{ secrets.GITHUB_TOKEN }}
 
 
   sonar-cloud:
