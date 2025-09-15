@@ -13,6 +13,7 @@ jobs:
   yarn-check-lint-prettier-test-publish:
     permissions:
       contents: write
+      packages: read
     uses: repowerednl/.github/.github/workflows/yarn-check-lint-prettier-test-publish.yml@main
     with:
       should_publish: false # Replace with ${{ endsWith( GITHUB.REF, 'main') }} to enable publishing
