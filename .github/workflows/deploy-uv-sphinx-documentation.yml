@@ -49,8 +49,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -59,7 +59,6 @@ jobs:
         uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
-          working_directory: .
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: true
@@ -74,7 +73,7 @@ jobs:
           uv run make html
 
       - name: Deploy documentation
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ inputs.docs_host }}
           port: ${{ inputs.docs_port }}
