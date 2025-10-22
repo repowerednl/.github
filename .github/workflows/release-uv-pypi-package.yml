@@ -1,0 +1,57 @@
+name: Release PyPi package (uv)
+
+on:
+  workflow_call:
+    inputs:
+      file_paths_to_cache:
+        type: string
+        required: true
+      # Provided by caller workflow
+      tag:
+        type: string
+        required: true
+      uv_version:
+        type: string
+        required: true
+    secrets:
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+      publish_pypi_url:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: UV and Python Setup
+      id: cache
+      uses: repowerednl/.github/composite-actions/python-uv-cache@main
+      with:
+        uv_version: ${{ inputs.uv_version }}
+        working_directory: .
+        private_pypi_user: ${{ secrets.private_pypi_user }}
+        private_pypi_password: ${{ secrets.private_pypi_password }}
+        enable_cache: true
+
+    - name: Install build dependencies
+      run: |
+        uv sync --all-extras
+
+    - name: Update version to ${{ inputs.tag }}
+      run: |
+        uv version ${{ inputs.tag }}
+
+    - name: Build sdist and wheel
+      run: |
+        uv build
+
+    - name: Publish to PyPI
+      env:
+        UV_PYPI_TOKEN: ${{ secrets.private_pypi_password }}
+      run: |
+        uv publish --repository-url ${{ secrets.publish_pypi_url }} --username ${{ secrets.private_pypi_user }} --password ${{ secrets.private_pypi_password }}
