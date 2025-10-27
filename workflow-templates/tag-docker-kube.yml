@@ -24,6 +24,9 @@ jobs:
   # This job will only run if ran from the main branch
   create-release:
     needs: tag
+    permissions:
+      contents: write
+      pull-requests: read
     uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
     with:
       tag: ${{ needs.tag.outputs.tag }}
