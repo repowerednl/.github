@@ -1,0 +1,84 @@
+name: Pytest, Sphinx Docs and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest-simple-with-coverage:
+    uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
+    permissions:
+      pull-requests: write
+      contents: write
+      actions: read
+    strategy:
+      matrix:
+        # Make sure that the configured python versions are available here.
+        # These versions are cached on the runner; otherwise setting up python is too slow for the CI
+        # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
+        python_version: [ "3.11.2" ]
+        uv_version: [ "0.9.4" ]
+    with:
+      python_version: ${{ matrix.python_version }}
+      uv_version: ${{ matrix.uv_version }}
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        .venv
+        /home/runner/.local/
+      # working_directory: # Optional, defaults to '.'
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  tag:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
+
+  # This job will only run if ran from the main branch
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
+  deploy-sphinx-documentation:
+    needs: create-release
+    uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@main
+    with:
+      python_version: "3.11.2"
+      uv_version: "0.9.4"
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        .venv
+        /home/runner/.local/
+      docs_target: /home/repowered/docs/<package-name> # ------------- This needs to be manually configured! -----------------------
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+      docs_ssh_private_key: ${{ secrets.DOCS_SSH_PRIVATE_KEY }}
+
+  release:
+    needs: [tag, create-release]
+    uses: repowerednl/.github/.github/workflows/release-uv-pypi-package.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      python_version: "3.11.2"
+      uv_version: "0.9.4"
+      # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
+      # when configuring a working directory, make sure the cached paths are also up-to-date
+      file_paths_to_cache: |
+        .venv
+        /home/runner/.local/
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+      publish_pypi_url: ${{ secrets.PRIVATE_PYPI_PUBLISH_URL}}
