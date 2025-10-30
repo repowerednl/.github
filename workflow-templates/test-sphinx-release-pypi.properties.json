@@ -1,5 +1,5 @@
 {
-    "name": "Pytest, sphinx docs and release PyPi package",
+    "name": "Pytest, sphinx docs and release PyPi package - Poetry",
     "description": "Run pytest with coverage (without parallelization and postgres services), deploy Sphinx documentation and release the code as a private PyPi package",
     "iconName": "octicon package-dependents",
     "categories": ["Repowered"],
