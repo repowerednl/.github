@@ -53,7 +53,7 @@ jobs:
         env:
           pytest_github_report: true
           pytest_use_blanks: true
-          CI: trues
+          CI: true
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
