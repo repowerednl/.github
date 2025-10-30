@@ -55,6 +55,7 @@ jobs:
 
     - name: Publish to PyPI
       env:
+        UV_NO_TRUSTED_PUBLISHING: 1 
         UV_PYPI_USERNAME: ${{ secrets.private_pypi_user }}
         UV_PYPI_PASSWORD: ${{ secrets.private_pypi_password }}
         UV_PYPI_REPOSITORY_URL: ${{ secrets.publish_pypi_url }}
