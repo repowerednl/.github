@@ -24,6 +24,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      UV_INDEX_REPOWERED_USERNAME: ${{ secrets.private_pypi_user }}
+      UV_INDEX_REPOWERED_PASSWORD: ${{ secrets.private_pypi_password }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
