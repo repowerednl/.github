@@ -34,6 +34,6 @@ runs:
       working-directory: ${{ inputs.working_directory }}
       shell: bash
       run: |
-        echo "UV_INDEX_REPOWERED_USERNAME=${{ inputs.private_pypi_user }}" >> "$GITHUB_ENV"
-        echo "UV_INDEX_REPOWERED_PASSWORD=${{ inputs.private_pypi_password }}" >> "$GITHUB_ENV"
+        export UV_INDEX_REPOWERED_USERNAME=${{ inputs.private_pypi_user }}
+        export UV_INDEX_REPOWERED_PASSWORD=${{ inputs.private_pypi_password }}
         uv sync --locked --all-extras --dev
