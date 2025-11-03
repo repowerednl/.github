@@ -1,11 +1,12 @@
 {
-    "name": "Pytest, sphinx docs and release PyPi package - Poetry",
+    "name": "Pytest, sphinx docs and release PyPi package",
     "description": "Run pytest with coverage (without parallelization and postgres services), deploy Sphinx documentation and release the code as a private PyPi package",
     "iconName": "octicon package-dependents",
     "categories": ["Repowered"],
     "filePatterns": [
         ".*.py",
         "poetry.lock",
+        "uv.lock",
         "pyproject.toml"
     ]
 }
