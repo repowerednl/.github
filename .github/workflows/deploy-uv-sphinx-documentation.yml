@@ -3,14 +3,6 @@ name: Deploy sphinx documentation (UV)
 on:
   workflow_call:
     inputs:
-      file_paths_to_cache:
-        type: string
-        required: true
-
-      python_version:
-        type: string
-        required: true
-
       uv_version:
         type: string
         required: true
@@ -35,8 +27,6 @@ on:
         default: docs/_build/html
 
     secrets:
-      private_pypi_url:
-        required: true
       private_pypi_user:
         required: true
       private_pypi_password:
