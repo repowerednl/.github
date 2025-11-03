@@ -9,7 +9,9 @@ on:
 
 jobs:
   pytest-simple-with-coverage:
-    uses: repowerednl/.github/.github/workflows/python-test-coverage-simple.yml@main
+    # Make sure that the uv/poetry versions are aligned with the selected workflow
+    uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
+    # uses: repowerednl/.github/.github/workflows/python-test-coverage-simple.yml@main
     permissions:
       pull-requests: write
       contents: write
@@ -51,7 +53,9 @@ jobs:
 
   deploy-sphinx-documentation:
     needs: create-release
-    uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
+    # Make sure that the uv/poetry versions are aligned with the selected workflow
+    uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@main
+    # uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       python_version: "3.11.2"
       # poetry_version: "1.8.4"
@@ -70,7 +74,9 @@ jobs:
 
   release:
     needs: [tag, create-release]
-    uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
+    # Make sure that the uv/poetry versions are aligned with the selected workflow
+    uses: repowerednl/.github/.github/workflows/release-uv-pypi-package.yml@main
+    # uses: repowerednl/.github/.github/workflows/release-pypi-package.yml@main
     with:
       tag: ${{ needs.tag.outputs.tag }}
       python_version: "3.11.2"
