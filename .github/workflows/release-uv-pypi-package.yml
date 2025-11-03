@@ -3,9 +3,6 @@ name: Release PyPi package (uv)
 on:
   workflow_call:
     inputs:
-      file_paths_to_cache:
-        type: string
-        required: true
       # Provided by caller workflow
       tag:
         type: string
@@ -29,7 +26,7 @@ jobs:
       UV_INDEX_REPOWERED_PASSWORD: ${{ secrets.private_pypi_password }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: UV and Python Setup
       id: cache
@@ -55,8 +52,6 @@ jobs:
 
     - name: Publish to PyPI
       env:
-        UV_NO_TRUSTED_PUBLISHING: 1
-        UV_PUBLISH_REPOSITORY: ${{ secrets.publish_pypi_url }}
         UV_PUBLISH_USERNAME: ${{ secrets.private_pypi_user }}
         UV_PUBLISH_PASSWORD: ${{ secrets.private_pypi_password }}
-      run: uv publish
+      run: uv publish --index repowered
