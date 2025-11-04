@@ -1,0 +1,91 @@
+name: Run Daphne Sync
+
+on:
+  workflow_call:
+    inputs:
+      interval_unit:
+        description: "Time interval unit for data sync (day, week, month; default is day)"
+        required: true
+      interval_amount:
+        description: "How much time interval to sync (default is 5)"
+        required: true
+      exclude_tables:
+        description: "| separated list of tables to exclude (% equals .* in regex)"
+        required: true
+      include_tables:
+        description: "| separated list of tables to include (% equals .*)"
+        required: true
+      datetime_until:
+        description: "Datetime upper bound for data extraction (default is 'now', but can be a datetime string in the format: %Y-%m-%d %H:%M:%S)"
+        required: true
+      log_level:
+        description: "Logging level (default is INFO))"
+        required: true
+      # Optional
+      continue_on_error:
+        description: "Whether to continue on errors (default is false)"
+        required: false
+        default: false
+    secrets:
+      source_db:
+        required: true
+      source_host:
+        required: true
+      source_pw:
+        required: true
+      source_user:
+        required: true
+      source_port:
+        required: true
+      target_db:
+        required: true
+      target_host:
+        required: true
+      target_pw:
+        required: true
+      target_user:
+        required: true
+      target_port:
+        required: true
+      private_pypi_user:
+        required: false
+      private_pypi_password:
+        required: false
+
+jobs:
+  run-daphne:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: UV and Python Setup
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+        with:
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+
+      - name: Run Daphne sync
+        env:
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+          CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
+        run: |
+          python -m daphne.main \
+            --source-db-name "${{ secrets.source_db }}" \
+            --source-host "${{ secrets.source_host }}" \
+            --source-password "${{ secrets.source_pw }}" \
+            --source-user "${{ secrets.source_user }}" \
+            --source-port "${{ secrets.source_port }}" \
+            --target-db-name "${{ secrets.target_db }}" \
+            --target-host "${{ secrets.target_host }}" \
+            --target-password "${{ secrets.target_pw }}" \
+            --target-user "${{ secrets.target_user }}" \
+            --target-port "${{ secrets.target_port }}" \
+            --interval-scope "${{ inputs.interval_unit }}" \
+            --interval-amount "${{ inputs.interval_amount }}" \
+            --exclude-tables "${{ inputs.exclude_tables }}" \
+            --include-tables "${{ inputs.include_tables }}" \
+            --datetime_until "${{ inputs.datetime_until }}" \
+            --log-level "${{ inputs.log_level }}" $CONTINUE_ON_ERROR_FLAG

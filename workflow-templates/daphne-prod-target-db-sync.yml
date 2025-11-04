@@ -1,0 +1,49 @@
+name: Run Daphne Sync (template)
+
+on:
+  # Scheduled trigger (example: '0 18 * * 0' every Sunday at 18:00 UTC)
+  schedule:
+    - cron: ${{ vars.SYNC_SCHEDULE_CRON }}
+  # Manual trigger
+  workflow_dispatch:
+  # Triggered when the release workflow succeeds
+  workflow_run:
+    workflows:
+!      - # The actual name of your RELEASE workflow (example: GitHub Tag, Docker publish build, Kubernetes Deploy)
+    types:
+      - completed
+
+jobs:
+  # Remove this job (and its references in the sync job) if you don't work with environments
+  github-environment:
+    permissions:
+      pull-requests: read
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+
+  sync-source-to-target-db:
+    needs: github-environment
+    environment: ${{ needs.github-environment.outputs.environment }}
+    uses: repowerednl/.github/.github/workflows/prod-target-sync.yml@main
+    with:
+      interval_unit: ${{ vars.INTERVAL_UNIT }}
+      interval_amount: ${{ vars.INTERVAL_AMOUNT }}
+      exclude_tables: ${{ vars.EXCLUDE_TABLES }}
+      include_tables: ${{ vars.INCLUDE_TABLES }}
+      datetime_until: ${{ vars.DATETIME_UNTIL }}
+      log_level: ${{ vars.LOG_LEVEL }}
+#      continue_on_error: "true" # Optional, defaults to "false"
+    secrets:
+      # Source should defined on repository level
+      source_db: ${{ secrets.SOURCE_DB }}
+      source_host: ${{ secrets.SOURCE_HOST }}
+      source_pw: ${{ secrets.SOURCE_PW }}
+      source_user: ${{ secrets.SOURCE_USER }}
+      source_port: ${{ secrets.SOURCE_PORT }}
+      # Target should defined on environment level if environments exist
+      target_db: ${{ secrets.TARGET_DB }}
+      target_host: ${{ secrets.TARGET_HOST }}
+      target_pw: ${{ secrets.TARGET_PW }}
+      target_user: ${{ secrets.TARGET_USER }}
+      target_port: ${{ secrets.TARGET_PORT }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
