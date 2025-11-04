@@ -1,0 +1,74 @@
+name: Deploy sphinx documentation (UV)
+
+on:
+  workflow_call:
+    inputs:
+      uv_version:
+        type: string
+        required: true
+
+      docs_target:
+        description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/)"
+        type: string
+        required: true
+
+      # Optional
+      docs_host:
+        type: string
+        default: docs.repowered.nl
+      docs_port:
+        type: number
+        default: 22
+      docs_user:
+        type: string
+        default: repowered
+      docs_source:
+        type: string
+        default: docs/_build/html
+
+    secrets:
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+      docs_ssh_private_key:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+
+      - name: UV and Python Setup
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+        with:
+          uv_version: ${{ inputs.uv_version }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+          enable_cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Build documentation
+        run: |
+          cd docs
+          uv run make html
+
+      - name: Deploy documentation
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ inputs.docs_host }}
+          port: ${{ inputs.docs_port }}
+          username: ${{ inputs.docs_user }}
+          key: ${{ secrets.docs_ssh_private_key }}
+          source: ${{ inputs.docs_source }}
+          target: ${{ inputs.docs_target }}
+          strip_components: 3 # remove the docs/_build/html part from the path
