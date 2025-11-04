@@ -1,9 +1,9 @@
-name: Run Daphne Sync (template)
+name: Run Daphne Sync
 
 on:
-  # Scheduled trigger (example: '0 18 * * 0' every Sunday at 18:00 UTC)
+  # Scheduled trigger (default: '0 18 * * 0' every Sunday at 18:00 UTC)
   schedule:
-    - cron: ${{ vars.SYNC_SCHEDULE_CRON }}
+    - cron: 0 18 * * 0
   # Manual trigger
   workflow_dispatch:
   # Triggered when the release workflow succeeds
@@ -14,7 +14,7 @@ on:
       - completed
 
 jobs:
-  # Remove this job (and its references in the sync job) if you don't work with environments
+  # Remove this job (and its references in the sync job) if you don't work with GitHub environments
   github-environment:
     permissions:
       pull-requests: read
@@ -31,6 +31,7 @@ jobs:
       include_tables: ${{ vars.INCLUDE_TABLES }}
       datetime_until: ${{ vars.DATETIME_UNTIL }}
       log_level: ${{ vars.LOG_LEVEL }}
+      environment: ${{ needs.github-environment.outputs.environment }} # Optional, defaults to no environment
 #      continue_on_error: "true" # Optional, defaults to "false"
     secrets:
       # Source should defined on repository level
