@@ -63,6 +63,8 @@ on:
         required: true
       private_pypi_password:
         required: true
+      private_pypi_url:
+        required: true
 
 jobs:
   run-daphne:
@@ -73,9 +75,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: UV and Python Setup
-        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+      - name: (Cached) Python and Poetry
+        uses: repowerednl/.github/composite-actions/python-poetry-cache@main
         with:
+          poetry_no_root: false
+          private_pypi_url: ${{ secrets.private_pypi_url }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
 
@@ -84,7 +88,7 @@ jobs:
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
         run: |
           datetime_until="${{ inputs.datetime_until }}" && datetime=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
-          python -m daphne.main \
+          poetry run python -m daphne.main \
             --source-db-name "${{ secrets.source_db }}" \
             --source-host "${{ secrets.source_host }}" \
             --source-password "${{ secrets.source_pw }}" \
@@ -95,7 +99,7 @@ jobs:
             --target-password "${{ secrets.target_pw }}" \
             --target-user "${{ secrets.target_user }}" \
             --target-port "${{ secrets.target_port }}" \
-            --interval-scope "${{ inputs.interval_unit }}" \
+            --interval-unit "${{ inputs.interval_unit }}" \
             --interval-amount "${{ inputs.interval_amount }}" \
             --exclude-tables "${{ inputs.exclude_tables }}" \
             --include-tables "${{ inputs.include_tables }}" \
