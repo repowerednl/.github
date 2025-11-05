@@ -87,7 +87,7 @@ jobs:
         env:
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
         run: |
-          datetime_until="${{ inputs.datetime_until }}" && datetime=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
+          datetime_until="${{ inputs.datetime_until }}" && datetime_until=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
           poetry run python -m daphne.main \
             --source-db-name "${{ secrets.source_db }}" \
             --source-host "${{ secrets.source_host }}" \
