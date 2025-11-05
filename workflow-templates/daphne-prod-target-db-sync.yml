@@ -22,14 +22,13 @@ jobs:
 
   sync-source-to-target-db:
     needs: github-environment
-    environment: ${{ needs.github-environment.outputs.environment }}
     uses: repowerednl/.github/.github/workflows/prod-target-sync.yml@main
     with:
       interval_unit: ${{ vars.INTERVAL_UNIT }}
       interval_amount: ${{ vars.INTERVAL_AMOUNT }}
       exclude_tables: ${{ vars.EXCLUDE_TABLES }}
       include_tables: ${{ vars.INCLUDE_TABLES }}
-      datetime_until: ${{ vars.DATETIME_UNTIL }}
+#      datetime_until: ${{ vars.DATETIME_UNTIL }} # Optional, defaults to 'now'
       log_level: ${{ vars.LOG_LEVEL }}
       environment: ${{ needs.github-environment.outputs.environment }} # Optional, defaults to no environment
 #      continue_on_error: "true" # Optional, defaults to "false"

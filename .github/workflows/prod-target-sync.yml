@@ -15,13 +15,14 @@ on:
       include_tables:
         description: "| separated list of tables to include (% equals .*)"
         required: true
-      datetime_until:
-        description: "Datetime upper bound for data extraction (default is 'now', but can be a datetime string in the format: %Y-%m-%d %H:%M:%S)"
-        required: true
+      # Optional
       log_level:
         description: "Logging level (default is INFO))"
-        required: true
-      # Optional
+        required: false
+        default: INFO
+      datetime_until:
+        description: "Datetime upper bound for data extraction (default is 'now', but can be a datetime string in the format: %Y-%m-%d %H:%M:%S)"
+        required: false
       environment:
         description: "The GitHub environment to run the sync in"
         required: false
@@ -51,9 +52,9 @@ on:
       target_port:
         required: true
       private_pypi_user:
-        required: false
+        required: true
       private_pypi_password:
-        required: false
+        required: true
 
 jobs:
   run-daphne:
@@ -72,10 +73,9 @@ jobs:
 
       - name: Run Daphne sync
         env:
-          private_pypi_user: ${{ secrets.private_pypi_user }}
-          private_pypi_password: ${{ secrets.private_pypi_password }}
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
         run: |
+          datetime_until="${{ inputs.datetime_until }}" && datetime=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
           python -m daphne.main \
             --source-db-name "${{ secrets.source_db }}" \
             --source-host "${{ secrets.source_host }}" \
@@ -91,5 +91,5 @@ jobs:
             --interval-amount "${{ inputs.interval_amount }}" \
             --exclude-tables "${{ inputs.exclude_tables }}" \
             --include-tables "${{ inputs.include_tables }}" \
-            --datetime_until "${{ inputs.datetime_until }}" \
+            --datetime_until "$datetime_until" \
             --log-level "${{ inputs.log_level }}" $CONTINUE_ON_ERROR_FLAG
