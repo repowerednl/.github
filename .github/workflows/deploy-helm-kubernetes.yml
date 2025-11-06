@@ -39,9 +39,6 @@ jobs:
       - name: Set values' filepath dynamically
         id: set-values
         run: | 
-          echo "env: ${{ inputs.environment }}"
-          echo "matrix.vars_filepath: ${{ matrix.vars_filepath }}"
-          echo "vars[matrix.vars_filepath]: ${{ vars[matrix.vars_filepath] }}"
           filename="${{ matrix.vars_filepath }}"
           echo "VALUES_FILEPATH=deployment/${{ inputs.environment }}/$filename" >> $GITHUB_OUTPUT
 
