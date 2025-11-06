@@ -19,9 +19,8 @@ on:
         required: false
       deployment_name-values_file:
         type: string
-        description: "The name for the deployment (when empty it uses the repo name) and the corresponding helm values filename (defaults to 'values.yml)"
-        required: false
-        default: "[{'name': '', 'vars_filepath': 'VALUES_PATH'}]"
+        description: "Structure should be: /deployment/[prod/dev/qa]/<values_file>, specify the values file here, environment is determined by workflow."
+        required: true
     secrets:
       digital_ocean_access_token:
         required: true
@@ -40,7 +39,7 @@ jobs:
       - name: Set values' filepath dynamically
         id: set-values
         run: |
-          echo "VALUES_FILEPATH=${{ vars[matrix.vars_filepath] }}" >> $GITHUB_OUTPUT
+          echo "VALUES_FILEPATH=deployment/${{ inputs.environment }}/${{ vars[matrix.vars_filepath] }}" >> $GITHUB_OUTPUT
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
