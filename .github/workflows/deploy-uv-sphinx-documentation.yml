@@ -7,6 +7,9 @@ on:
         type: string
         required: true
 
+      tag:
+        type: string
+        required: true
       docs_target:
         description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/)"
         type: string
@@ -60,6 +63,7 @@ jobs:
       - name: Build documentation
         run: |
           cd docs
+          uv version ${{ inputs.tag }}
           uv run make html
 
       - name: Deploy documentation
