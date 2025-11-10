@@ -30,19 +30,23 @@ jobs:
             echo "Latest release merge to main event. Deploying to production"
             echo "env_name=prod" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "pull_request" || ("${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.head_branch }}" == "dev") ]]; then
-            # Check if a PR exists from dev to main
-            pr_response=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                                 -H "Accept: application/vnd.github+json" \
-                                 "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&base=main&head=${{ github.repository_owner }}:dev")
-            echo "PR resonspone: $pr_response"
-            if [[ "$pr_response" == *"\"id\":"* ]]; then
-              echo "A release PR has been opened from dev to main. Deploying to qa"
-              echo "env_name=qa" >> $GITHUB_OUTPUT
+            if [[ "${{ github.event.pull_request.base.ref }}" == "dev" ]]; then
+                echo "PR is targeting dev. Deploying to dev"
+                echo "env_name=dev" >> $GITHUB_OUTPUT
             else
-              echo "A request to deploy the dev branch has been made. Deploying to dev"
+              # Check if a PR exists from dev to main
+              pr_response=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                                  -H "Accept: application/vnd.github+json" \
+                                  "https://api.github.com/repos/${{ github.repository }}/pulls?state=open&base=main&head=${{ github.repository_owner }}:dev")
+              echo "PR resonspone: $pr_response"
+              if [[ "$pr_response" == *"\"id\":"* ]]; then
+                echo "A release PR has been opened from dev to main. Deploying to qa"
+                echo "env_name=qa" >> $GITHUB_OUTPUT
+              else
+                echo "A request to deploy the dev branch has been made. Deploying to dev"
+                echo "env_name=dev" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "A request to deploy a feature branch has been made. Deploying to dev"
               echo "env_name=dev" >> $GITHUB_OUTPUT
             fi
-          else
-            echo "A request to deploy a feature branch has been made. Deploying to dev"
-            echo "env_name=dev" >> $GITHUB_OUTPUT
-          fi
