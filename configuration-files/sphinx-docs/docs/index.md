@@ -1,4 +1,4 @@
-<!-- <package name> master file, manually created on <add date here>. 
+<!-- Sphinx seeder file.
     Automatically creates full html when running
    "make html" in the docs folder. -->
 
@@ -10,7 +10,7 @@ Welcome to {{Package}}'s documentation!
    :template: custom-module-template.rst
    :recursive:
 
-   <your-package-here>
+   <package>
 ```
 
 ```{include} ../README.md
@@ -25,4 +25,8 @@ Welcome to {{Package}}'s documentation!
 
 ```{include} ../README.md
 :start-line: 19
+```
+
+```{eval-rst}
+:ref:`Elaborate site index <modindex>`
 ```

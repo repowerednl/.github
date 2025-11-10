@@ -6,7 +6,10 @@ on:
       uv_version:
         type: string
         required: true
-
+      tag:
+        description: "The Semantic Versioning GitHub tag used for version control"
+        type: string
+        required: true
       docs_target:
         description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/)"
         type: string
@@ -37,13 +40,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
+      # - name: Generate GitHub App token
+      #   uses: actions/create-github-app-token@v2
+      #   id: app-token
+      #   with:
+      #     app-id: ${{ inputs.app-id }}
+      #     private-key: ${{ secrets.private-key }}
+
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-
 
       - name: UV and Python Setup
         uses: repowerednl/.github/composite-actions/python-uv-cache@main
@@ -53,16 +64,25 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: true
 
-      - name: Install dependencies
+      - name: Install dependencies & update version to semantic
         run: |
-          uv sync --all-extras
+          uv sync --group docs --all-extras
+          uv version ${{ inputs.tag }}
 
-      - name: Build documentation
+      - name: Fetch "docs/" folder from shared .github repo & copy missing files
+        run: |  # Fetch shallow copy for speed, makedir 'docs' if it doesnt exist, then copy only missing files (--archive & --verbose: -av)
+          git clone --depth=1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/repowerednl/.github.git /tmp/gh-shared
+          mkdir -p docs
+          rsync -av --ignore-existing /tmp/gh-shared/configuration-files/sphinx-docs/docs/ ./docs/
+
+      - name: Build documentation for ${{ inputs.docs_target }} version ${{ inputs.tag }}
         run: |
           cd docs
-          uv run make html
+          uv run python pre.py --logging=info
+          uv run make html --logging=info
+          uv run python post.py --logging=info
 
-      - name: Deploy documentation
+      - name: Deploy documentation to server
         uses: appleboy/scp-action@v1
         with:
           host: ${{ inputs.docs_host }}

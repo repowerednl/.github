@@ -10,22 +10,60 @@ import os
 import sys
 import tomllib
 from datetime import datetime
+from logging import INFO
+from sphinx.util import logging
 
-sys.path.insert(0, os.path.abspath(os.path.join("..", "src")))
-sys.path.insert(0, os.path.abspath(os.path.join(".", "_ext")))
+logger = logging.getLogger(__name__)
+logger.setLevel(INFO)
 
-with open("index.md") as fp:
-    for i, line in enumerate(fp):
-        if i == 12:
-            project = line[:-1]
-
-project = project.replace(" ", "").capitalize()
-print("Building documentation for project: '" + project + "'")
-
+# Read project metadata from pyproject.toml
 copyright = str(datetime.today().year) + ", REpowered B.V"
-author = "the Repowered team but mostly Alfred"
+author = "the Repowered team"
 with open(os.path.join("..", "pyproject.toml"), "rb") as f:
-    release = tomllib.load(f)["tool"]["poetry"]["version"]
+    project_dict = tomllib.load(f)["project"]
+    release: str = project_dict["version"]
+    project_folder: str = project_dict["name"]
+    project_folder = project_folder.replace(" ", "").lower()
+    project_name = project_folder.capitalize()
+    authors: list[str] = project_dict.get("authors", [])
+    if authors:
+        author = author + "(mostly " + ", ".join([a.split(" ")[0] for a in authors]) + ")"
+logger.info(f"[Sphinx wrapper] Building documentation for project: '{project_name}', version: '{release}'")
+
+# Add the project source directory and the _ext directory to sys.path
+project_src_path = os.path.abspath(os.path.join("..", "src", project_folder))
+project_path = os.path.abspath(os.path.join("..", project_folder))
+if os.path.exists(project_src_path):  # Check if the project folder is in 'src'
+    sys.path.insert(0, os.path.abspath(os.path.join("..", "src")))
+    logger.info(f"[Sphinx wrapper] Added project to sys.path: '{project_src_path}'")
+elif os.path.exists(project_path):
+    sys.path.insert(0, os.path.abspath(os.path.join("..")))
+    logger.info(f"[Sphinx wrapper] Added project to sys.path: '{project_path}'")
+else:
+    raise FileNotFoundError(f"Could not find project folder for '{project_folder}' in either '../src/' or '../'.")
+sys.path.insert(0, os.path.abspath(os.path.join(".", "_ext")))
+logger.info(f"[Sphinx wrapper] Added _ext folder to sys.path: '{os.path.abspath(os.path.join('.', '_ext'))}'")
+
+# Open the README.md and extract any notes inside it (specified as one-line "NOTE: ..." comments)
+with open(os.path.join("..", "README.md"), "r") as f:
+    readme_lines = f.readlines()
+    notes = {i: line[6:]
+        for (i, line) in enumerate(readme_lines)
+        if line.startswith("NOTE: ") and len(line) > 6
+    }
+
+# Write the project_folder name to index.md (replace "<package>" with "project_folder") for use in the docs
+with open("index.md", "w") as fp:
+    for i, line in enumerate(fp):
+        if "<package>" in line:
+            fp.write(line.replace("<package>", project_folder))
+
+# Replace all notes in README.md with proper note blocks for Sphinx -- NOT FINISHED
+for (i, note) in reversed(notes.items()):
+    readme_lines[i] = "\n```{{eval-rst}}.. note::\n   "+ note.strip("\n ") +"\n```\n"
+with open(os.path.join("..", "README.md"), "w") as f:
+    f.writelines(readme_lines)
+
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -45,7 +83,7 @@ autoclass_content = "class"
 autodoc_member_order = "bysource"
 autosummary_generate = True
 myst_enable_extensions = ["substitution"]
-myst_substitutions = {"Package": project}
+myst_substitutions = {"Package": project_name}
 
 # -- Pydantic autodoc configuration -----------------------------------------
 show_json_representations = (
@@ -55,40 +93,39 @@ show_summaries = True  # Whether to show summaries under models/settings
 elaborate_field_info = (
     False  # Whether to list validators and constraints under each field
 )
-member_ordering = "default"  # How to order summaries, models and settings
+member_order = "default"  # How to order summaries, models and settings
 ordering = {
     "summary": {"default": "alphabetical", "bysource": "bysource"},
     "member": {"default": "groupwise", "bysource": "bysource"},
 }
-autodoc_pydantic_model_summary_list_order = ordering["summary"][
-    member_ordering
-]  # ┰─ Ordering
-autodoc_pydantic_settings_summary_list_order = ordering["summary"][member_ordering]  # ┃
-autodoc_pydantic_model_member_order = ordering["member"][member_ordering]  # ┃
-autodoc_pydantic_settings_member_order = ordering["member"][member_ordering]  # ┚
-autodoc_pydantic_model_show_json = show_json_representations  # ┰─ Json representations
-autodoc_pydantic_settings_show_json = show_json_representations  # ┚
-autodoc_pydantic_model_show_config_summary = show_summaries  # ┰─ Summaries
-autodoc_pydantic_model_show_validator_summary = show_summaries  # ┃
-autodoc_pydantic_model_show_field_summary = show_summaries  # ┃
-autodoc_pydantic_settings_show_config_summary = show_summaries  # ┃
-autodoc_pydantic_settings_show_validator_summary = show_summaries  # ┃
-autodoc_pydantic_settings_show_field_summary = show_summaries  # ┚
-autodoc_pydantic_field_list_validators = elaborate_field_info  # ┰─ Elaborate field info
-autodoc_pydantic_field_show_constraints = elaborate_field_info  # ┚
+autodoc_pydantic_model_summary_list_order = ordering["summary"][member_order]  # .  ┰─ Ordering
+autodoc_pydantic_settings_summary_list_order = ordering["summary"][member_order]  # ┃
+autodoc_pydantic_model_member_order = ordering["member"][member_order]  # .         ┃
+autodoc_pydantic_settings_member_order = ordering["member"][member_order]  # .      ┚
+autodoc_pydantic_model_show_json = show_json_representations  # .                   ┰─ Json representations
+autodoc_pydantic_settings_show_json = show_json_representations  # .                ┚
+autodoc_pydantic_model_show_config_summary = show_summaries  # .                    ┰─ Summaries
+autodoc_pydantic_model_show_validator_summary = show_summaries  # .                 ┃
+autodoc_pydantic_model_show_field_summary = show_summaries  # .                     ┃
+autodoc_pydantic_settings_show_config_summary = show_summaries  # .                 ┃
+autodoc_pydantic_settings_show_validator_summary = show_summaries  # .              ┃
+autodoc_pydantic_settings_show_field_summary = show_summaries  # .                  ┚
+autodoc_pydantic_field_list_validators = elaborate_field_info  # .                  ┰─ Elaborate field info
+autodoc_pydantic_field_show_constraints = elaborate_field_info  # .                 ┚
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+html_css_files = ['custom.css']
 html_favicon = "https://www.google.com/s2/favicons?domain=www.repowered.nl"
 html_theme_options = {
     "logo": {
-        "text": project + " v" + release + " Docs",
+        "text": project_name + " " + release + " Docs",
         "image_light": "https://www.repowered.nl/wp-content/build/svg/logo-repowered.svg",
         "image_dark": "https://www.repowered.nl/wp-content/build/svg/logo-repowered.svg",
-        "alt_text": project + " v" + release + " Docs - Repowered Docs Home",
+        "alt_text": project_name + " " + release + " Docs - Repowered Docs Home",
         "link": "https://docs.repowered.nl/",
     }
 }
