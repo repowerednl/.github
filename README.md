@@ -2,16 +2,16 @@
 
 This is a special repository for the default community health files. The files within this repository are shared within the organization. For reference please visit [Github docs](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file#supported-file-types) about this. 
 
-This repository should contain the following files:
-- [ ] CODE_OF_CONDUCT.md
-- [x] CONTRIBUTING.md _needs updating (merging from other )_
-- [ ] GOVERNANCE.md
-- [x] Issue and pull request templates
-- [ ] SECURITY.md
-- [ ] SUPPORT.md
+## Workflows
+We use reusable workflows: [Reuse workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
+If you want to create/update one, there are a few rules to adhere:
+- Make sure they are backwards compatible (if that is not possible; make sure you update all the repositories where this workflow is used)
+- Add proof of a successfull workflow run to the PR description (backwards compatability including if applicable)
+- Create/update the accompanying workflow template (_see below_)
 
 ## Workflow Templates
-To have consistent workflows that can easily be maintained, templates have been created under the folder `workflow_templates' that are reusable. 
+To have consistent workflows that can easily be maintained, templates have been created under the folder 'workflow_templates'. 
+- Templates have one goal and can be modified to specific needs. Current goals are; `deploy to ..`, `test stack ..`, `release package pypi/npm`
 - For creating such a template here: [Create template](https://docs.github.com/en/actions/sharing-automations/creating-workflow-templates-for-your-organization)
 - For using such a template in a repository: [Use template](https://docs.github.com/en/actions/writing-workflows/using-workflow-templates)
 - For testing such a template including explanations: [workflow-tests](https://github.com/repowerednl/workflow-tests)
