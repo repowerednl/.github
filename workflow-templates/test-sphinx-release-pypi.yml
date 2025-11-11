@@ -54,12 +54,13 @@ jobs:
   deploy-sphinx-documentation:
     needs: create-release
     # Make sure that the uv/poetry versions are aligned with the selected workflow
-    uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@main
+    uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@DATA-323-Create-default-Sphinx-docs-folder-and-store-it-somewhere
     # uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
       # python_version: "3.11.2"
       # poetry_version: "1.8.4"
       uv_version: "0.9.4"
+      tag: ${{ needs.tag.outputs.tag }}
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       # file_paths_to_cache: |

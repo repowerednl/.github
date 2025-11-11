@@ -1,4 +1,4 @@
-name: Deploy sphinx documentation (UV)
+name: Build (& deploy) sphinx documentation (UV)
 
 on:
   workflow_call:
@@ -11,9 +11,9 @@ on:
         type: string
         required: true
       docs_target:
-        description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/)"
+        description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/). Skips deployment if empty (Sphinx build testing)."
         type: string
-        required: true
+        default: "/home/repowered/docs/<package-name>"
 
       # Optional
       docs_host:
@@ -44,13 +44,6 @@ jobs:
       contents: read
 
     steps:
-      # - name: Generate GitHub App token
-      #   uses: actions/create-github-app-token@v2
-      #   id: app-token
-      #   with:
-      #     app-id: ${{ inputs.app-id }}
-      #     private-key: ${{ secrets.private-key }}
-
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
@@ -64,25 +57,27 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: true
 
-      - name: Install dependencies & update version to semantic
-        run: |
-          uv sync --group docs --all-extras
-          uv version ${{ inputs.tag }}
+      - name: Checkout .github repo for default docs folder
+        uses: actions/checkout@v5
+        with:
+          repository: repowerednl/.github
+          ref: DATA-323-Create-default-Sphinx-docs-folder-and-store-it-somewhere
+          path: /tmp/gh-shared
 
       - name: Fetch "docs/" folder from shared .github repo & copy missing files
-        run: |  # Fetch shallow copy for speed, makedir 'docs' if it doesnt exist, then copy only missing files (--archive & --verbose: -av)
-          git clone --depth=1 https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/repowerednl/.github.git /tmp/gh-shared
+        run: |  # Makedir 'docs' if it doesnt exist (-p) & copy only missing files (--archive & --verbose: -av)
           mkdir -p docs
           rsync -av --ignore-existing /tmp/gh-shared/configuration-files/sphinx-docs/docs/ ./docs/
 
-      - name: Build documentation for ${{ inputs.docs_target }} version ${{ inputs.tag }}
+      - name: Build documentation for ${{ github.event.repository.name }} version ${{ inputs.tag }}
         run: |
           cd docs
           uv run python pre.py --logging=info
           uv run make html --logging=info
           uv run python post.py --logging=info
 
-      - name: Deploy documentation to server
+      - if: ${{ (inputs.docs_target != "/home/repowered/docs/<package-name>") && (inputs.docs_target != "") }} # Only deploy if docs_target is not default or empty
+        name: Deploy documentation to server (${{ inputs.docs_target }})
         uses: appleboy/scp-action@v1
         with:
           host: ${{ inputs.docs_host }}

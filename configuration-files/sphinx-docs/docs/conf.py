@@ -3,9 +3,6 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
 import os
 import sys
 import tomllib
@@ -16,6 +13,9 @@ from sphinx.util import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(INFO)
 
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
 # Read project metadata from pyproject.toml
 copyright = str(datetime.today().year) + ", REpowered B.V"
 author = "the Repowered team"
@@ -24,12 +24,11 @@ with open(os.path.join("..", "pyproject.toml"), "rb") as f:
     release: str = project_dict["version"]
     project_folder: str = project_dict["name"]
     project_folder = project_folder.replace(" ", "").lower()
-    project_name = project_folder.capitalize()
+    project = project_folder.capitalize()
     authors: list[str] = project_dict.get("authors", [])
     if authors:
         author = author + "(mostly " + ", ".join([a.split(" ")[0] for a in authors]) + ")"
-logger.info(f"[Sphinx wrapper] Building documentation for project: '{project_name}', version: '{release}'")
-
+logger.info(f"[Sphinx wrapper] Building documentation for project: '{project}', version: '{release}'")
 # Add the project source directory and the _ext directory to sys.path
 project_src_path = os.path.abspath(os.path.join("..", "src", project_folder))
 project_path = os.path.abspath(os.path.join("..", project_folder))
@@ -52,17 +51,24 @@ with open(os.path.join("..", "README.md"), "r") as f:
         if line.startswith("NOTE: ") and len(line) > 6
     }
 
-# Write the project_folder name to index.md (replace "<package>" with "project_folder") for use in the docs
+# Replace all notes in README.md with proper note blocks for Sphinx
+readme_sub = "../README.md"
+if notes:
+    logger.info(f"[Sphinx wrapper] Found {len(notes)} notes in README.md, converting to Sphinx note blocks (rst)...")
+    readme_sub = "../README.md\n:start-line: 1"
+    # Add end-line to readme for each note found, and add note block in place of original line, then start readme again
+    for (i, note) in reversed(notes.items()):
+        readme_sub = readme_sub + f"\n:end-line: {i-1}\n```\n" + "\n```{eval-rst}.. note::\n   " + note.strip("\n ") + "\n```\n\n```{include} ../README.md:\n" + f"start-line: {i+1}"
+    for line in ("```{include} <readme>\n```".replace("<readme>", readme_sub)).split("\n"):
+        print(line)  # Temporary prints
+
+# Write the project_folder name to index.md & add README.md (with notes)
 with open("index.md", "w") as fp:
     for i, line in enumerate(fp):
         if "<package>" in line:
             fp.write(line.replace("<package>", project_folder))
-
-# Replace all notes in README.md with proper note blocks for Sphinx -- NOT FINISHED
-for (i, note) in reversed(notes.items()):
-    readme_lines[i] = "\n```{{eval-rst}}.. note::\n   "+ note.strip("\n ") +"\n```\n"
-with open(os.path.join("..", "README.md"), "w") as f:
-    f.writelines(readme_lines)
+        elif "<readme>" in line:
+            fp.write(line.replace("<readme>", readme_sub))
 
 
 # -- General configuration ---------------------------------------------------
@@ -72,9 +78,11 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "myst_parser",
-    "sphinxcontrib.autodoc_pydantic",
+    # "myst_nb",  # Used in StoragePy, instead of myst_parser
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    # "pydantic_autosummary",  # Used in StoragePy, instead of sphinx.ext.autodoc & autosummary
+    "sphinxcontrib.autodoc_pydantic",
 ]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "_templates", "_ext", "Thumbs.db", ".DS_Store"]
@@ -82,18 +90,20 @@ autodoc_mock_imports = []
 autoclass_content = "class"
 autodoc_member_order = "bysource"
 autosummary_generate = True
-myst_enable_extensions = ["substitution"]
-myst_substitutions = {"Package": project_name}
+myst_enable_extensions = ["dollarmath","substitution"]
+myst_substitutions = {"Package": project}
 
-# -- Pydantic autodoc configuration -----------------------------------------
-show_json_representations = (
-    False  # Whether to show json representation of models or settings
-)
-show_summaries = True  # Whether to show summaries under models/settings
-elaborate_field_info = (
-    False  # Whether to list validators and constraints under each field
-)
-member_order = "default"  # How to order summaries, models and settings
+# -- Myst-NB configuration ---------------------------------------------------
+nb_execution_timeout = 600 # Timeout in seconds
+nb_execution_show_tb = True
+nb_execution_allow_errors = True
+html_js_files = ["https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"]
+
+# -- Pydantic autodoc configuration ------------------------------------------
+show_json_representations = False  # Json representation of models/settings
+show_summaries = True  # Show summaries under models/settings
+elaborate_field_info = False  # List validators & constraints under fields
+member_order = "default"  # Order of summaries, models & settings. StoragePy: "bysource"
 ordering = {
     "summary": {"default": "alphabetical", "bysource": "bysource"},
     "member": {"default": "groupwise", "bysource": "bysource"},
@@ -122,10 +132,11 @@ html_css_files = ['custom.css']
 html_favicon = "https://www.google.com/s2/favicons?domain=www.repowered.nl"
 html_theme_options = {
     "logo": {
-        "text": project_name + " " + release + " Docs",
+        "text": project + " " + release + " Docs",
         "image_light": "https://www.repowered.nl/wp-content/build/svg/logo-repowered.svg",
         "image_dark": "https://www.repowered.nl/wp-content/build/svg/logo-repowered.svg",
-        "alt_text": project_name + " " + release + " Docs - Repowered Docs Home",
+        "alt_text": project + " " + release + " Docs - Repowered Docs Home",
         "link": "https://docs.repowered.nl/",
-    }
+    },
+    "navigation_with_keys": False,
 }
