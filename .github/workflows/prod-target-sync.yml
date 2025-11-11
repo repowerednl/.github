@@ -12,11 +12,11 @@ on:
         required: true
         type: number
       exclude_tables:
-        description: "| separated list of tables to exclude (% equals .* in regex)"
+        description: "| separated list of table(s/patterns) to exclude (% equals .* in regex). Can be 'none' to exclude nothing; inclusion > exclusion."
         required: true
         type: string
       include_tables:
-        description: "| separated list of tables to include (% equals .*)"
+        description: "| separated list of table(s/patterns) to include (% equals .* in regex). Can be '%' to include everything"
         required: true
         type: string
       # Optional
