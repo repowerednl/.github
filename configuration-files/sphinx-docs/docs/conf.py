@@ -13,6 +13,11 @@ from sphinx.util import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(INFO)
 
+with open(os.path.join("custom_config.toml"), "rb") as f:
+    settings_dict = tomllib.load(f).get("extensions", {})
+    USE_PYDANTIC_AUTOSUMMARY: bool = settings_dict.get("use_pydantic_autosummary", False)
+    MEMBER_ORDER = "default" if settings_dict.get("member_order_by_source", False) is False else "bysource"
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -25,10 +30,13 @@ with open(os.path.join("..", "pyproject.toml"), "rb") as f:
     project_folder: str = project_dict["name"]
     project_folder = project_folder.replace(" ", "").lower()
     project = project_folder.capitalize()
-    authors: list[str] = project_dict.get("authors", [])
+    authors: list[str] = [a["name"].split(" ")[0]+f" ({a['email']})" for a in project_dict.get("authors", [])]
     if authors:
-        author = author + "(mostly " + ", ".join([a.split(" ")[0] for a in authors]) + ")"
-logger.info(f"[Sphinx wrapper] Building documentation for project: '{project}', version: '{release}'")
+        author = author + " (but mostly " + " & ".join(authors) + ")"
+logger.info(f"[Sphinx wrapper] Building documentation for project: '{project}', version: '{release}', by {author}")
+
+
+# -- Path setup ---------------------------------------------------------------
 # Add the project source directory and the _ext directory to sys.path
 project_src_path = os.path.abspath(os.path.join("..", "src", project_folder))
 project_path = os.path.abspath(os.path.join("..", project_folder))
@@ -43,47 +51,51 @@ else:
 sys.path.insert(0, os.path.abspath(os.path.join(".", "_ext")))
 logger.info(f"[Sphinx wrapper] Added _ext folder to sys.path: '{os.path.abspath(os.path.join('.', '_ext'))}'")
 
+# -- Readme admonitions processing ---------------------------------------------
 # Open the README.md and extract any notes inside it (specified as one-line "NOTE: ..." comments)
 with open(os.path.join("..", "README.md"), "r") as f:
     readme_lines = f.readlines()
-    notes = {i: line[6:]
+    notes = [(i, line[line.find(":")+2:], line[:line.find(":")].lower())
         for (i, line) in enumerate(readme_lines)
-        if line.startswith("NOTE: ") and len(line) > 6
-    }
+        if (line.startswith("NOTE: ") and len(line) > 6)
+        or (line.startswith("WARNING: ") and len(line) > 9)
+        or (line.startswith("TIP: ") and len(line) > 5)
+    ]
 
 # Replace all notes in README.md with proper note blocks for Sphinx
 readme_sub = "../README.md"
 if notes:
-    logger.info(f"[Sphinx wrapper] Found {len(notes)} notes in README.md, converting to Sphinx note blocks (rst)...")
+    logger.info(f"[Sphinx wrapper] Found {len(notes)} notes in README.md, converting to Sphinx admonition blocks (rst)...")
     readme_sub = "../README.md\n:start-line: 1"
     # Add end-line to readme for each note found, and add note block in place of original line, then start readme again
-    for (i, note) in reversed(notes.items()):
-        readme_sub = readme_sub + f"\n:end-line: {i-1}\n```\n" + "\n```{eval-rst}.. note::\n   " + note.strip("\n ") + "\n```\n\n```{include} ../README.md:\n" + f"start-line: {i+1}"
-    for line in ("```{include} <readme>\n```".replace("<readme>", readme_sub)).split("\n"):
-        print(line)  # Temporary prints
+    for (i, note, note_type) in notes:
+        readme_sub = readme_sub + f"\n:end-line: {i}\n```\n\n```" + "{eval-rst}"+f"\n.. {note_type}::\n   " + note.strip("\n ") + "\n```\n\n```{include} ../README.md\n" + f":start-line: {i+2}"
 
 # Write the project_folder name to index.md & add README.md (with notes)
-with open("index.md", "w") as fp:
-    for i, line in enumerate(fp):
-        if "<package>" in line:
-            fp.write(line.replace("<package>", project_folder))
-        elif "<readme>" in line:
-            fp.write(line.replace("<readme>", readme_sub))
-
+with open("index.md", "r") as index_md:
+    index_md_str = index_md.read()
+with open("index.md", "w") as index_md:
+    file_str = index_md_str.replace("<package>", project_folder).replace("<readme>", readme_sub)
+    index_md.write(file_str)
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = [
+default_extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "myst_parser",
-    # "myst_nb",  # Used in StoragePy, instead of myst_parser
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    # "pydantic_autosummary",  # Used in StoragePy, instead of sphinx.ext.autodoc & autosummary
-    "sphinxcontrib.autodoc_pydantic",
+    "myst_nb",  # Contains myst_parser
+    "sphinxcontrib.autodoc_pydantic"
 ]
+if USE_PYDANTIC_AUTOSUMMARY:
+    logger.info("[Sphinx wrapper] Using 'pydantic_autosummary' extension for Pydantic model docs.")
+    extensions = default_extensions + ["pydantic_autosummary"]
+else:
+    logger.info("[Sphinx wrapper] Using 'sphinx.ext.autodoc' and 'sphinx.ext.autosummary' extensions for Pydantic model docs.")
+    extensions = default_extensions + [
+        "sphinx.ext.autodoc",
+        "sphinx.ext.autosummary",
+    ]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "_templates", "_ext", "Thumbs.db", ".DS_Store"]
 autodoc_mock_imports = []
@@ -103,7 +115,7 @@ html_js_files = ["https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/requir
 show_json_representations = False  # Json representation of models/settings
 show_summaries = True  # Show summaries under models/settings
 elaborate_field_info = False  # List validators & constraints under fields
-member_order = "default"  # Order of summaries, models & settings. StoragePy: "bysource"
+member_order = MEMBER_ORDER  # Order of summaries, models & settings. StoragePy: "bysource"
 ordering = {
     "summary": {"default": "alphabetical", "bysource": "bysource"},
     "member": {"default": "groupwise", "bysource": "bysource"},

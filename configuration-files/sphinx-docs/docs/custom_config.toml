@@ -1,0 +1,5 @@
+# Custom configuration for Sphinx documentation builder.
+
+[extensions]
+use_pydantic_autosummary = false
+member_order_by_source = false
