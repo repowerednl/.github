@@ -13,7 +13,7 @@ on:
       docs_target:
         description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/). Skips deployment if empty (Sphinx build testing)."
         type: string
-        default: "/home/repowered/docs/<package-name>"
+        default: '/home/repowered/docs/<package-name>'
 
       # Optional
       docs_host:
@@ -76,7 +76,7 @@ jobs:
           uv run make html --logging=info
           uv run python post.py --logging=info
 
-      - if: ${{ (inputs.docs_target != "/home/repowered/docs/<package-name>") && (inputs.docs_target != "") }} # Only deploy if docs_target is not default or empty
+      - if: ${{ (inputs.docs_target != '/home/repowered/docs/<package-name>') && (inputs.docs_target != '') }} # Only deploy if docs_target is not default or empty
         name: Deploy documentation to server (${{ inputs.docs_target }})
         uses: appleboy/scp-action@v1
         with:
