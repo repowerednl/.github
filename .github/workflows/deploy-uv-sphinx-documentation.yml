@@ -41,8 +41,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
 
       - name: UV and Python Setup
@@ -52,10 +50,6 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: true
-
-      - name: Install dependencies
-        run: |
-          uv sync --all-extras
 
       - name: Build documentation
         run: |
