@@ -17,6 +17,10 @@ inputs:
     required: false
     description: Whether to enable the cache for uv
     default: true
+  extra_uv_sync_parameters:
+    required: false
+    description: Additional parameters to pass to `uv sync` command
+    default: "--locked --all-extras"
 
 runs:
   using: "composite"
@@ -30,10 +34,11 @@ runs:
       with:
         version: ${{ inputs.uv_version }}
         enable-cache: ${{ inputs.enable_cache }}
+        extra_uv_sync_parameters: ${{ inputs.extra_uv_sync_parameters }}
     - name: Install the project
       working-directory: ${{ inputs.working_directory }}
       shell: bash
       run: |
         export UV_INDEX_REPOWERED_USERNAME=${{ inputs.private_pypi_user }}
         export UV_INDEX_REPOWERED_PASSWORD=${{ inputs.private_pypi_password }}
-        uv sync --locked --all-extras --dev
+        uv sync ${{ inputs.extra_uv_sync_parameters }}
