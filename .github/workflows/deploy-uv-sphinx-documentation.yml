@@ -29,6 +29,11 @@ on:
         type: string
         default: docs/_build/html
 
+      extra_uv_sync_parameters:
+        type: string
+        default: "--locked --all-extras --group docs"
+
+
     secrets:
       private_pypi_user:
         required: true
@@ -53,10 +58,8 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: true
+          extra_uv_sync_parameters: ${{ inputs.extra_uv_sync_parameters }}
 
-      - name: Install dependencies
-        run: |
-          uv sync --all-extras --group docs
 
       - name: Build documentation
         run: |
