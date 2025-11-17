@@ -52,7 +52,7 @@ jobs:
 
 
       - name: UV and Python Setup
-        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+        uses: repowerednl/.github/composite-actions/python-uv-cache@change-docs-workflow
         with:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
