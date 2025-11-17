@@ -65,7 +65,7 @@ jobs:
         run: |
           cd docs
           uv version ${{ inputs.tag }}
-          uv run make html
+          uv run --no-sync --locked make html
 
       - name: Deploy documentation
         uses: appleboy/scp-action@v1
