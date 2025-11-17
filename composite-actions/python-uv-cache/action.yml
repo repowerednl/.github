@@ -34,10 +34,11 @@ runs:
       with:
         version: ${{ inputs.uv_version }}
         enable-cache: ${{ inputs.enable_cache }}
-        extra_uv_sync_parameters: ${{ inputs.extra_uv_sync_parameters }}
     - name: Install the project
       working-directory: ${{ inputs.working_directory }}
       shell: bash
+      with:
+        extra_uv_sync_parameters: ${{ inputs.extra_uv_sync_parameters }}
       run: |
         export UV_INDEX_REPOWERED_USERNAME=${{ inputs.private_pypi_user }}
         export UV_INDEX_REPOWERED_PASSWORD=${{ inputs.private_pypi_password }}
