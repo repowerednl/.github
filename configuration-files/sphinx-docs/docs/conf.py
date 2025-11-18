@@ -13,10 +13,11 @@ from sphinx.util import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(INFO)
 
-with open(os.path.join("custom_config.toml"), "rb") as f:
-    settings_dict = tomllib.load(f).get("extensions", {})
+# Get custom settings from config.toml
+with open(os.path.join("config.toml"), "rb") as f:
+    settings_dict = tomllib.load(f).get("custom", {})
     USE_PYDANTIC_AUTOSUMMARY: bool = settings_dict.get("use_pydantic_autosummary", False)
-    MEMBER_ORDER = "default" if settings_dict.get("member_order_by_source", False) is False else "bysource"
+    MEMBER_ORDER = "default" if settings_dict.get("member_order_by_source", False) else "bysource"
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -30,11 +31,10 @@ with open(os.path.join("..", "pyproject.toml"), "rb") as f:
     project_folder: str = project_dict["name"]
     project_folder = project_folder.replace(" ", "").lower()
     project = project_folder.capitalize()
-    authors: list[str] = [a["name"].split(" ")[0]+f" ({a['email']})" for a in project_dict.get("authors", [])]
+    authors: list[str] = [f'<a class="reference external" href="mailto:{a["email"]}">{a["name"].split(" ")[0]}</a>' for a in project_dict.get("authors", [])]
     if authors:
         author = author + " (but mostly " + " & ".join(authors) + ")"
 logger.info(f"[Sphinx wrapper] Building documentation for project: '{project}', version: '{release}', by {author}")
-
 
 # -- Path setup ---------------------------------------------------------------
 # Add the project source directory and the _ext directory to sys.path

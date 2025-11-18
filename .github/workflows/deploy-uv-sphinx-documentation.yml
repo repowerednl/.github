@@ -6,12 +6,8 @@ on:
       uv_version:
         type: string
         required: true
-      tag:
-        description: "The Semantic Versioning GitHub tag used for version control"
-        type: string
-        required: true
       docs_target:
-        description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/). Skips deployment if empty (Sphinx build testing)."
+        description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>). Skips deployment if default or empty (Sphinx build testing)."
         type: string
         default: '/home/repowered/docs/<package-name>'
 
@@ -25,9 +21,6 @@ on:
       docs_user:
         type: string
         default: repowered
-      docs_source:
-        type: string
-        default: docs/_build/html
 
     secrets:
       private_pypi_user:
@@ -67,8 +60,8 @@ jobs:
           mkdir -p docs
           rsync -av --ignore-existing /tmp/gh-shared/configuration-files/sphinx-docs/docs/ ./docs/
 
-      - name: Build documentation for ${{ github.event.repository.name }} version ${{ inputs.tag }}
-        run: |
+      - name: Build documentation for ${{ github.event.repository.name }}
+        run: |  # Create docs in '.docs/_build/html'
           cd docs
           uv run python pre.py --logging=info
           uv run make html --logging=info
@@ -82,6 +75,6 @@ jobs:
           port: ${{ inputs.docs_port }}
           username: ${{ inputs.docs_user }}
           key: ${{ secrets.docs_ssh_private_key }}
-          source: ${{ inputs.docs_source }}
+          source: docs/_build/html
           target: ${{ inputs.docs_target }}
           strip_components: 3 # remove the docs/_build/html part from the path
