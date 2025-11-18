@@ -49,7 +49,7 @@ jobs:
     permissions:
       contents: write
     needs: tag
-    uses: repowerednl/.github/workflows/bump-uv-pyproject-toml@add-bumper-fix-making-doc
+    uses: repowerednl/.github/workflows/bump-uv-pyproject-toml@add-bumper-fix-making-docs
     with:
       uv_version: "0.9.4"
       tag: ${{ needs.tag.outputs.tag }}

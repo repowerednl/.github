@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: UV and Python Setup
-        uses: repowerednl/.github/composite-actions/python-uv-cache@add-bumper-fix-making-doc
+        uses: repowerednl/.github/composite-actions/python-uv-cache@add-bumper-fix-making-docs
         with:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
