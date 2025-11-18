@@ -6,10 +6,6 @@ on:
       uv_version:
         type: string
         required: true
-
-      tag:
-        type: string
-        required: true
       docs_target:
         description: "The directory where the package's documentation will be deployed (e.g. /home/repowered/docs/<package name>/)"
         type: string
@@ -28,11 +24,9 @@ on:
       docs_source:
         type: string
         default: docs/_build/html
-
       extra_uv_sync_parameters:
         type: string
         default: "--all-extras --group docs"
-
 
     secrets:
       private_pypi_user:
@@ -50,9 +44,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-
       - name: UV and Python Setup
-        uses: repowerednl/.github/composite-actions/python-uv-cache@change-docs-workflow
+        uses: repowerednl/.github/composite-actions/python-uv-cache@add-bumper-fix-making-doc
         with:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
@@ -60,14 +53,9 @@ jobs:
           enable_cache: true
           extra_uv_sync_parameters: ${{ inputs.extra_uv_sync_parameters }}
 
-      - name: Install dependencies
-        run: |
-          uv sync ${{ inputs.extra_uv_sync_parameters }}
-
       - name: Build documentation
         run: |
-          uv version ${{ inputs.tag }}
-          uv run --no-sync ${{ inputs.extra_uv_sync_parameters }} make html
+          uv run make html
 
       - name: Deploy documentation
         uses: appleboy/scp-action@v1
