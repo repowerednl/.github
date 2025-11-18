@@ -63,4 +63,4 @@ jobs:
       - name: Push changes
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: git push origin HEAD
+        run: git push origin HEAD:${GITHUB_REF_NAME}
