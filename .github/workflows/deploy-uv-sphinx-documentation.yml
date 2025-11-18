@@ -55,6 +55,7 @@ jobs:
 
       - name: Build documentation
         run: |
+          cd docs
           uv run make html
 
       - name: Deploy documentation
