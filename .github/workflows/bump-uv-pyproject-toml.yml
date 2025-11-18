@@ -17,6 +17,10 @@ on:
     secrets:
       private-key:
         required: true
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
 
 jobs:
   update-pyproject-toml:
@@ -42,9 +46,11 @@ jobs:
 
       - name: Bump pyproject.toml version to ${{ inputs.tag }}
         run: |
+          export UV_INDEX_REPOWERED_USERNAME=${{ secrets.private_pypi_user }}
+          export UV_INDEX_REPOWERED_PASSWORD=${{ secrets.private_pypi_password }}
           VERSION="${{ inputs.tag }}"
           VERSION="${VERSION#v}"  # Remove leading 'v' if present
-          uv project version ${{ inputs.tag }}
+          uv version ${{ inputs.tag }}
           git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
           git config user.email "${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
           git add pyproject.toml || true
