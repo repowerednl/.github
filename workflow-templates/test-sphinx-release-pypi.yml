@@ -49,7 +49,7 @@ jobs:
     permissions:
       contents: write
     needs: tag
-    uses: repowerednl/.github/workflows/bump-uv-pyproject-toml@add-bumper-fix-making-docs
+    uses: repowerednl/.github/workflows/bump-uv-pyproject-toml@main
     with:
       uv_version: "0.9.4"
       tag: ${{ needs.tag.outputs.tag }}
@@ -67,7 +67,7 @@ jobs:
       tag: ${{ needs.tag.outputs.tag }}
 
   deploy-sphinx-documentation:
-    needs: create-release
+    needs: [create-release, bump-version]
     # Make sure that the uv/poetry versions are aligned with the selected workflow
     uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@main
     # uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main

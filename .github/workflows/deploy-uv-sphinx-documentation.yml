@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
 
       - name: UV and Python Setup
-        uses: repowerednl/.github/composite-actions/python-uv-cache@add-bumper-fix-making-docs
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
