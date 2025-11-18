@@ -44,6 +44,21 @@ jobs:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
+  # Only available for uv packages; delete this job otherwise
+  bump-version:
+    permissions:
+      contents: write
+    needs: tag
+    uses: repowerednl/.github/workflows/bump-uv-pyproject-toml@main
+    with:
+      uv_version: "0.9.4"
+      tag: ${{ needs.tag.outputs.tag }}
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
   # This job will only run if ran from the main branch
   create-release:
     needs: tag
@@ -52,12 +67,11 @@ jobs:
       tag: ${{ needs.tag.outputs.tag }}
 
   deploy-sphinx-documentation:
-    needs: [create-release, tag]
+    needs: [create-release, bump-version]
     # Make sure that the uv/poetry versions are aligned with the selected workflow
     uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@main
     # uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
     with:
-      tag: ${{ needs.tag.outputs.tag }}
       # python_version: "3.11.2"
       # poetry_version: "1.8.4"
       uv_version: "0.9.4"

@@ -29,11 +29,13 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version-file: "pyproject.toml"
+
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
         version: ${{ inputs.uv_version }}
         enable-cache: ${{ inputs.enable_cache }}
+
     - name: Install the project
       working-directory: ${{ inputs.working_directory }}
       shell: bash
