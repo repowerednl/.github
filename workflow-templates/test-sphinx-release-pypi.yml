@@ -65,7 +65,7 @@ jobs:
       tag: ${{ needs.tag.outputs.tag }}
 
   deploy-sphinx-documentation:
-    needs: [create-release]
+    needs: create-release
     # Make sure that the uv/poetry versions are aligned with the selected workflow
     uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@main
     # uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main
