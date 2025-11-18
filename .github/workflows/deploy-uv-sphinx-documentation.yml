@@ -41,8 +41,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout (PR-aware)
         uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
 
       - name: UV and Python Setup
         uses: repowerednl/.github/composite-actions/python-uv-cache@add-bumper-fix-making-docs
