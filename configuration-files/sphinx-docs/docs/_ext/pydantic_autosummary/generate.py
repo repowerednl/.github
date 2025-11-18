@@ -351,7 +351,7 @@ def generate_autosummary_content(
                 module = import_module(fullname)
                 if module and hasattr(module, "__sphinx_mock__"):
                     continue
-            except ImportExceptionGroup:
+            except ImportError:
                 pass
 
             items.append(fullname)
@@ -520,7 +520,7 @@ def generate_autosummary_docs(
                 # try to import as an instance attribute
                 name, obj, parent, modname = import_ivar_by_name(entry.name)
                 qualname = name.replace(modname + ".", "")
-            except ImportExceptionGroup as exc2:
+            except ImportError as exc2:
                 if exc2.__cause__:
                     exceptions: list[BaseException] = exc.exceptions + [exc2.__cause__]
                 else:

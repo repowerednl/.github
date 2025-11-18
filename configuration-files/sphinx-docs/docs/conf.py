@@ -17,7 +17,7 @@ logger.setLevel(INFO)
 with open(os.path.join("config.toml"), "rb") as f:
     settings_dict = tomllib.load(f).get("custom", {})
     USE_PYDANTIC_AUTOSUMMARY: bool = settings_dict.get("use_pydantic_autosummary", False)
-    MEMBER_ORDER = "default" if settings_dict.get("member_order_by_source", False) else "bysource"
+    MEMBER_ORDER = "bysource" if settings_dict.get("member_order_by_source", False) else "default"
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information

@@ -43,6 +43,17 @@ jobs:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
+  bump-package-json:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/bump-package-json.yml@main
+    needs: tag
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
   # This job will only run if ran from the main branch
   create-release:
     needs: tag
@@ -51,7 +62,7 @@ jobs:
       tag: ${{ needs.tag.outputs.tag }}
 
   deploy-uv-sphinx-documentation:
-    needs: create-release
+    needs: [create-release, bump-package-json]
     # Make sure that the uv/poetry versions are aligned with the selected workflow
     uses: repowerednl/.github/.github/workflows/deploy-uv-sphinx-documentation.yml@DATA-323-Create-default-Sphinx-docs-folder-and-store-it-somewhere
     # uses: repowerednl/.github/.github/workflows/deploy-sphinx-documentation.yml@main

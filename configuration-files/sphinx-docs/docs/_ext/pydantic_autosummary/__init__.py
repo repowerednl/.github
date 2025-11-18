@@ -303,7 +303,7 @@ class Autosummary(SphinxDirective):
                 # check existence of instance attribute
                 try:
                     return import_ivar_by_name(name, prefixes)
-                except ImportExceptionGroup as exc2:
+                except ImportError as exc2:
                     if exc2.__cause__:
                         errors: list[BaseException] = exc.exceptions + [exc2.__cause__]
                     else:
@@ -698,7 +698,7 @@ def import_by_name(
                 prefixed_name = name
             obj, parent, modname = _import_by_name(prefixed_name, grouped_exception)
             return prefixed_name, obj, parent, modname
-        except ImportExceptionGroup:
+        except ImportError:
             tried.append(prefixed_name)
         except ImportExceptionGroup as exc:
             tried.append(prefixed_name)
@@ -709,7 +709,7 @@ def import_by_name(
         raise ImportExceptionGroup(
             "no module named %s" % " or ".join(tried), exceptions
         )
-    raise ImportExceptionGroup("no module named %s" % " or ".join(tried))
+    raise ImportError("no module named %s" % " or ".join(tried))
 
 
 def _import_by_name(name: str, grouped_exception: bool = True) -> tuple[Any, Any, str]:
@@ -725,7 +725,7 @@ def _import_by_name(name: str, grouped_exception: bool = True) -> tuple[Any, Any
             try:
                 mod = import_module(modname)
                 return getattr(mod, name_parts[-1]), mod, modname
-            except (ImportExceptionGroup, IndexError, AttributeError) as exc:
+            except (ImportError, IndexError, AttributeError) as exc:
                 errors.append(exc.__cause__ or exc)
 
         # ... then as MODNAME, MODNAME.OBJ1, MODNAME.OBJ1.OBJ2, ...
@@ -736,7 +736,7 @@ def _import_by_name(name: str, grouped_exception: bool = True) -> tuple[Any, Any
             modname = ".".join(name_parts[:j])
             try:
                 import_module(modname)
-            except ImportExceptionGroup as exc:
+            except ImportError as exc:
                 errors.append(exc.__cause__ or exc)
 
             if modname in sys.modules:
@@ -751,12 +751,12 @@ def _import_by_name(name: str, grouped_exception: bool = True) -> tuple[Any, Any
             return obj, parent, modname
         else:
             return sys.modules[modname], None, modname
-    except (ValueError, ImportExceptionGroup, AttributeError, KeyError) as exc:
+    except (ValueError, ImportError, AttributeError, KeyError) as exc:
         errors.append(exc)
         if grouped_exception:
-            raise ImportExceptionGroup("", errors)
+            raise ImportExceptionGroup('', errors)
         else:
-            raise ImportExceptionGroup(*exc.args) from exc
+            raise ImportError(*exc.args) from exc
 
 
 def import_ivar_by_name(
@@ -788,12 +788,12 @@ def import_ivar_by_name(
             found_attrs |= {attr for (qualname, attr) in analyzer.annotations}
             if attr in found_attrs:
                 return real_name + "." + attr, INSTANCEATTR, obj, modname
-    except (ImportExceptionGroup, ValueError, PycodeError) as exc:
-        raise ImportExceptionGroup from exc
+    except (ImportError, ValueError, PycodeError) as exc:
+        raise ImportError from exc
     except ImportExceptionGroup:
         raise  # pass through it as is
 
-    raise ImportExceptionGroup
+    raise ImportError
 
 
 # -- :autolink: (smart default role) -------------------------------------------
