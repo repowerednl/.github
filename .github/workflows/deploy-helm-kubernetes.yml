@@ -91,7 +91,7 @@ jobs:
             echo $DEPLOYMENT_INFO
             echo "Setting the new image: $VERSIONED_TAG"
             helm upgrade $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG
+              --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG --version $CONFIGURED_HELM_VERSION
           else
             # Set the namespace creation flag if it's an initial deployment
             if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
