@@ -85,6 +85,7 @@ jobs:
           private_pypi_url: ${{ secrets.private_pypi_url }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
+          enable_cache: true
 
       - name: Run Daphne sync
         env:
