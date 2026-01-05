@@ -20,6 +20,10 @@ on:
         required: true
         type: string
       # Optional
+      uv_version:
+        type: string
+        default: "0.9.8"
+        required: false
       log_level:
         description: "Logging level (default is INFO))"
         required: false
@@ -75,20 +79,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: (Cached) Python and Poetry
-        uses: repowerednl/.github/composite-actions/python-poetry-cache@main
+      - name: (Cached) Python and uv
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
-          poetry_no_root: false
-          private_pypi_url: ${{ secrets.private_pypi_url }}
+          uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
+          enable_cache: true
 
       - name: Run Daphne sync
         env:
           CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
         run: |
           datetime_until="${{ inputs.datetime_until }}" && datetime_until=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
-          poetry run python -m daphne.main \
+          uv run python -m daphne.main \
             --source-db-name "${{ secrets.source_db }}" \
             --source-host "${{ secrets.source_host }}" \
             --source-password "${{ secrets.source_pw }}" \
