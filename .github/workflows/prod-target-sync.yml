@@ -3,6 +3,9 @@ name: Run Daphne Sync
 on:
   workflow_call:
     inputs:
+      uv_version:
+        type: string
+        required: true
       interval_unit:
         description: "Time interval unit for data sync (day, week, month; default is day)"
         required: true
@@ -75,10 +78,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: (Cached) Python and Poetry
-        uses: repowerednl/.github/composite-actions/python-poetry-cache@main
+      - name: (Cached) Python and uv
+        uses: repowerednl/.github/composite-actions/python-uv-cache@IN-330-Daphne-workflow-uses-uv
         with:
-          poetry_no_root: false
+          uv_version: ${{ inputs.uv_version }}
           private_pypi_url: ${{ secrets.private_pypi_url }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
