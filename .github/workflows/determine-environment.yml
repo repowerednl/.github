@@ -42,11 +42,7 @@ jobs:
               if [[ "$pr_response" == *"\"id\":"* ]]; then
                 echo "A release PR has been opened from dev to main. Deploying to qa"
                 echo "env_name=qa" >> $GITHUB_OUTPUT
-              else
-                echo "A request to deploy the dev branch has been made. Deploying to dev"
-                echo "env_name=dev" >> $GITHUB_OUTPUT
-              fi
-            else
-              echo "A request to deploy a feature branch has been made. Deploying to dev"
-              echo "env_name=dev" >> $GITHUB_OUTPUT
-            fi
+          else
+            echo "A request to deploy a feature branch has been made. Deploying to dev"
+            echo "env_name=dev" >> $GITHUB_OUTPUT
+          fi
