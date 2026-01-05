@@ -79,7 +79,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: (Cached) Python and uv
-        uses: repowerednl/.github/composite-actions/python-uv-cache@IN-330-Daphne-workflow-uses-uv
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_url: ${{ secrets.private_pypi_url }}

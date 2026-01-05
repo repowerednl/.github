@@ -32,6 +32,7 @@ jobs:
       log_level: ${{ vars.LOG_LEVEL }}
       environment: ${{ needs.github-environment.outputs.environment }} # Optional, defaults to no environment
 #      continue_on_error: "true" # Optional, defaults to "false"
+      uv_version: ${{ matrix.uv_version }}
     secrets:
       # Source should defined on repository level
       source_db: ${{ secrets.SOURCE_DB }}
