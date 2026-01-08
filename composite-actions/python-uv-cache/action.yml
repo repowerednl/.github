@@ -17,12 +17,16 @@ inputs:
     required: false
     description: Whether to enable the cache for uv
     default: true
+  extra_uv_sync_parameters:
+    required: false
+    description: Additional parameters to pass to `uv sync` command
+    default: "--locked --all-extras"
 
 runs:
   using: "composite"
   steps:
     - name: "Set up Python"
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version-file: "pyproject.toml"
     - name: Install uv
@@ -36,4 +40,4 @@ runs:
       run: |
         export UV_INDEX_REPOWERED_USERNAME=${{ inputs.private_pypi_user }}
         export UV_INDEX_REPOWERED_PASSWORD=${{ inputs.private_pypi_password }}
-        uv sync --locked --all-extras --dev
+        uv sync ${{ inputs.extra_uv_sync_parameters }}
