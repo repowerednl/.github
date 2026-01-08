@@ -1,4 +1,4 @@
-name: Deploy docker-compose via SSH
+name: Deprecated since June 2025 (no DevOps support available; use Cloud&Helm) 
 
 on:
   workflow_call:
