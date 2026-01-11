@@ -38,9 +38,9 @@ on:
         required: false
         type: string
       continue_on_error:
-        description: "Whether to continue on errors (default is false)"
+        description: "Whether to continue on errors (default is true)"
         required: false
-        default: false
+        default: 'true'
         type: string
     secrets:
       source_db:
@@ -99,8 +99,6 @@ jobs:
           enable_cache: true
 
       - name: Run Daphne sync
-        env:
-          CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
         run: |
           datetime_until="${{ inputs.datetime_until }}" && datetime_until=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
           uv run python -m daphne.main \
@@ -119,4 +117,5 @@ jobs:
             --exclude-tables "${{ inputs.exclude_tables }}" \
             --include-tables "${{ inputs.include_tables }}" \
             --datetime_until "$datetime_until" \
-            --log-level "${{ inputs.log_level }}" $CONTINUE_ON_ERROR_FLAG
+            --log-level "${{ inputs.log_level }}" \
+            ${{ inputs.continue_on_error != 'false' && '--continue-on-error' || '' }}
