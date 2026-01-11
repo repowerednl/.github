@@ -38,9 +38,9 @@ on:
         required: false
         type: string
       continue_on_error:
-        description: "Whether to continue on errors (default is false)"
+        description: "Whether to continue on errors (default is true)"
         required: false
-        default: false
+        default: 'true'
         type: string
     secrets:
       source_db:
@@ -90,17 +90,22 @@ jobs:
           echo "PostgreSQL 17 client installed"
           echo "pg_dump version: $(pg_dump --version)"
 
-      - name: (Cached) Python and uv
-        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+      - name: Setup Python
+        uses: actions/setup-python@v6
         with:
-          uv_version: ${{ inputs.uv_version }}
-          private_pypi_user: ${{ secrets.private_pypi_user }}
-          private_pypi_password: ${{ secrets.private_pypi_password }}
-          enable_cache: true
+          python-version: '3.12'  # or whatever version you need
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: |
+          export UV_INDEX_REPOWERED_USERNAME=${{ secrets.private_pypi_user }}
+          export UV_INDEX_REPOWERED_PASSWORD=${{ secrets.private_pypi_password }}
+          uv lock --upgrade-package daphne
+          uv sync
 
       - name: Run Daphne sync
-        env:
-          CONTINUE_ON_ERROR_FLAG: ${{ inputs.continue_on_error == 'true' && '--continue-on-error' || '' }}
         run: |
           datetime_until="${{ inputs.datetime_until }}" && datetime_until=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
           uv run python -m daphne.main \
@@ -119,4 +124,5 @@ jobs:
             --exclude-tables "${{ inputs.exclude_tables }}" \
             --include-tables "${{ inputs.include_tables }}" \
             --datetime_until "$datetime_until" \
-            --log-level "${{ inputs.log_level }}" $CONTINUE_ON_ERROR_FLAG
+            --log-level "${{ inputs.log_level }}" \
+            ${{ inputs.continue_on_error != 'false' && '--continue-on-error' || '' }}
