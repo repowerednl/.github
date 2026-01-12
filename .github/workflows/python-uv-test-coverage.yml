@@ -44,6 +44,7 @@ jobs:
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         group: ${{ fromJson(inputs.test_groups) }}
 
