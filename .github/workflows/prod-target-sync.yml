@@ -42,6 +42,10 @@ on:
         required: false
         default: 'true'
         type: string
+      runner:
+        required: false
+        type: string
+        default: ubuntu-latest
     secrets:
       source_db:
         required: true
@@ -72,7 +76,7 @@ on:
 
 jobs:
   run-daphne:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     environment: ${{ inputs.environment || null }}
 
     steps:
