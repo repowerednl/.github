@@ -31,6 +31,10 @@ on:
         type: boolean
         description: Whether to enable the cache for uv
         default: true
+      fail_fast:
+        type: boolean
+        description: Whether to fail fast on the first test failure
+        default: false
     secrets:
       postgres_password:
         required: true
@@ -44,6 +48,7 @@ jobs:
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: ${{ inputs.fail_fast }}
       matrix:
         group: ${{ fromJson(inputs.test_groups) }}
 
