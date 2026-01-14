@@ -55,10 +55,32 @@ jobs:
             echo "Secret already exists. It was created in another job"
           fi
 
-      - name: Run migrations job
+      - name: Check migration required
+        id: migration-check
+        run: |
+          echo "Checking if migrations are required..."
+
+          MIGRATION_MSG=$(uv run python manage.py makemigrations --dry-run)
+          echo "migration_msg<<EOF" >> $GITHUB_OUTPUT
+          echo "$MIGRATION_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          if echo "$MIGRATION_MSG" | grep -q "No changes detected"; then
+            echo "No migrations required."
+            echo "migrations_required=false" >> $GITHUB_OUTPUT
+          else
+            echo "Migrations are required."
+            echo "migrations_required=true" >> $GITHUB_OUTPUT
+          fi
+        env:
+          CI: true
+          ENV: ${{ inputs.environment }}
+
+      - name: Run migrations job if changes detected
+        if: steps.migration-check.outputs.migrations_required == 'true'
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
+
 
       - name: Verify migrations are successful
         env:
