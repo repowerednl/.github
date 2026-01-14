@@ -20,6 +20,10 @@ on:
         required: true
         type: string
       # Optional
+      runner:
+        type: string
+        default: 'ubuntu-latest'
+        required: false
       uv_version:
         type: string
         default: "0.9.8"
@@ -72,12 +76,12 @@ on:
 
 jobs:
   run-daphne:
-    runs-on: "Data-sync-paid"
+    runs-on: ${{ inputs.runner }}
     environment: ${{ inputs.environment || null }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install PostgreSQL 17 Client
         run: |
@@ -90,20 +94,13 @@ jobs:
           echo "PostgreSQL 17 client installed"
           echo "pg_dump version: $(pg_dump --version)"
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
+      - name: (Cached) Python and uv
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
-          python-version: '3.12'  # or whatever version you need
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Install dependencies
-        run: |
-          export UV_INDEX_REPOWERED_USERNAME=${{ secrets.private_pypi_user }}
-          export UV_INDEX_REPOWERED_PASSWORD=${{ secrets.private_pypi_password }}
-          uv lock --upgrade-package daphne
-          uv sync
+          uv_version: ${{ inputs.uv_version }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+          enable_cache: true
 
       - name: Run Daphne sync
         run: |
