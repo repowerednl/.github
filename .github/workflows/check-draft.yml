@@ -8,9 +8,8 @@ on:
 jobs:
   check:
     # Only run when NOT draft
-    if: inputs.is-draft
+    if: inputs.is-draft == true
     runs-on: ubuntu-latest
     steps:
       - name: Proceed
         run: echo "This is a draft PR. Skipping subsequent jobs."
-        
