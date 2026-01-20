@@ -1,0 +1,15 @@
+name: Check Draft PR Status
+
+on:
+  workflow_call:
+    inputs:
+      is-draft:
+        type: boolean
+jobs:
+  check:
+    # Only run when NOT draft
+    if: inputs.is-draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Proceed
+        run: echo "This PR is not a draft. Proceeding with workflow."
