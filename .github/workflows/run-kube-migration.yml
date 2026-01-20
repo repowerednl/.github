@@ -16,8 +16,7 @@ on:
         type: string
         required: false
         default: |
-          **/models.py
-          **/migrations/**.py
+         **/migrations/**.py
     secrets:
       digital_ocean_access_token:
         required: true
