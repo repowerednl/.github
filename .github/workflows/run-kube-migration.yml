@@ -73,35 +73,14 @@ jobs:
             echo "Secret already exists. It was created in another job"
           fi
 
-      - name: Check migration required
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
-        id: migration-check
-        run: |
-          echo "Checking if migrations are required..."
-
-          MIGRATION_MSG=$(uv run python manage.py makemigrations --dry-run)
-          echo "migration_msg<<EOF" >> $GITHUB_OUTPUT
-          echo "$MIGRATION_MSG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          if echo "$MIGRATION_MSG" | grep -q "No changes detected"; then
-            echo "No migrations required."
-            echo "migrations_required=false" >> $GITHUB_OUTPUT
-          else
-            echo "Migrations are required."
-            echo "migrations_required=true" >> $GITHUB_OUTPUT
-          fi
-        env:
-          CI: true
-          ENV: ${{ inputs.environment }}
-
       - name: Run migrations job if changes detected
-        if: steps.changed-migration-files.outputs.any_changed == 'true' && steps.migration-check.outputs.migrations_required == 'true'
+        if: steps.changed-migration-files.outputs.any_changed == 'true'
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
 
       - name: Verify migrations are successful
-        if: steps.changed-migration-files.outputs.any_changed == 'true' && steps.migration-check.outputs.migrations_required == 'true'
+        if: steps.changed-migration-files.outputs.any_changed == 'true'
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
