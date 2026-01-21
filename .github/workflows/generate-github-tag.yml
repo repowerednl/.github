@@ -14,12 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.github-tag.outputs.tag }}
-    if: ${{ github.event_name == 'push' 
-      || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') 
-      || contains(github.event.workflow_run.head_commit.message, '[deploy]')
-      || contains(github.event.workflow_run.head_branch, 'IN-355-no-migrations-run-when-no-model-changes')))
- 
-      || github.event.label.name == 'deploy' }}
+    # TEMP: always run on this branch so the pipeline can execute
+    # (revert this after testing)
+    # if: ${{ github.event_name == 'push' 
+    #   || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') 
+    #   || contains(github.event.workflow_run.head_commit.message, '[deploy]')
+    #   || contains(github.event.workflow_run.head_branch, 'IN-355-no-migrations-run-when-no-model-changes')))
+    #   || github.event.label.name == 'deploy' }}
     steps:
       # Checkout the repository with all commit history
       - name: Checkout ${{ github.repository }}
