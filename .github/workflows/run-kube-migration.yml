@@ -11,6 +11,11 @@ on:
       environment:
         type: string
         required: true
+      migration_files:
+        type: string
+        #all migration directories
+        default: |
+         **/migrations/**.py 
     secrets:
       digital_ocean_access_token:
         required: true
@@ -26,6 +31,19 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect migration-related changes
+        id: changed-migration-files
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47
+        with:
+          files: ${{ inputs.migration_files }}
+
+      - name: Skip migrations if no migration-related changes
+        if: steps.changed-migration-files.outputs.any_changed != 'true'
+        run: |
+          echo "No migration-related file changes detected. Skipping migration job."
+
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
 
@@ -38,8 +56,6 @@ jobs:
         env:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
-
-      - uses: actions/checkout@v4
 
       - name: Update kubernetes secrets
         run: |
@@ -55,12 +71,16 @@ jobs:
             echo "Secret already exists. It was created in another job"
           fi
 
-      - name: Run migrations job
+      - name: Run migrations job if changes detected
+        if: steps.changed-migration-files.outputs.any_changed == 'true'
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
 
       - name: Verify migrations are successful
+        if: steps.changed-migration-files.outputs.any_changed == 'true'
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
+
+
