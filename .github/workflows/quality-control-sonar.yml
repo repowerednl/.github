@@ -12,18 +12,21 @@ jobs:
   quality-control-sonar:
     runs-on: ubuntu-latest
     name: Quality checks via SonarCloud with coverage report
+    if: |
+      github.event_name != 'pull_request' ||
+      !(github.base_ref == 'main' && github.head_ref == 'dev')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Download coverage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ inputs.coverage_report_name }}
 
       - name: SonarCloud analysis
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
