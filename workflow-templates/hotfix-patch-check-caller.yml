@@ -9,4 +9,4 @@ on:
 jobs:
   check-patch-tag:
     if: contains(github.head_ref, 'hotfix')
-    uses: YOUR-ORG/.github/.github/workflows/hotfix-patch-check.yml@main
+    uses: repowerednl/.github/.github/workflows/hotfix-patch-check.yml@main
