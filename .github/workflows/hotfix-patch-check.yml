@@ -5,8 +5,6 @@ on:
     types: [opened, edited, synchronize, reopened]
     branches:
       - main
-      - 'IN-220-**'  # Temporary: for testing purposes
-  workflow_dispatch:  # Allows manual testing from Actions tab
 
 jobs:
   check-patch-tag:
