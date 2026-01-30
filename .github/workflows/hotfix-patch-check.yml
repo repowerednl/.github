@@ -1,0 +1,40 @@
+name: Hotfix Patch Tag Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches:
+      - main
+      - 'IN-220-**'  # Temporary: for testing purposes
+  workflow_dispatch:  # Allows manual testing from Actions tab
+
+jobs:
+  check-patch-tag:
+    runs-on: ubuntu-latest
+    if: contains(github.head_ref, 'hotfix')
+    
+    steps:
+      - name: Check for #patch tag in PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            const hasPatchTag = prBody.includes('#patch');
+            
+            if (!hasPatchTag) {
+              // Add a comment to the PR
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '⚠️ **Hotfix PR Missing #patch Tag**\n\n' +
+                      'This PR is from a hotfix branch but does not include `#patch` in the description.\n\n' +
+                      'Please add `#patch` to the PR description to ensure the tag is created properly.\n\n' +
+                      '**Required:** Include `#patch` in the commit message or PR description.'
+              });
+              
+              // Fail the check
+              core.setFailed('PR description must include #patch tag for hotfix branches');
+            } else {
+              console.log('✅ #patch tag found in PR description');
+            }
