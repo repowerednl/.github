@@ -30,3 +30,13 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The scanner auto-detects PR info from CI environment variables,
+        #  but those don't propagate through cross-repo workflow_call.
+        # The flags bypass auto-detection so it does propagate.
+        args: >
+          ${{ github.event_name == 'pull_request' && format(
+            '-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}',
+            github.event.pull_request.number,
+            github.event.pull_request.head.ref,
+            github.event.pull_request.base.ref
+          ) || '' }}
