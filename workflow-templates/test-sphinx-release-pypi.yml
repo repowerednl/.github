@@ -5,10 +5,16 @@ on:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 jobs:
+  draft-pr-check:
+        uses: repowerednl/.github/.github/workflows/check-draft.yml@main
+        with:
+          is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
   pytest-simple-with-coverage:
+    needs: draft-pr-check
     # Make sure that the uv/poetry versions are aligned with the selected workflow
     uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
     # uses: repowerednl/.github/.github/workflows/python-test-coverage-simple.yml@main
@@ -46,7 +52,7 @@ jobs:
 
   # This job will only run if ran from the main branch
   create-release:
-    needs: tag
+    needs: [tag, draft-pr-check]
     uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
     with:
       tag: ${{ needs.tag.outputs.tag }}
