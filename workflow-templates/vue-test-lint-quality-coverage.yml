@@ -6,11 +6,17 @@ on:
       - dev
       - hotfix**
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches-ignore:
       - main
 
 jobs:
+  draft-pr-check:
+        uses: repowerednl/.github/.github/workflows/check-draft.yml@main
+        with:
+          is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
   yarn-check-lint-prettier-test-publish:
+    needs: draft-pr-check
     permissions:
       contents: write
       packages: read
