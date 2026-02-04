@@ -6,11 +6,17 @@ on:
       - dev
       - hotfix**
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches-ignore:
       - main
 
 jobs:
+  draft-pr-check:
+        uses: repowerednl/.github/.github/workflows/check-draft.yml@main
+        with:
+          is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
   pytest-with-coverage:
+    needs: draft-pr-check
     uses: repowerednl/.github/.github/workflows/python-test-coverage.yml@main
     permissions:
       pull-requests: write
@@ -43,6 +49,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   alembic-migration-test:
+    needs: draft-pr-check
     uses: repowerednl/.github/.github/workflows/alembic-migration-test.yml@main
     strategy:
       matrix:
