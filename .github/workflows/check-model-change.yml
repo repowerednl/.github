@@ -1,0 +1,26 @@
+name: Detect model changes
+
+on:
+  workflow_call:
+    inputs:
+      migration_files:
+        type: string
+        default: |
+          **/migrations/*.py
+    outputs:
+      model_changed:
+        value: ${{ jobs.detect.outputs.model_changed }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      model_changed: ${{ steps.changed.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+      - id: changed
+        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47
+        with:
+          files: ${{ inputs.migration_files }}
