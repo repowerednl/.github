@@ -53,7 +53,7 @@ jobs:
   detect-model-changes:
     runs-on: ubuntu-latest
     outputs:
-      any_changed: ${{ steps.detect.outputs.any_changed }}
+      model_changed: ${{ steps.detect.outputs.model_changed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -110,7 +110,7 @@ jobs:
           files: ${{ inputs.migration_files }}
       - name: Decide migration flag for pytest
         run: |
-          if [ "${{ steps.detect.outputs.any_changed }}" != "true" ]; then
+          if [ "${{ steps.detect.outputs.model_changed }}" != "true" ]; then
             echo "PYTEST_MIGRATION_FLAG=--no-migrations" >> $GITHUB_ENV
           else
             echo "PYTEST_MIGRATION_FLAG=" >> $GITHUB_ENV
