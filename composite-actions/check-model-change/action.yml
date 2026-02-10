@@ -1,0 +1,22 @@
+name: Detect changed files
+description: Detect whether files matching patterns changed
+inputs:
+  files:
+    description: Glob patterns
+    required: true
+outputs:
+  any_changed:
+    description: Whether any matching file changed
+    value: ${{ steps.changed.outputs.any_changed }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - id: changed
+      uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 
+      with:
+        files: ${{ inputs.files }}

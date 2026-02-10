@@ -27,23 +27,13 @@ on:
         required: false
 
 jobs:
+
   migraties:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Detect migration-related changes
-        id: changed-migration-files
-        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47
-        with:
-          files: ${{ inputs.migration_files }}
-
-      - name: Skip migrations if no migration-related changes
-        if: steps.changed-migration-files.outputs.any_changed != 'true'
-        run: |
-          echo "No migration-related file changes detected. Skipping migration job."
-
+      
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
 
@@ -51,7 +41,7 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.digital_ocean_access_token }}
-
+          
       - name: Save DigitalOcean kubeconfig with short-lived credentials
         env:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
@@ -70,15 +60,25 @@ jobs:
           else
             echo "Secret already exists. It was created in another job"
           fi
+      - name: detect-migration-changes
+        id: detect
+        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
+        with:
+          files: ${{ inputs.migration_files }}
+
+      - name: Skip migrations if no migration-related changes
+        if: steps.detect.outputs.any_changed != 'true'
+        run: |
+          echo "No migration-related file changes detected. Skipping migration job."
 
       - name: Run migrations job if changes detected
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
+        if: steps.detect.outputs.any_changed == 'true'
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
 
       - name: Verify migrations are successful
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
+        if: steps.detect.outputs.any_changed == 'true'
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}

@@ -35,9 +35,12 @@ on:
         type: boolean
         description: Whether to fail fast on the first test failure
         default: false
-      pytest_migration_check:
+      migration_files:
         type: string
-        required: false
+        #all migration directories
+        default: |
+         **/migrations/**.py 
+
     secrets:
       postgres_password:
         required: true
@@ -48,6 +51,7 @@ on:
 
 jobs:
   pytest-with-coverage:
+    
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
     strategy:
@@ -86,11 +90,22 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
-
+      - name: Detect model/migration changes
+        id: detect
+        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
+        with:
+          files: ${{ inputs.migration_files }}
+      - name: Decide migration flag for pytest
+        run: |
+          if [ "${{ steps.detect.outputs.any_changed }}" != "true" ]; then
+            echo "PYTEST_MIGRATION_FLAG=--no-migrations" >> $GITHUB_ENV
+          else
+            echo "PYTEST_MIGRATION_FLAG=" >> $GITHUB_ENV
+          fi
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
-          uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} ${{ inputs.pytest_migration_check }}
+          uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} $PYTEST_MIGRATION_FLAG
         env:
           pytest_github_report: true
           pytest_use_blanks: true
