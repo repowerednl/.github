@@ -7,7 +7,7 @@ inputs:
 outputs:
   model_changed:
     description: Indicates if any models changed 
-    value: ${{ steps.changed.outputs.model_changed }}
+    value: ${{ steps.changed.outputs.any_changed  }}
 
 runs:
   using: "composite"

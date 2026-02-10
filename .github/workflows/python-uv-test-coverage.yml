@@ -58,7 +58,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - id: detect
         uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
         with:
@@ -103,14 +102,9 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
-      - name: Detect model/migration changes
-        id: detect
-        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
-        with:
-          files: ${{ inputs.migration_files }}
       - name: Decide migration flag for pytest
         run: |
-          if [ "${{ steps.detect.outputs.model_changed }}" != "true" ]; then
+          if [ "${{ needs.detect-model-changes.outputs.model_changed }}" != "true" ]; then
             echo "PYTEST_MIGRATION_FLAG=--no-migrations" >> $GITHUB_ENV
           else
             echo "PYTEST_MIGRATION_FLAG=" >> $GITHUB_ENV
