@@ -64,7 +64,6 @@ jobs:
         with:
           files: ${{ inputs.migration_files }}
   pytest-with-coverage:
-    
     name: Pytest With Postgres and Coverage
     needs: detect-model-changes
     runs-on: ubuntu-latest
