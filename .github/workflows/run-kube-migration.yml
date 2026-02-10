@@ -27,6 +27,24 @@ on:
         required: false
 
 jobs:
+  detect-migration-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.detect.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect migration-related changes
+        id: detect
+        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
+        with:
+          files: ${{ inputs.migration_files }}
+   
+      - name: Skip migrations if no migration-related changes
+        if: steps.detect.outputs.any_changed != 'true'
+        run: |
+          echo "No migration-related file changes detected. Skipping migration job."
 
   migraties:
     runs-on: ubuntu-latest
@@ -60,25 +78,15 @@ jobs:
           else
             echo "Secret already exists. It was created in another job"
           fi
-      - name: detect-migration-changes
-        id: detect
-        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
-        with:
-          files: ${{ inputs.migration_files }}
-
-      - name: Skip migrations if no migration-related changes
-        if: steps.detect.outputs.any_changed != 'true'
-        run: |
-          echo "No migration-related file changes detected. Skipping migration job."
+      
 
       - name: Run migrations job if changes detected
-        if: steps.detect.outputs.any_changed == 'true'
+
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
 
       - name: Verify migrations are successful
-        if: steps.detect.outputs.any_changed == 'true'
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}

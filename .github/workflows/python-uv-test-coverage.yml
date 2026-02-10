@@ -50,9 +50,23 @@ on:
         required: true
 
 jobs:
+  detect-model-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.detect.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: detect
+        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
+        with:
+          files: ${{ inputs.migration_files }}
   pytest-with-coverage:
     
     name: Pytest With Postgres and Coverage
+    needs: detect-model-changes
     runs-on: ubuntu-latest
     strategy:
       fail-fast: ${{ inputs.fail_fast }}
