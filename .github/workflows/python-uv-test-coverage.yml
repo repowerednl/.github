@@ -53,15 +53,21 @@ jobs:
   detect-model-changes:
     runs-on: ubuntu-latest
     outputs:
-      model_changed: ${{ steps.detect.outputs.model_changed }}
+      any_changed: ${{ steps.changed-migration-files.outputs.any_changed }} 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - id: detect
-        uses: repowerednl/.github/composite-actions/check-model-change@IN-358-add-no-migrations-to-test
+          fetch-depth: 0 
+      - name: Detect migration-related changes
+        id: changed-migration-files
+        uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
+          base_sha: ${{github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }} 
+          sha: ${{github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Skip migrations if no migration-related changes
+        if: steps.changed-migration-files.outputs.any_changed != 'true'
+        run: echo "No migration-related file changes detected. Skipping migration job."
   pytest-with-coverage:
     name: Pytest With Postgres and Coverage
     needs: detect-model-changes
@@ -104,7 +110,7 @@ jobs:
           enable_cache: ${{ inputs.enable_cache }}
       - name: Decide migration flag for pytest
         run: |
-          if [ "${{ needs.detect-model-changes.outputs.model_changed }}" != "true" ]; then
+          if [ "${{ needs.detect-model-changes.outputs.any_changed }}" != "true" ]; then
             echo "PYTEST_MIGRATION_FLAG=--no-migrations" >> $GITHUB_ENV
           else
             echo "PYTEST_MIGRATION_FLAG=" >> $GITHUB_ENV
@@ -112,8 +118,10 @@ jobs:
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
+          echo "PYTEST_MIGRATION_FLAG='${PYTEST_MIGRATION_FLAG}'"
           uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} $PYTEST_MIGRATION_FLAG
         env:
+          PYTEST_MIGRATION_FLAG: ${{ needs.detect-model-changes.outputs.any_changed == 'true' && '' || '--no-migrations' }}
           pytest_github_report: true
           pytest_use_blanks: true
           CI: true

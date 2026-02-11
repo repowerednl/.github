@@ -27,23 +27,32 @@ on:
         required: false
 
 jobs:
-  migraties:
+  detect-model-changes:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    outputs:
+      any_changed: ${{ steps.changed-migration-files.outputs.any_changed }} 
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0 
       - name: Detect migration-related changes
         id: changed-migration-files
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-
+          base_sha: ${{github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }} 
+          sha: ${{github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - name: Skip migrations if no migration-related changes
         if: steps.changed-migration-files.outputs.any_changed != 'true'
-        run: |
-          echo "No migration-related file changes detected. Skipping migration job."
+        run: echo "No migration-related file changes detected. Skipping migration job."
 
+  migraties:
+    needs: detect-model-changes
+    if: needs.detect-model-changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
 
