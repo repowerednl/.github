@@ -53,41 +53,41 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install envsubst
-        run: sudo apt-get update && sudo apt-get -y install gettext-base
+      - name: Migration Job Triggered
+        run: echo "Migration will be applied because models have changed so this job as a dummy is created instead running actual migrations"
+      # - name: Install envsubst
+      #   run: sudo apt-get update && sudo apt-get -y install gettext-base
 
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.digital_ocean_access_token }}
+      # - name: Install doctl
+      #   uses: digitalocean/action-doctl@v2
+      #   with:
+      #     token: ${{ secrets.digital_ocean_access_token }}
 
-      - name: Save DigitalOcean kubeconfig with short-lived credentials
-        env:
-          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
-        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+      # - name: Save DigitalOcean kubeconfig with short-lived credentials
+      #   env:
+      #     expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+      #   run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
-      - name: Update kubernetes secrets
-        run: |
-          kubectl delete secret infisical-secrets --ignore-not-found=true
-          if ! kubectl get secret infisical-secrets > /dev/null 2>&1; then
-            echo "Secret not found. Creating it now..."
-            kubectl create secret generic infisical-secrets \
-              --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
-              --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
-              --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
-            echo "Secret created successfully."
-          else
-            echo "Secret already exists. It was created in another job"
-          fi
+      # - name: Update kubernetes secrets
+      #   run: |
+      #     kubectl delete secret infisical-secrets --ignore-not-found=true
+      #     if ! kubectl get secret infisical-secrets > /dev/null 2>&1; then
+      #       echo "Secret not found. Creating it now..."
+      #       kubectl create secret generic infisical-secrets \
+      #         --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
+      #         --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
+      #         --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
+      #       echo "Secret created successfully."
+      #     else
+      #       echo "Secret already exists. It was created in another job"
+      #     fi
 
-      - name: Run migrations job if changes detected
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
-        run: cat migrations_job.yml | envsubst | kubectl apply -f -
-        env:
-          VERSION: ${{ inputs.tag }}
+      # - name: Run migrations job if changes detected
+      #   run: cat migrations_job.yml | envsubst | kubectl apply -f -
+      #   env:
+      #     VERSION: ${{ inputs.tag }}
 
-      - name: Verify migrations are successful
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
-        env:
-          timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
-        run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
+      # - name: Verify migrations are successful
+      #   env:
+      #     timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
+      #   run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
