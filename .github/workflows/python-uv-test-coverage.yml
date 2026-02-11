@@ -117,7 +117,6 @@ jobs:
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
-          echo "RAW OUTPUT: '${{ needs.detect-model-changes.outputs.any_changed }}'"
           if [[ "${{ needs.detect-model-changes.outputs.any_changed }}" == "true" ]]; then
           PYTEST_MIGRATION_FLAG=""
           else
