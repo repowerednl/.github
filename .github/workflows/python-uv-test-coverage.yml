@@ -74,8 +74,6 @@ jobs:
           files: ${{ inputs.migration_files }}
           base_sha: ${{ inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
-
-      
   pytest-with-coverage:
     name: Pytest With Postgres and Coverage
     needs: detect-model-changes
@@ -119,6 +117,7 @@ jobs:
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
+          echo "RAW OUTPUT: '${{ needs.detect-model-changes.outputs.any_changed }}'"
           echo "PYTEST_MIGRATION_FLAG='${PYTEST_MIGRATION_FLAG}'"
           uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} $PYTEST_MIGRATION_FLAG
         env:
