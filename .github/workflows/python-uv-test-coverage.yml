@@ -39,7 +39,7 @@ on:
         type: string
         #all migration directories
         default: |
-         **/migrations/**.py 
+         **/migrations/**/*.py
 
     secrets:
       postgres_password:
@@ -63,11 +63,15 @@ jobs:
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }} 
-          sha: ${{github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-      - name: Skip migrations if no migration-related changes
-        if: steps.changed-migration-files.outputs.any_changed != 'true'
-        run: echo "No migration-related file changes detected. Skipping migration job."
+          base_sha: ${{ github.event.workflow_call.event_name == 'pull_request'
+            && github.event.workflow_call.pull_request.base.sha
+            || github.event.before }}
+            
+          sha: ${{ github.event.workflow_call.event_name == 'pull_request'
+            && github.event.workflow_call.pull_request.head.sha
+            || github.sha }}
+
+      
   pytest-with-coverage:
     name: Pytest With Postgres and Coverage
     needs: detect-model-changes
