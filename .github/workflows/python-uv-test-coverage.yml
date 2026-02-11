@@ -123,7 +123,7 @@ jobs:
           else
             PYTEST_MIGRATION_FLAG="--no-migrations"
           fi
-
+          echo "Using PYTEST_MIGRATION_FLAG: '${PYTEST_MIGRATION_FLAG}'"
           uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} ${PYTEST_MIGRATION_FLAG}
         env:
           pytest_github_report: true
