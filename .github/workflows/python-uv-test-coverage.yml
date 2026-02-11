@@ -116,20 +116,13 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
-      - name: Decide migration flag for pytest
-        run: |
-          if [ "${{ needs.detect-model-changes.outputs.any_changed }}" != "true" ]; then
-            echo "PYTEST_MIGRATION_FLAG=--no-migrations" >> $GITHUB_ENV
-          else
-            echo "PYTEST_MIGRATION_FLAG=" >> $GITHUB_ENV
-          fi
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
           echo "PYTEST_MIGRATION_FLAG='${PYTEST_MIGRATION_FLAG}'"
           uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} $PYTEST_MIGRATION_FLAG
         env:
-          PYTEST_MIGRATION_FLAG: ${{ needs.detect-model-changes.outputs.any_changed == 'true' && '' || '--no-migrations' }}
+          PYTEST_MIGRATION_FLAG: ${{ contains(needs.detect-model-changes.outputs.any_changed, 'true') && '' || '--no-migrations' }}
           pytest_github_report: true
           pytest_use_blanks: true
           CI: true
