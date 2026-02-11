@@ -16,6 +16,15 @@ on:
         #all migration directories
         default: |
          **/migrations/**/*.py
+      base_sha:
+        type: string
+        description: The base sha to compare the changed files to. This is automatically set by the caller workflow 
+        required: true
+      
+      head_sha:
+        type: string
+        description: The head sha to compare the changed files to. This is automatically set by the caller workflow a
+        required: true
     secrets:
       digital_ocean_access_token:
         required: true
@@ -40,13 +49,8 @@ jobs:
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{ github.event.workflow_call.event_name == 'pull_request'
-            && github.event.workflow_call.pull_request.base.sha
-            || github.event.before }}
-            
-          sha: ${{ github.event.workflow_call.event_name == 'pull_request'
-            && github.event.workflow_call.pull_request.head.sha
-            || github.sha }}
+          base_sha: ${{ inputs.base_sha }}
+          sha: ${{ inputs.head_sha }}
 
       - name: Skip migrations if no migration-related changes
         if: steps.changed-migration-files.outputs.any_changed != 'true'
