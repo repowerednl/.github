@@ -81,15 +81,15 @@ jobs:
         run: |
           kubectl delete secret infisical-secrets --ignore-not-found=true
           if ! kubectl get secret infisical-secrets > /dev/null 2>&1; then
-          echo "Secret not found. Creating it now..."
-          kubectl create secret generic infisical-secrets \
-            --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
-            --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
-            --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
-          echo "Secret created successfully."
-            else
-          echo "Secret already exists. It was created in another job"
-            fi
+            echo "Secret not found. Creating it now..."
+            kubectl create secret generic infisical-secrets \
+              --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
+              --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
+              --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
+            echo "Secret created successfully."
+          else
+            echo "Secret already exists. It was created in another job"
+          fi
 
       - name: Run migrations job if changes detected
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
@@ -100,3 +100,4 @@ jobs:
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
+
