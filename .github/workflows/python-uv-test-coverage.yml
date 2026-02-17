@@ -59,24 +59,8 @@ on:
         required: true
 
 jobs:
-  detect-model-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      any_changed: ${{ steps.changed-migration-files.outputs.any_changed }} 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 
-      - name: Detect migration-related changes
-        id: changed-migration-files
-        uses: tj-actions/changed-files@v47.0.2
-        with:
-          files: ${{ inputs.migration_files }}
-          base_sha: ${{ inputs.base_sha }}
-          sha: ${{ inputs.head_sha }}
   pytest-with-coverage:
     name: Pytest With Postgres and Coverage
-    needs: detect-model-changes
     runs-on: ubuntu-latest
     strategy:
       fail-fast: ${{ inputs.fail_fast }}
@@ -114,15 +98,25 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
+
+      - name: Detect model changes
+        id: detect_model_changes
+        uses: tj-actions/changed-files@v47.0.2
+        with:
+          files: ${{ inputs.migration_files }}
+          base_sha: ${{ inputs.base_sha }}
+          sha: ${{ inputs.head_sha }}
+
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
-          if [[ "${{ needs.detect-model-changes.outputs.any_changed }}" == "true" ]]; then
           PYTEST_MIGRATION_FLAG=""
-          else
-            PYTEST_MIGRATION_FLAG="--no-migrations"
+          if [[ "${{ steps.detect_model_changes.outputs.any_changed }}" != "true" ]]; then
+  
+           PYTEST_MIGRATION_FLAG="--no-migrations"
           fi
-          echo "Using PYTEST_MIGRATION_FLAG: '${PYTEST_MIGRATION_FLAG}'"
+          
+          echo "PYTEST_MIGRATION_FLAG=$PYTEST_MIGRATION_FLAG"
           uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} ${PYTEST_MIGRATION_FLAG}
         env:
           pytest_github_report: true
