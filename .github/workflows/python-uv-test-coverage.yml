@@ -35,6 +35,21 @@ on:
         type: boolean
         description: Whether to fail fast on the first test failure
         default: false
+      migration_files:
+        type: string
+        #all migration directories
+        default: |
+         **/migrations/**/*.py
+      base_sha:
+        type: string
+        description: The base sha to compare the changed files to. This is automatically set by the caller workflow 
+        required: true
+      
+      head_sha:
+        type: string
+        description: The head sha to compare the changed files to. This is automatically set by the caller workflow a
+        required: true
+
     secrets:
       postgres_password:
         required: true
@@ -84,10 +99,25 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
 
+      - name: Detect model changes
+        id: detect_model_changes
+        uses: tj-actions/changed-files@v47.0.2
+        with:
+          files: ${{ inputs.migration_files }}
+          base_sha: ${{ inputs.base_sha }}
+          sha: ${{ inputs.head_sha }}
+
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
-          uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }}
+          PYTEST_MIGRATION_FLAG=""
+          if [[ "${{ steps.detect_model_changes.outputs.any_changed }}" != "true" ]]; then
+  
+           PYTEST_MIGRATION_FLAG="--no-migrations"
+          fi
+          
+          echo "PYTEST_MIGRATION_FLAG=$PYTEST_MIGRATION_FLAG"
+          uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} ${PYTEST_MIGRATION_FLAG}
         env:
           pytest_github_report: true
           pytest_use_blanks: true

@@ -15,7 +15,16 @@ on:
         type: string
         #all migration directories
         default: |
-         **/migrations/**.py 
+         **/migrations/**/*.py
+      base_sha:
+        type: string
+        description: The base sha to compare the changed files to. This is automatically set by the caller workflow 
+        required: true
+      
+      head_sha:
+        type: string
+        description: The head sha to compare the changed files to. This is automatically set by the caller workflow a
+        required: true
     secrets:
       digital_ocean_access_token:
         required: true
@@ -27,23 +36,34 @@ on:
         required: false
 
 jobs:
+  detect-model-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.changed-migration-files.outputs.any_changed }} 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+      - name: Detect migration-related changes
+        id: changed-migration-files
+        uses: tj-actions/changed-files@v47.0.2
+        with:
+          files: ${{ inputs.migration_files }}
+          base_sha: ${{ inputs.base_sha }}
+          sha: ${{ inputs.head_sha }}
+
+      - name: Skip migrations if no migration-related changes
+        if: steps.changed-migration-files.outputs.any_changed != 'true'
+        run: echo "No migration-related file changes detected. Skipping migration job."
+
   migraties:
+    needs: detect-model-changes
+    if: needs.detect-model-changes.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Detect migration-related changes
-        id: changed-migration-files
-        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47
-        with:
-          files: ${{ inputs.migration_files }}
-
-      - name: Skip migrations if no migration-related changes
-        if: steps.changed-migration-files.outputs.any_changed != 'true'
-        run: |
-          echo "No migration-related file changes detected. Skipping migration job."
-
+      
       - name: Install envsubst
         run: sudo apt-get update && sudo apt-get -y install gettext-base
 
@@ -72,15 +92,12 @@ jobs:
           fi
 
       - name: Run migrations job if changes detected
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
         run: cat migrations_job.yml | envsubst | kubectl apply -f -
         env:
           VERSION: ${{ inputs.tag }}
 
       - name: Verify migrations are successful
-        if: steps.changed-migration-files.outputs.any_changed == 'true'
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
-
 
