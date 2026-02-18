@@ -77,7 +77,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
-          RELEASE_BRANCHES: main
+          RELEASE_BRANCHES: main,hotfix.*
           DEFAULT_BUMP: patch
           PRERELEASE: ${{ steps.set-prerelease-flag.outputs.is_prerelease == 'true' }}
 
