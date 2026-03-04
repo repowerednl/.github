@@ -98,13 +98,27 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
+      - name: Fix base SHA for hotfix first push
+        if: startsWith(github.ref_name, 'hotfix')
+        id: hotfix_base_sha
+        shell: bash
+        run: |
+          BASE="${{ inputs.base_sha }}"
+          NULL_SHA="0000000000000000000000000000000000000000"
 
+          if [ "$BASE" = "$NULL_SHA" ]; then
+            git fetch origin main
+            BASE=$(git merge-base "${{ inputs.head_sha }}" origin/main)
+          fi
+
+          echo "base_sha=$BASE" >> $GITHUB_OUTPUT
+                
       - name: Detect model changes
         id: detect_model_changes
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{ inputs.base_sha }}
+          base_sha: ${{ startsWith(github.ref_name, 'hotfix') && steps.hotfix_base_sha.outputs.base_sha || inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
 
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
