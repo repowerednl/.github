@@ -29,7 +29,7 @@ on:
         required: false
       enable_cache:
         type: boolean
-        description: [Deprecated] Always enabled
+        description: "[Deprecated] Always enabled"
         default: true
       fail_fast:
         type: boolean
