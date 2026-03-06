@@ -11,8 +11,12 @@ inputs:
     required: true
   enable_cache:
     required: false
-    description: [DEPRECATED] always enabled
+    description: [DEPRECATED] only used for backward compatibility (always enabled)
     default: true
+  working_directory:
+    required: false
+    description: [DEPRECATED] only used for backward compatibility (always root)
+    default: .
 
 runs:
   using: "composite"
