@@ -11,7 +11,7 @@ inputs:
     required: true
   enable_cache:
     required: false
-    description: Whether to enable the cache for uv
+    description: [DEPRECATED] always enabled
     default: true
 
 runs:
@@ -21,7 +21,7 @@ runs:
       uses: astral-sh/setup-uv@v7
       with:
         version: ${{ inputs.uv_version }}
-        enable-cache: ${{ inputs.enable_cache }}
+        enable-cache: true
         cache-local-path: ${{ github.workspace }}/.uv-cache
         cache-dependency-glob: |
           uv.lock
