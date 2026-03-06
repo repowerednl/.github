@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Retrieve environment
         id: retrieve-environment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const eventName = context.eventName;
