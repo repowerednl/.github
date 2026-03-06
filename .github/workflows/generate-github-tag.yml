@@ -11,6 +11,7 @@ jobs:
   generate-tag:
     permissions:
       contents: write
+      pull-requests: read
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.github-tag.outputs.tag }}
@@ -55,6 +56,18 @@ jobs:
                        (prHead === 'dev' || prHead.startsWith('hotfix/'))) {
               isPrerelease = true;
               reason = `PR from \`${prHead}\` to \`main\`.`;
+            } else {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                base: 'main',
+                head: `${context.repo.owner}:${branch}`,
+              });
+              if (prs.length > 0) {
+                isPrerelease = true;
+                reason = `Open PR from \`${branch}\` to \`main\`.`;
+              }
             }
 
             core.setOutput('is_prerelease', isPrerelease);
