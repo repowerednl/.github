@@ -14,20 +14,9 @@ on:
       environment:
         type: string
         required: true
-      # Optional
-      with_infisical_configuration:
-        type: boolean
-        required: false
-        default: false
     secrets:
       digital_ocean_access_token:
         required: true
-      infisical_client_id:
-        required: false
-      infisical_client_client_secret:
-        required: false
-      infisical_client_project_id:
-        required: false
 
 jobs:
   deploy-verify:
@@ -47,17 +36,15 @@ jobs:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
         run: doctl kubernetes cluster kubeconfig save  --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
-      - name: Update kubernetes secrets
-        if: ${{ inputs.with_infisical_configuration == true }}
-        run: |
-          kubectl delete secret infisical-secrets --ignore-not-found=true
-          kubectl create secret generic infisical-secrets \
-          --from-literal=INFISICAL_CLIENT_ID=${{ secrets.infisical_client_id }} \
-          --from-literal=INFISICAL_CLIENT_SECRET=${{ secrets.infisical_client_client_secret }} \
-          --from-literal=INFISICAL_PROJECT_ID=${{ secrets.infisical_client_project_id }}
-
-      - name: Deploy ${{matrix.container_name}}
-        run: kubectl set image deployment/${{matrix.container_name}}-deployment ${{matrix.container_name}}=${{inputs.docker_image_tag}}
+      - name: Deploy ${{ matrix.container_name }}
+        run: | 
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "Production deployment. Release image tags are: ${{ inputs.docker_image_tag }}."
+          else
+            echo "Non-production deployment. Updating image to ${{ inputs.docker_image_tag }} and restarting"
+          fi
+          VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
+          kubectl set image deployment/${{ matrix.container_name }}-deployment ${{ matrix.container_name }}=$VERSIONED_TAG
 
       - name: Verify ${{matrix.container_name}} deployment
         run: kubectl rollout status deployment/${{matrix.container_name}}-deployment

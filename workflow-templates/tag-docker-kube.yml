@@ -1,4 +1,4 @@
-name: GitHub Tag, Docker publish build, SSH Deploy
+name: GitHub Tag, Docker publish build, Kubernetes Deploy
 
 on:
   push:
@@ -6,11 +6,14 @@ on:
       - main
   workflow_run:
     workflows:
-!      - # The name of your test workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
+!      - # The actual name of your TEST workflow (example: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis)
     types:
       - completed
+  pull_request:
+    types:
+      - labeled
 
-run-name: Deploy branch ${{ github.event.workflow_run.head_branch }} by @${{ github.actor }}
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || 'main' }} by @${{ github.actor }}
 
 jobs:
   tag:
@@ -18,7 +21,18 @@ jobs:
       contents: write
     uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
 
+  # This job will only run if ran from the main branch
+  create-release:
+    needs: tag
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
   # Only for the front-end; delete this job if you don't have a 'package.json'
+  # If you do, add bump to the 'needs' section for docker -> needs: [tag, bump]
   bump:
     permissions:
       contents: write
@@ -26,17 +40,24 @@ jobs:
     needs: tag
     with:
       tag: ${{ needs.tag.outputs.tag }}
-      # node_version: # Optional, defaults to "20"
-      # working_directory: # Optional, defaults to '.'.
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
   # Repeat steps docker + deploy-verify if there are multiple Dockerfiles
 
+  github-environment:
+    permissions:
+      pull-requests: read
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+
   docker:
     uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
-    needs: tag
+    needs: [ tag, github-environment ]
     with:
       tag: ${{ needs.tag.outputs.tag }}
       docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
+      environment: ${{ needs.github-environment.outputs.environment }}
       # dockerfile_name: # Optional, defaults to 'Dockerfile'
       # build_argument_one: # Optional, no default; from GitHub Variables
       # build_argument_two: # Optional, no default; from GitHub Variables
@@ -51,20 +72,23 @@ jobs:
       # docker_secret_5:
       # docker_secret_6:
 
-  github-environment:
-    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
-
-# TODO(REP-2945): Move this step to the repository infra
-# Should only be active for repower-django (add job to 'needs' in deploy-verify)
-#  run-migrations:
-#    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
-#    needs: tag
-#    with:
-#      tag: ${{ needs.tag.outputs.tag }}
+#   TODO(REP-2945): Move this step to the repository infra
+#   Should only be active for apps with a database (add job to 'needs' in deploy-verify)
+    run-migrations:
+      uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
+      needs: [tag, github-environment]
+      with:
+        tag: ${{ needs.tag.outputs.tag }}
+        environment: ${{ needs.github-environment.outputs.environment }}
+      secrets:
+        digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
+        infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+        infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
 
   deploy-verify:
-    uses: repowerednl/.github/.github/workflows/kube-deploy-verify.yml@main
-    needs: [github-environment, docker]
+    uses: repowerednl/.github/.github/workflows/deploy-verify-kubernetes.yml@main
+    needs: [ docker ]
     with:
       # If there are multiple deployments for a single docker image, the container names can be specified here
       # Example:
@@ -72,10 +96,6 @@ jobs:
       # the corresponding container_names are: "['foo', 'bar']"
       container_names: # A JSON list string i.e. "['my name']"
       docker_image_tag: ${{ needs.docker.outputs.image_tag }}
-      environment: ${{ needs.github-environment.outputs.environment }}
-      # with_infisical_configuration: # Optional, defaults to false
+      environment: ${{ needs.docker.outputs.environment }}
     secrets:
-      digital_ocean_access_token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
-      # infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
-      # infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-      # infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
+      digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}

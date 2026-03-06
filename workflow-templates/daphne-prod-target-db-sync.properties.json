@@ -1,0 +1,13 @@
+{
+  "name": "Daphne Sync Workflow",
+  "description": "Reusable workflow template to run Daphne-based data synchronization between databases on a configurable schedule. Note that the Daphne package needs to be part of the project's dependencies.",
+  "iconName": "octicon database",
+  "categories": [
+    "Repowered"
+  ],
+  "filePatterns": [
+    "poetry.lock",
+    "uv.lock",
+    "pyproject.toml"
+  ]
+}

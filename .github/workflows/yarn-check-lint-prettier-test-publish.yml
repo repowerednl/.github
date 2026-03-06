@@ -25,7 +25,9 @@ on:
         description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
         default: .
     secrets:
-      npm_auth_token:
+      # The token that is used to pull repowerednl packages from GitHub.
+      # Note: The repository needs to be added to the allowed list within the package!
+      packages_auth_token:
         required: true
 
 jobs:
@@ -33,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
-      NPM_AUTH_TOKEN: ${{ secrets.npm_auth_token }}
+      PACKAGES_AUTH_TOKEN: ${{ secrets.packages_auth_token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

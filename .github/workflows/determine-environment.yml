@@ -20,11 +20,10 @@ jobs:
     if: ${{ github.event_name == 'push' 
       || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') 
       || contains(github.event.workflow_run.head_commit.message, '[deploy]'))) 
-      || github.event.label.name == 'deploy' }}
+      || github.event.label.name == 'deploy' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Retrieve environment
         id: retrieve-environment
-        #TODO(REP-2853): temporarily also qa environment until the rollback workflow is in place
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_name }}" == "main" ]]; then
             echo "Latest release merge to main event. Deploying to production"

@@ -1,0 +1,12 @@
+name: Hotfix Patch Tag
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches:
+      - main
+
+jobs:
+  check-patch-tag:
+    if: contains(github.head_ref, 'hotfix')
+    uses: repowerednl/.github/.github/workflows/hotfix-patch-check.yml@main

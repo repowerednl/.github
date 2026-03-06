@@ -1,23 +1,23 @@
-#### semver tag:
-- #major: incompatible API, datamodel or business logic changes
-- #minor: add or remove functionality in a backward compatible manner
-- #patch: backward compatible bug fixes
+## Version bump 
+#patch/#minor/#major: <- _choose one_
 
-Give a brief summary of the feature or bugfix using the semantic versioning structure below.
-[Optionally] Describe the impact in has.
+## Summary
+...
 
-[UI/UX] Include a media file
+### Jira ticket
+[PLAT-]
 
-[Optionally] Jira ticket link: https://repowerednl.atlassian.net/browse/REP-
+### Media / Screenshot
+...
 
-[deploy] <- deployment trigger for feature branches to dev; remove for releases or hotfixes
+## Checks
+- [ ] I have added unit tests
+- [ ] I have tested this locally
 
-### Example (to be removed)
+## [Optional] Data changes
+- [ ] I have added a migration
+- [ ] I have backfilled data for new/updated fields 
+- [ ] I have updated the peerdb publication (if table needs to be synced to ClickHouse)
 
-#### #minor: Add model FunnyAnimals
-
-For testing the alembic migration workflow, a model was added without creating a migration.
-
-Now, when running the workflow, the migration test fails (as wanted) resulting in a GitHub Job Summary report, explaining that the migration for FunnyAnimals has not been created.
-
-[deploy]
+### TODO
+- [ ] ...

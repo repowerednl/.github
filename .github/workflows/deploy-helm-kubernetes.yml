@@ -1,0 +1,129 @@
+name: Do a Helm deployment
+
+on:
+  workflow_call:
+    inputs:
+      # Required
+      docker_image_tag:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      helm_deployment_version:
+        type: string
+        required: true
+      # Optional
+      namespace:
+        type: string
+        required: false
+      deployment_name-values_file:
+        type: string
+        description: "Structure should be: /deployment/[prod/dev/qa]/<values_file>, specify the values file here, environment is determined by workflow."
+        required: true
+    secrets:
+      digital_ocean_access_token:
+        required: true
+
+jobs:
+  deploy-helm:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        include: ${{ fromJson(inputs.deployment_name-values_file) }}
+    permissions:
+      packages: read
+      contents: read
+    steps:
+      - name: Set values' filepath dynamically
+        id: set-values
+        run: | 
+          filename="${{ matrix.vars_filepath }}"
+          echo "VALUES_FILEPATH=deployment/${{ inputs.environment }}/$filename" >> $GITHUB_OUTPUT
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.digital_ocean_access_token }}
+
+      - name: Save DigitalOcean kubeconfig with short-lived credentials
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Helm Deployment to Kubernetes
+        id: helm-deployment
+        run: |
+          DEPLOYMENT_NAME="${{ matrix.name || github.event.repository.name }}"
+          NAMESPACE="${{ inputs.namespace || github.event.repository.name }}"
+          # Get the current deployed Helm version
+          CURRENT_HELM_VERSION=$(helm list -n "$DEPLOYMENT_NAME" -o json | jq -r '.[0].chart' | rev | cut -d'-' -f1 | rev)
+          CONFIGURED_HELM_VERSION="${{ inputs.helm_deployment_version }}"
+          echo "previous_helm_version=$CURRENT_HELM_VERSION" >> $GITHUB_OUTPUT
+          echo "new_helm_version=$CONFIGURED_HELM_VERSION" >> $GITHUB_OUTPUT
+
+          # Check if values file changed
+          if git diff --name-only HEAD~1 | grep -q "${{ steps.set-values.outputs.VALUES_FILEPATH }}"; then
+            VALUES_UPDATED=true
+          else
+            VALUES_UPDATED=false
+          fi
+          echo "values_updated=$VALUES_UPDATED" >> $GITHUB_OUTPUT
+          
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+              DEPLOYMENT_INFO=$(echo "Production deployment. Release image tags are: ${{ inputs.docker_image_tag }}.")
+          else
+              DEPLOYMENT_INFO=$(echo "Non-production deployment. Image tag is: ${{ inputs.docker_image_tag }}")
+          fi
+
+          VERSIONED_TAG=$(echo "${{ inputs.docker_image_tag }}" | cut -d',' -f1)
+          # Check if current Helm version matches the target version
+          if [[ "$CURRENT_HELM_VERSION" == "$CONFIGURED_HELM_VERSION" && "$VALUES_UPDATED" == "false" ]]; then
+            echo $DEPLOYMENT_INFO
+            echo "Setting the new image: $VERSIONED_TAG"
+            helm upgrade $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG --version $CONFIGURED_HELM_VERSION
+          else
+            # Set the namespace creation flag if it's an initial deployment
+            if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
+              CREATE_NAMESPACE_COMMAND="--create-namespace"
+            else
+              CREATE_NAMESPACE_COMMAND=""
+            fi
+
+            # Login to repowered container registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
+            echo $DEPLOYMENT_INFO
+            echo "Upgrading or installing the deployment with the repo's helm values file: ${{ steps.set-values.outputs.VALUES_FILEPATH }} and image tag: $VERSIONED_TAG"
+            helm upgrade --install $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
+              --version $CONFIGURED_HELM_VERSION --namespace $NAMESPACE $CREATE_NAMESPACE_COMMAND \
+              --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG
+          fi
+
+      - name: Helm deployment status as summary
+        continue-on-error: true
+        run: |         
+          echo "<h2> :chart: Helm Status Output </h2>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          DEPLOYMENT_NAME="${{ matrix.name || github.event.repository.name }}"
+          NAMESPACE="${{ inputs.namespace || github.event.repository.name }}"
+          helm status $DEPLOYMENT_NAME -n $NAMESPACE >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image tags (versioned one used): ${{ inputs.docker_image_tag }} " >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.helm-deployment.outputs.previous_helm_version }} == "null"]; then
+            echo ":new: This was an initial deployment" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "Updated values? ${{ steps.helm-deployment.outputs.values_updated }} " >> $GITHUB_STEP_SUMMARY
+          CONFIGURED_HELM_VERSION="${{ steps.helm-deployment.outputs.new_helm_version }}"
+          if [ ${{ steps.helm-deployment.outputs.previous_helm_version }} != "$CONFIGURED_HELM_VERSION" ]; then
+            echo "Helm version updated! Version used: $CONFIGURED_HELM_VERSION" >> $GITHUB_STEP_SUMMARY
+          fi

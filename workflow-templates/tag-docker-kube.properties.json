@@ -1,7 +1,7 @@
 {
     "name": "Tag, docker and Kubernetes deploy",
     "description": "Create and publish a SemVer GitHub Tag, Build the docker image(s) for the hub and deploy that to Kubernetes",
-    "iconName": "octicon conainer",
+    "iconName": "octicon container",
     "categories": ["Repowered"],
     "filePatterns": [
         "(.*\\/)?Dockerfile(\\.{1}[^.].*)?"

@@ -1,0 +1,75 @@
+name: Pytest with Coverage
+# This is a basic pytest implementation without a postgres service and without parallelization
+
+on:
+  workflow_call:
+    inputs:
+      # Provided by caller workflow
+      uv_version:
+        type: string
+        required: true
+      # Optional
+      working_directory:
+        type: string
+        description: Whenever the app (i.e. manage.py) is not in the root, the location can be specified here
+        default: .
+    secrets:
+      private_pypi_user:
+        required: true
+      private_pypi_password:
+        required: true
+
+jobs:
+  pytest-with-coverage:
+    name: Pytest With Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: UV and Python Setup
+        uses: repowerednl/.github/composite-actions/python-uv-cache@main
+        with:
+          uv_version: ${{ inputs.uv_version }}
+          working_directory: ${{ inputs.working_directory }}
+          private_pypi_user: ${{ secrets.private_pypi_user }}
+          private_pypi_password: ${{ secrets.private_pypi_password }}
+          enable_cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Run tests with coverage
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          uv run coverage run -m pytest -v
+        env:
+          pytest_github_report: true
+          pytest_use_blanks: true
+          CI: true
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          path: ${{ inputs.working_directory }}/.coverage
+          if-no-files-found: 'error'
+          include-hidden-files: true
+          overwrite: true
+
+      - name: Coverage reports
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          uv run coverage report
+          uv run coverage xml
+
+      - name: Coverage comment
+        id: coverage-comment
+        uses: py-cov-action/python-coverage-comment-action@v3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          COVERAGE_PATH: ${{ inputs.working_directory }}
+          MINIMUM_ORANGE: 80

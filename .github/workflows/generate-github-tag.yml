@@ -26,15 +26,57 @@ jobs:
           fetch-depth: '0'
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Automatically bump and tag with the latest SemVer formatted version.
+      - name: Set prerelease flag
+        id: set-prerelease-flag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.workflow_run?.head_branch
+              ?? process.env.GITHUB_HEAD_REF
+              ?? process.env.GITHUB_REF.split('/').pop();
+            const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
+            const label = context.payload.label?.name ?? '';
+            const prHead = context.payload.pull_request?.head?.ref ?? '';
+            const prBase = context.payload.pull_request?.base?.ref ?? '';
+
+            let isPrerelease = false;
+            let reason = '';
+
+            if (branch !== 'dev' && branch !== 'main') {
+              isPrerelease = true;
+              reason = `Branch is \`${branch}\`, not dev or main.`;
+            } else if (commitMsg.includes('[deploy]')) {
+              isPrerelease = true;
+              reason = 'Commit message contains `[deploy]`.';
+            } else if (label === 'deploy') {
+              isPrerelease = true;
+              reason = 'Label is `deploy`.';
+            } else if (context.eventName === 'pull_request' && prHead === 'dev' && prBase === 'main') {
+              isPrerelease = true;
+              reason = 'PR from `dev` to `main`.';
+            } else if (context.eventName === 'pull_request' && prBase === 'main' &&
+                       (prHead === 'dev' || prHead.startsWith('hotfix/'))) {
+              isPrerelease = true;
+              reason = `PR from \`${prHead}\` to \`main\`.`;
+            }
+
+            core.setOutput('is_prerelease', isPrerelease);
+
+            if (isPrerelease) {
+              await core.summary.addHeading('🚀 Creating a **prerelease** tag', 3)
+                .addRaw(`**Reason:** ${reason}`)
+                .write();
+            } else {
+              await core.summary.addHeading('🎉 Creating a **full release** tag', 3).write();
+            }
+
+      # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag
         id: github-tag
-        uses: anothrNick/github-tag-action@1
+        uses: anothrNick/github-tag-action@1.71.0 # (7/5/25) Pinned version needed: https://github.com/anothrNick/github-tag-action/issues/341
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
-          RELEASE_BRANCHES: dev
+          RELEASE_BRANCHES: main
           DEFAULT_BUMP: patch
-          PRERELEASE: ${{ (!contains(github.event.workflow_run.head_branch, 'dev') 
-            || (contains(github.event.workflow_run.pull_requests[0].base.ref, 'main')) && contains(github.event.workflow_run.head_commit.message, '[deploy]')) 
-            || (contains(github.event.workflow_run.pull_requests[0].base.ref, 'main')) ** github.event.label.name == 'deploy') }}
+          PRERELEASE: ${{ steps.set-prerelease-flag.outputs.is_prerelease == 'true' }}
