@@ -1,5 +1,5 @@
 name: uv Setup including Cache with configurable files
-description: This composite action loads the cache that can be configured for multiple files, installs uv with configurations and it's packages if not found on the cache.
+description: This composite action loads the cache that can be configured for multiple files, installs uv with configurations and its packages if not found on the cache.
 
 inputs:
   uv_version:
@@ -11,11 +11,11 @@ inputs:
     required: true
   enable_cache:
     required: false
-    description: [DEPRECATED] only used for backward compatibility (always enabled)
+    description: "[DEPRECATED] only used for backward compatibility (always enabled)"
     default: true
   working_directory:
     required: false
-    description: [DEPRECATED] only used for backward compatibility (always root)
+    description: "[DEPRECATED] only used for backward compatibility (always root)"
     default: .
 
 runs:

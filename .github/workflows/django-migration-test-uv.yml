@@ -20,7 +20,7 @@ on:
       # Optional
       working_directory:
         type: string
-        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here.
+        description: [Deprecated] Always use root
         default: .
       django_settings_environment:
         type: string
