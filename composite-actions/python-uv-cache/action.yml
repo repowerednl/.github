@@ -32,6 +32,7 @@ runs:
           pyproject.toml
 
     - name: Set up Python
+      shell: bash
       run: uv python install # This will respect the Python version pinned in the project
 
     - name: Install the project
