@@ -27,6 +27,7 @@ runs:
         version: ${{ inputs.uv_version }}
         enable-cache: true
         cache-python: true
+        prune-cache: false
         cache-local-path: ${{ github.workspace }}/.uv-cache
         cache-dependency-glob: |
           uv.lock
