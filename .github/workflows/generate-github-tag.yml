@@ -51,9 +51,6 @@ jobs:
             } else if (label === 'deploy') {
               isPrerelease = true;
               reason = 'Label is `deploy`.';
-            } else if (context.eventName === 'pull_request' && prHead === 'dev' && prBase === 'main') {
-              isPrerelease = true;
-              reason = 'PR from `dev` to `main`.';
             } else if (context.eventName === 'pull_request' && prBase === 'main' &&
                        (prHead === 'dev' || prHead.startsWith('hotfix/'))) {
               isPrerelease = true;
