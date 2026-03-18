@@ -97,20 +97,19 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
+      - name: Fetch main for hotfix null SHA
+        if: startsWith(github.ref_name, 'hotfix') && inputs.base_sha == '0000000000000000000000000000000000000000'
+        run: git fetch origin main
+
       - name: Fix base SHA for hotfix first push
         if: startsWith(github.ref_name, 'hotfix')
         id: hotfix_base_sha
-        shell: bash
         run: |
-          BASE="${{ inputs.base_sha }}"
-          NULL_SHA="0000000000000000000000000000000000000000"
-
-          if [ "$BASE" = "$NULL_SHA" ]; then
-            git fetch origin main
-            BASE=$(git merge-base "${{ inputs.head_sha }}" origin/main)
+          if [ "${{ inputs.base_sha }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "base_sha=$(git merge-base ${{ inputs.head_sha }} origin/main)" >> $GITHUB_OUTPUT
+          else
+            echo "base_sha=${{ inputs.base_sha }}" >> $GITHUB_OUTPUT
           fi
-
-          echo "base_sha=$BASE" >> $GITHUB_OUTPUT
                 
       - name: Detect model changes
         id: detect_model_changes
