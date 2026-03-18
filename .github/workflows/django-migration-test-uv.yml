@@ -20,7 +20,7 @@ on:
       # Optional
       working_directory:
         type: string
-        description: Whenever the app (i.e. manage.py) is not in the root; the location can be specified here.
+        description: "[Deprecated] Always use root"
         default: .
       django_settings_environment:
         type: string
@@ -64,7 +64,6 @@ jobs:
         uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
-          working_directory: ${{ inputs.working_directory }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
 

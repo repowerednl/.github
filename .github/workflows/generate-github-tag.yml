@@ -17,7 +17,7 @@ jobs:
     if: ${{ github.event_name == 'push' 
       || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') 
       || contains(github.event.workflow_run.head_commit.message, '[deploy]'))) 
-      || github.event.label.name == 'deploy' }}
+      || github.event.label.name == 'deploy' || github.event_name == 'workflow_dispatch' }}
     steps:
       # Checkout the repository with all commit history
       - name: Checkout ${{ github.repository }}
@@ -28,48 +28,44 @@ jobs:
 
       - name: Set prerelease flag
         id: set-prerelease-flag
-        env:
-          COMMIT_MSG: ${{ github.event.workflow_run.head_commit.message }}
-          LABEL: ${{ github.event.label.name }}
-          EVENT_NAME: ${{ github.event_name }}
-          PR_HEAD: ${{ github.event.pull_request.head.ref }}
-          PR_BASE: ${{ github.event.pull_request.base.ref }}
-        run: |
-          # Extract context
-          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}"
-      
-          # Default values
-          IS_PRERELEASE=false
-          REASON=""
-      
-          # Determine if this is a prerelease
-          if [[ "$BRANCH" != "dev" && "$BRANCH" != "main" ]]; then
-            IS_PRERELEASE=true
-            REASON="Branch is \`$BRANCH\`, not dev or main."
-          elif [[ "$COMMIT_MSG" == *"[deploy]"* ]]; then
-            IS_PRERELEASE=true
-            REASON="Commit message contains \`[deploy]\`."
-          elif [[ "$LABEL" == "deploy" ]]; then
-            IS_PRERELEASE=true
-            REASON="Label is \`deploy\`."
-          elif [[ "$EVENT_NAME" == "pull_request" && "$PR_HEAD" == "dev" && "$PR_BASE" == "main" ]]; then
-            IS_PRERELEASE=true
-            REASON="PR from \`dev\` to \`main\`."
-          elif [[ "$EVENT_NAME" == "pull_request" && "$PR_BASE" == "main" && 
-            ( "$PR_HEAD" == "dev" || "$PR_HEAD" == hotfix/* ) ]]; then
-            IS_PRERELEASE=true
-            REASON="PR from \`$PR_HEAD\` to \`main\`."
-          fi
-      
-          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-      
-          # Step summary output
-          if [[ "$IS_PRERELEASE" == "true" ]]; then
-            echo "### 🚀 Creating a **prerelease** tag" >> $GITHUB_STEP_SUMMARY
-            echo "**Reason:** $REASON" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### 🎉 Creating a **full release** tag" >> $GITHUB_STEP_SUMMARY
-          fi
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const branch = context.payload.workflow_run?.head_branch
+              ?? process.env.GITHUB_HEAD_REF
+              ?? process.env.GITHUB_REF.split('/').pop();
+            const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
+            const label = context.payload.label?.name ?? '';
+            const prHead = context.payload.pull_request?.head?.ref ?? '';
+            const prBase = context.payload.pull_request?.base?.ref ?? '';
+
+            let isPrerelease = false;
+            let reason = '';
+
+            if (branch !== 'dev' && branch !== 'main') {
+              isPrerelease = true;
+              reason = `Branch is \`${branch}\`, not dev or main.`;
+            } else if (commitMsg.includes('[deploy]')) {
+              isPrerelease = true;
+              reason = 'Commit message contains `[deploy]`.';
+            } else if (label === 'deploy') {
+              isPrerelease = true;
+              reason = 'Label is `deploy`.';
+            } else if (context.eventName === 'pull_request' && prBase === 'main' &&
+                       (prHead === 'dev' || prHead.startsWith('hotfix/'))) {
+              isPrerelease = true;
+              reason = `PR from \`${prHead}\` to \`main\`.`;
+            }
+
+            core.setOutput('is_prerelease', isPrerelease);
+
+            if (isPrerelease) {
+              await core.summary.addHeading('🚀 Creating a **prerelease** tag', 3)
+                .addRaw(`**Reason:** ${reason}`)
+                .write();
+            } else {
+              await core.summary.addHeading('🎉 Creating a **full release** tag', 3).write();
+            }
 
       # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag

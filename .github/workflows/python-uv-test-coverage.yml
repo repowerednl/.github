@@ -29,7 +29,7 @@ on:
         required: false
       enable_cache:
         type: boolean
-        description: Whether to enable the cache for uv
+        description: "[Deprecated] Always enabled"
         default: true
       fail_fast:
         type: boolean
@@ -94,7 +94,6 @@ jobs:
         uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
-          working_directory: ${{ inputs.working_directory }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
           enable_cache: ${{ inputs.enable_cache }}
@@ -163,7 +162,6 @@ jobs:
         uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
-          working_directory: ${{ inputs.working_directory }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
 
