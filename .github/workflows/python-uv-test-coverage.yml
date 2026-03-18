@@ -96,7 +96,6 @@ jobs:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
-          enable_cache: ${{ inputs.enable_cache }}
       - name: Fetch main for hotfix null SHA
         if: startsWith(github.ref_name, 'hotfix') && inputs.base_sha == '0000000000000000000000000000000000000000'
         run: git fetch origin main
