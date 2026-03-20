@@ -63,8 +63,6 @@ on:
 
 jobs:
   pytest-with-coverage:
-    env:
-      ZERO_SHA: '0000000000000000000000000000000000000000'
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
     strategy:
@@ -102,12 +100,12 @@ jobs:
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
       - name: Fetch target branch for merge-base resolution
-        if: inputs.base_sha == env.ZERO_SHA
+        if:  inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha
         run: git fetch origin ${{ inputs.target_branch }} --depth=1
 
       - name: Fix base SHA for first push on new branch
         id: resolve_base
-        if: inputs.base_sha == env.ZERO_SHA
+        if: inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha
         run: echo "sha=$(git merge-base ${{ inputs.head_sha }} origin/${{ inputs.target_branch }})" >> $GITHUB_OUTPUT
                 
       - name: Detect model changes
@@ -115,7 +113,7 @@ jobs:
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{ inputs.base_sha == env.ZERO_SHA && steps.resolve_base.outputs.sha || inputs.base_sha }}
+          base_sha: ${{(inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha) && steps.resolve_base.outputs.sha || inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
 
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
