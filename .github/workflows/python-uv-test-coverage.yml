@@ -101,7 +101,7 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
       - name: Fetch target branch for merge-base resolution
         if:  inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha
-        run: git fetch origin ${{ inputs.target_branch }} --depth=1
+        run: git fetch origin ${{ inputs.target_branch }} 
 
       - name: Fix base SHA for first push on new branch
         id: resolve_base
