@@ -34,7 +34,7 @@ jobs:
             const headBranch = context.payload.workflow_run?.head_branch;
             const prBase = context.payload.pull_request?.base?.ref;
 
-            if (eventName === 'push' && refName === 'main') {
+            if ((eventName === 'push' && refName === 'main') || (eventName === 'workflow_run' && headBranch === 'main')) {
               core.setOutput('env_name', 'prod');
             } else if (eventName === 'pull_request' || (eventName === 'workflow_run' && headBranch === 'dev')) {
               if (prBase === 'dev') {
