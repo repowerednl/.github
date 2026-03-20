@@ -25,10 +25,6 @@ on:
         type: string
         description: The head sha to compare the changed files to. This is automatically set by the caller workflow a
         required: true
-
-      target_branch:
-        type: string
-        description: The target branch of the PR,
     secrets:
       digital_ocean_access_token:
         required: true
@@ -49,21 +45,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 
-      - name: Fetch target branch for merge-base resolution
-        if:  inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha
-        run: git fetch origin ${{ inputs.target_branch }} 
-
-      - name: Fix base SHA for first push on new branch
+      - name: Resolve base SHA for hotfix branches
         id: resolve_base
-        if: inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha
-        run: echo "sha=$(git merge-base ${{ inputs.head_sha }} origin/${{ inputs.target_branch }})" >> $GITHUB_OUTPUT
-                
+        if: startsWith(github.ref_name, 'hotfix')
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: | #check if the branch is a hotfix branch, use compareCommits to find the merge-base,  the commit where this branch diverged from main 
+            const { data } = await github.rest.repos.compareCommits({ 
+              ...context.repo,
+              base: 'main',
+              head: '${{ inputs.head_sha }}',
+            });
+            return data.merge_base_commit.sha;
       - name: Detect migration-related changes
         id: changed-migration-files
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{(inputs.base_sha == '0000000000000000000000000000000000000000'  || inputs.base_sha == inputs.head_sha) && steps.resolve_base.outputs.sha || inputs.base_sha }}
+          base_sha: ${{ (startsWith(github.ref_name, 'hotfix') || inputs.base_sha == inputs.head_sha) && steps.resolve_base.outputs.result || inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
 
       - name: Skip migrations if no migration-related changes
