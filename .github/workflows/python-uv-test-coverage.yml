@@ -50,6 +50,9 @@ on:
         description: The head sha to compare the changed files to. This is automatically set by the caller workflow a
         required: true
 
+      target_branch:
+        type: string
+        description: The target branch of the PR,
     secrets:
       postgres_password:
         required: true
@@ -60,6 +63,8 @@ on:
 
 jobs:
   pytest-with-coverage:
+    env:
+      ZERO_SHA: '0000000000000000000000000000000000000000'
     name: Pytest With Postgres and Coverage
     runs-on: ubuntu-latest
     strategy:
@@ -96,26 +101,21 @@ jobs:
           uv_version: ${{ inputs.uv_version }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
-      - name: Fetch main for hotfix null SHA
-        if: startsWith(github.ref_name, 'hotfix') && inputs.base_sha == '0000000000000000000000000000000000000000'
-        run: git fetch origin main
+      - name: Fetch target branch for merge-base resolution
+        if: inputs.base_sha == env.ZERO_SHA
+        run: git fetch origin ${{ inputs.target_branch }} --depth=1
 
-      - name: Fix base SHA for hotfix first push
-        if: startsWith(github.ref_name, 'hotfix')
-        id: hotfix_base_sha
-        run: |
-          if [ "${{ inputs.base_sha }}" = "0000000000000000000000000000000000000000" ]; then
-            echo "base_sha=$(git merge-base ${{ inputs.head_sha }} origin/main)" >> $GITHUB_OUTPUT
-          else
-            echo "base_sha=${{ inputs.base_sha }}" >> $GITHUB_OUTPUT
-          fi
+      - name: Fix base SHA for first push on new branch
+        id: resolve_base
+        if: inputs.base_sha == env.ZERO_SHA
+        run: echo "sha=$(git merge-base ${{ inputs.head_sha }} origin/${{ inputs.target_branch }})" >> $GITHUB_OUTPUT
                 
       - name: Detect model changes
         id: detect_model_changes
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{ startsWith(github.ref_name, 'hotfix') && steps.hotfix_base_sha.outputs.base_sha || inputs.base_sha }}
+          base_sha: ${{ inputs.base_sha == env.ZERO_SHA && steps.resolve_base.outputs.sha || inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
 
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
