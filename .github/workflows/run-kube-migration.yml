@@ -63,7 +63,7 @@ jobs:
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{ (startsWith(github.ref_name, 'hotfix') || inputs.base_sha == inputs.head_sha) && steps.resolve_base.outputs.result || inputs.base_sha }}
+          base_sha: ${{ steps.resolve_base.outputs.result || inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
 
       - name: Skip migrations if no migration-related changes
