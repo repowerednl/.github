@@ -98,7 +98,7 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
       - name: Resolve base SHA for hotfix branches
         id: resolve_base
-        if: startsWith(github.ref_name, 'hotfix')
+        if: startsWith(github.ref_name, 'hotfix') && inputs.base_sha == '0000000000000000000000000000000000000000'
         uses: actions/github-script@v7
         with:
           result-encoding: string
@@ -111,21 +111,20 @@ jobs:
             return data.merge_base_commit.sha;
       - name: Detect model changes
         id: detect_model_changes
+        if: github.event_name != 'workflow_dispatch'
         uses: tj-actions/changed-files@v47.0.2
         with:
           files: ${{ inputs.migration_files }}
-          base_sha: ${{ (startsWith(github.ref_name, 'hotfix') || inputs.base_sha == inputs.head_sha) && steps.resolve_base.outputs.result || inputs.base_sha }}
+          base_sha: ${{ steps.resolve_base.outputs.result || inputs.base_sha }}
           sha: ${{ inputs.head_sha }}
 
       - name: Run tests with coverage in ${{ strategy.job-total }} parallel test procs
         working-directory: ${{ inputs.working_directory }}
         run: |
           PYTEST_MIGRATION_FLAG=""
-          if [[ "${{ steps.detect_model_changes.outputs.any_changed }}" != "true" ]]; then
-  
-           PYTEST_MIGRATION_FLAG="--no-migrations"
+          if [[ "${{ github.event_name }}" != "workflow_dispatch" && "${{ steps.detect_model_changes.outputs.any_changed }}" != "true" ]]; then
+            PYTEST_MIGRATION_FLAG="--no-migrations"
           fi
-          
           echo "PYTEST_MIGRATION_FLAG=$PYTEST_MIGRATION_FLAG"
           uv run coverage run -m pytest -v --splits ${{ strategy.job-total }} --group ${{ matrix.group }} ${PYTEST_MIGRATION_FLAG}
         env:
