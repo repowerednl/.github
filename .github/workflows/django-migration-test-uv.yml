@@ -26,6 +26,10 @@ on:
         type: string
         description: Retrieval of settings can be done based on an environment identifier
         default: TEST
+      postgres_image:
+        type: string
+        description: The postgres image to use for the migration check
+        default: ghcr.io/dbsystel/postgresql-partman:17
     secrets:
       postgres_password:
         required: true
@@ -42,7 +46,7 @@ jobs:
     services:
       # This service requires that variables and secrets are defined on GitHub (see README)
       postgres:
-        image: postgres:17-alpine
+        image: ${{ inputs.postgres_image }}
         env:
           POSTGRES_DB: ${{ inputs.postgres_db }}
           POSTGRES_USER: ${{ inputs.postgres_user }}
