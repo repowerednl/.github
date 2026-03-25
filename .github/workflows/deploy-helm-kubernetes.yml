@@ -91,7 +91,9 @@ jobs:
             echo $DEPLOYMENT_INFO
             echo "Setting the new image: $VERSIONED_TAG"
             helm upgrade $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
-              --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG --version $CONFIGURED_HELM_VERSION
+              --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG \
+              --version $CONFIGURED_HELM_VERSION \
+              --atomic --cleanup-on-fail --timeout 10m
           else
             # Set the namespace creation flag if it's an initial deployment
             if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
@@ -106,7 +108,8 @@ jobs:
             echo "Upgrading or installing the deployment with the repo's helm values file: ${{ steps.set-values.outputs.VALUES_FILEPATH }} and image tag: $VERSIONED_TAG"
             helm upgrade --install $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version $CONFIGURED_HELM_VERSION --namespace $NAMESPACE $CREATE_NAMESPACE_COMMAND \
-              --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG
+              --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG \
+              --atomic --cleanup-on-fail --timeout 10m
           fi
 
       - name: Helm deployment status as summary
@@ -119,11 +122,11 @@ jobs:
           helm status $DEPLOYMENT_NAME -n $NAMESPACE >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Image tags (versioned one used): ${{ inputs.docker_image_tag }} " >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.helm-deployment.outputs.previous_helm_version }} == "null"]; then
+          if [ "${{ steps.helm-deployment.outputs.previous_helm_version }}" == "null" ]; then
             echo ":new: This was an initial deployment" >> $GITHUB_STEP_SUMMARY
           fi
           echo "Updated values? ${{ steps.helm-deployment.outputs.values_updated }} " >> $GITHUB_STEP_SUMMARY
           CONFIGURED_HELM_VERSION="${{ steps.helm-deployment.outputs.new_helm_version }}"
-          if [ ${{ steps.helm-deployment.outputs.previous_helm_version }} != "$CONFIGURED_HELM_VERSION" ]; then
+          if [ "${{ steps.helm-deployment.outputs.previous_helm_version }}" != "$CONFIGURED_HELM_VERSION" ]; then
             echo "Helm version updated! Version used: $CONFIGURED_HELM_VERSION" >> $GITHUB_STEP_SUMMARY
           fi
