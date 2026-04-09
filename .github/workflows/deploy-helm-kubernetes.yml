@@ -93,7 +93,7 @@ jobs:
             helm upgrade $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG \
               --version $CONFIGURED_HELM_VERSION \
-              --force-conflicts --atomic --cleanup-on-fail --timeout 10m
+              --server-side --force-conflicts --rollback-on-failure --cleanup-on-fail --timeout 10m
           else
             # Set the namespace creation flag if it's an initial deployment
             if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
@@ -109,7 +109,7 @@ jobs:
             helm upgrade --install $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version $CONFIGURED_HELM_VERSION --namespace $NAMESPACE $CREATE_NAMESPACE_COMMAND \
               --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG \
-              --force-conflicts --atomic --cleanup-on-fail --timeout 10m
+              --server-side --force-conflicts --rollback-on-failure --cleanup-on-fail --timeout 10m
           fi
 
       - name: Helm deployment status as summary
