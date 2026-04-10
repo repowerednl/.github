@@ -49,7 +49,7 @@ jobs:
 
       - name: Save DigitalOcean kubeconfig with short-lived credentials
         env:
-          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 900 }}
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
       - name: Install Helm
