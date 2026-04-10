@@ -63,5 +63,11 @@ jobs:
       - name: Verify migrations are successful
         env:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
-        run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
+        run: |
+          JOB_NAME="django-migrations-${{ inputs.tag }}"
+          if ! kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/$JOB_NAME; then
+            echo "::error::Migration job failed. Pod logs:"
+            kubectl logs job/$JOB_NAME || echo "Could not retrieve logs — job may have been cleaned up."
+            exit 1
+          fi
 
