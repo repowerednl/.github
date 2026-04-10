@@ -65,3 +65,7 @@ jobs:
           timeout-seconds: ${{ vars.MIGRATION_TIMEOUT_SECONDS || 300 }}
         run: kubectl wait --for=condition=complete --timeout=${{ env.timeout-seconds }}s job/django-migrations-${{inputs.tag}}
 
+      - name: Print migration logs (if failed)
+        if: failure()
+        run: kubectl logs job/django-migrations-${{inputs.tag}}
+
