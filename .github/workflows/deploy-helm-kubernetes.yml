@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     strategy:
+      fail-fast: false
       matrix:
         include: ${{ fromJson(inputs.deployment_name-values_file) }}
     permissions:
