@@ -4,8 +4,8 @@
 registries:
   - name: ghcr
     url: ghcr.io
-    username: repowerednl
-    password: '{{ .Values.ghcrToken }}'
+    username: '{{ requiredEnv "GHCR_USERNAME" }}'
+    password: '{{ requiredEnv "GHCR_PASSWORD" }}'
 
 helmDefaults:
   atomic: true

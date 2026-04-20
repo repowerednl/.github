@@ -24,6 +24,9 @@ jobs:
     permissions:
       packages: read
       contents: read
+    env:
+      GHCR_USERNAME: repowerednl
+      GHCR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v6
@@ -42,13 +45,12 @@ jobs:
         uses: helmfile/helmfile-action@v2
         with:
           helmfile-version: "v0.171.0"
-          helm-version: "v3.17.3"
+          helm-version: "v3.18.0"
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml apply
             --concurrency 0
             --state-values-set dockerImageTag=${{ inputs.docker_image_tag }}
-            --state-values-set ghcrToken=${{ secrets.GITHUB_TOKEN }}
             ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
 
       - name: Deployment status summary
