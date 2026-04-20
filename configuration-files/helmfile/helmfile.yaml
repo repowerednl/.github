@@ -1,0 +1,22 @@
+# Copy this file to deployment/<environment>/helmfile.yaml in your app repo.
+# All releases for this environment are declared here.
+
+helmDefaults:
+  atomic: true
+  cleanupOnFail: true
+  timeout: 600
+  wait: true
+  forceUpgrade: true
+
+releases:
+  - name: my-app
+    namespace: my-namespace
+    chart: oci://ghcr.io/repowerednl/helm-charts/deployment
+    version: "1.0.1"  # update when upgrading the chart
+    values:
+      - values_my-app.yml
+    set:
+      - name: image
+        value: {{ requiredEnv "DOCKER_IMAGE_TAG" }}
+
+  # Add more releases following the same pattern

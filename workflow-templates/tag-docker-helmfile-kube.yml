@@ -1,0 +1,70 @@
+name: GitHub Tag, Docker publish build, Helmfile deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_run:
+    workflows:
+!      - # The actual name of your TEST workflow (example: Run Pytest with Coverage, Check the Django Migration and run the Sonar Analysis)
+    types:
+      - completed
+    branches:
+      - dev
+      - hotfix**
+  pull_request:
+    types:
+      - labeled
+
+run-name: Deploy branch ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }} by @${{ github.actor }}
+
+jobs:
+  tag:
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
+
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
+  github-environment:
+    permissions:
+      pull-requests: read
+    uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+
+  docker:
+    uses: repowerednl/.github/.github/workflows/docker-build-and-push.yml@main
+    needs: [ tag, github-environment ]
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      docker_hub_username: ${{ vars.DOCKER_HUB_USERNAME }}
+      environment: ${{ needs.github-environment.outputs.environment }}
+    secrets:
+      docker_hub_access_token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+#   TODO(REP-2945): Move this step to the repository infra
+#   Should only be active for apps with a database (add job to 'needs' in deploy)
+  run-migrations:
+    uses: repowerednl/.github/.github/workflows/run-kube-migration.yml@main
+    needs: [ tag, github-environment ]
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      environment: ${{ needs.github-environment.outputs.environment }}
+    secrets:
+      digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      infisical_client_id: ${{ secrets.INFISICAL_CLIENT_ID }}
+      infisical_client_client_secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+      infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
+
+  deploy:
+    uses: repowerednl/.github/.github/workflows/deploy-helmfile-kubernetes.yml@main
+    needs: [ docker, run-migrations ]
+    with:
+      docker_image_tag: ${{ needs.docker.outputs.image_tag }}
+      environment: ${{ needs.docker.outputs.environment }}
+      # selector: "name=api"  # Optional: target a specific release defined in the helmfile
+    secrets:
+      digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}

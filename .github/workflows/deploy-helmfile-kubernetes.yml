@@ -1,0 +1,67 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      docker_image_tag:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      selector:
+        type: string
+        required: false
+        description: "Helmfile label selector to target specific releases, e.g. 'name=api'"
+    secrets:
+      digital_ocean_access_token:
+        required: true
+
+jobs:
+  deploy-helmfile:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      packages: read
+      contents: read
+    steps:
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.digital_ocean_access_token }}
+
+      - name: Save DigitalOcean kubeconfig with short-lived credentials
+        env:
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
+
+      - name: Deploy
+        uses: helmfile/helmfile-action@v2
+        with:
+          helmfile-version: "v0.171.0"
+          helm-plugins: https://github.com/databus23/helm-diff
+          helmfile-args: >-
+            -f deployment/${{ inputs.environment }}/helmfile.yaml apply
+            ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
+        env:
+          DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+          ENVIRONMENT: ${{ inputs.environment }}
+
+      - name: Deployment status summary
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "## Helmfile Status" >> $GITHUB_STEP_SUMMARY
+          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml status >> $GITHUB_STEP_SUMMARY
+          echo "Image tag: ${{ inputs.docker_image_tag }}" >> $GITHUB_STEP_SUMMARY
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}

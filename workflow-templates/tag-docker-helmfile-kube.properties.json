@@ -1,0 +1,10 @@
+{
+    "name": "Tag, Docker, Helmfile and Kubernetes deploy",
+    "description": "Create and publish a SemVer GitHub Tag, build the Docker image, use Helmfile to declaratively deploy all releases to Kubernetes",
+    "iconName": "octicon container",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        "(.*\\/)?Dockerfile(\\.{1}[^.].*)?",
+        "^deployment\\/.*\\/helmfile\\.ya?ml$"
+    ]
+}
