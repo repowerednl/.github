@@ -40,6 +40,8 @@ jobs:
 
       - name: Install Helm
         uses: azure/setup-helm@v5
+        with:
+          version: "v3.17.3"
 
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
