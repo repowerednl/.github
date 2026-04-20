@@ -38,23 +38,17 @@ jobs:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
-      - name: Install Helm
-        uses: azure/setup-helm@v5
-        with:
-          version: "v3.17.3"
-
-      - name: Login to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
-
       - name: Deploy
         uses: helmfile/helmfile-action@v2
         with:
           helmfile-version: "v0.171.0"
+          helm-version: "v3.17.3"
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml apply
             --concurrency 0
             --state-values-set dockerImageTag=${{ inputs.docker_image_tag }}
+            --state-values-set ghcrToken=${{ secrets.GITHUB_TOKEN }}
             ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
 
       - name: Deployment status summary
