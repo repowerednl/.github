@@ -26,7 +26,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
@@ -39,7 +39,7 @@ jobs:
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
       - name: Install Helm
-        uses: azure/setup-helm@v4.3.0
+        uses: azure/setup-helm@v5
 
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u repowerednl --password-stdin
@@ -51,10 +51,9 @@ jobs:
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml apply
+            --concurrency 0
+            --state-values-set dockerImageTag=${{ inputs.docker_image_tag }}
             ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
-        env:
-          DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
-          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Deployment status summary
         if: always()

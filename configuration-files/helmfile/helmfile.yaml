@@ -6,7 +6,7 @@ helmDefaults:
   cleanupOnFail: true
   timeout: 600
   wait: true
-  forceUpgrade: true
+  force: true
 
 releases:
   - name: my-app
@@ -17,6 +17,6 @@ releases:
       - values_my-app.yml
     set:
       - name: image
-        value: {{ requiredEnv "DOCKER_IMAGE_TAG" }}
+        value: '{{ .Values.dockerImageTag }}'
 
   # Add more releases following the same pattern
