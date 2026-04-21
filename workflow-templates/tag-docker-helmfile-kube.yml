@@ -60,11 +60,15 @@ jobs:
       infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
 
   deploy:
+    strategy:
+      matrix:
+        selector: [my-app]  # add one entry per release name in deployment/helmfile.yaml.gotmpl
+      fail-fast: false
     uses: repowerednl/.github/.github/workflows/deploy-helmfile-kubernetes.yml@main
     needs: [ docker, run-migrations ]
     with:
       docker_image_tag: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ needs.docker.outputs.environment }}
-      # selector: "name=api"  # Optional: target a specific release defined in the helmfile
+      selector: ${{ matrix.selector }}
     secrets:
       digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
