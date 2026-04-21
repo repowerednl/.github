@@ -72,12 +72,14 @@ jobs:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
           RELEASE_PREFIX: ${{ inputs.release_prefix }}
+          SELECTOR: ${{ inputs.selector }}
         run: |
           echo "## ✅ Deployment succeeded" >> $GITHUB_STEP_SUMMARY
           echo "<details><summary>Release status</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          helmfile -f deployment/helmfile.yaml.gotmpl --selector name=${{ inputs.selector }} status >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          # Errors are silently swallowed here — we don't want a status failure to fail the summary step
+          helmfile -f deployment/helmfile.yaml.gotmpl --selector "name=$SELECTOR" status >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "</details>" >> $GITHUB_STEP_SUMMARY
 
@@ -91,50 +93,68 @@ jobs:
           SELECTOR: ${{ inputs.selector }}
         with:
           script: |
-            const extractError = raw => {
+            // ── Helpers ────────────────────────────────────────────────────────────
+      
+            const baseHelmfileArgs = [
+              '-f', 'deployment/helmfile.yaml.gotmpl',
+              '--selector', `name=${process.env.SELECTOR}`,
+            ];
+      
+            const failedStatuses = ['failed', 'pending-install', 'pending-upgrade', 'pending-rollback'];
+            const statusIcon = s => s === 'deployed' ? '✅' : failedStatuses.includes(s) ? '❌' : '⚠️';
+      
+            const extractStderr = raw => {
               const match = raw.match(/^STDERR:\n([\s\S]+?)(?=\n(?:COMBINED OUTPUT|EXIT STATUS):|$)/m);
               return (match?.[1] ?? raw).trim();
             };
-
-            const helmfileArgs = cmd => [
-              '-f', 'deployment/helmfile.yaml.gotmpl',
-              cmd,
-              '--selector', `name=${process.env.SELECTOR}`
-            ];
-
-            const failedStatuses = ['failed', 'pending-install', 'pending-upgrade', 'pending-rollback'];
-            const statusIcon = s => s === 'deployed' ? '✅' : failedStatuses.includes(s) ? '❌' : '⚠️';
-
+      
+            // ── Step 1: detect config/template errors ──────────────────────────────
+      
             await core.summary.addHeading('❌ Deployment failed', 2);
-
-            // Detect config/template errors
-            const tmpl = await exec.getExecOutput('helmfile', helmfileArgs('template'), {
-              ignoreReturnCode: true, silent: true
+      
+            const tmpl = await exec.getExecOutput('helmfile', [...baseHelmfileArgs, 'template'], {
+              ignoreReturnCode: true,
+              silent: true,
             });
+      
             if (tmpl.exitCode !== 0) {
               await core.summary
                 .addHeading('Configuration error', 3)
                 .addQuote('The chart could not be rendered or processed. Check your helmfile.yaml.gotmpl or helm values.yaml file(s).')
-                .addCodeBlock(extractError(tmpl.stderr || tmpl.stdout))
+                .addCodeBlock(extractStderr(tmpl.stderr || tmpl.stdout))
                 .write();
               return;
             }
-
-            // Cluster installation error — get release namespace then fetch helm status
-            const list = await exec.getExecOutput('helmfile', helmfileArgs('list'), {
-              ignoreReturnCode: true, silent: true
+      
+            // ── Step 2: templates rendered OK — error occurred on the cluster ──────
+      
+            const list = await exec.getExecOutput('helmfile', [...baseHelmfileArgs, 'list'], {
+              ignoreReturnCode: true,
+              silent: true,
             });
-            const [name, ns] = list.stdout.split('\n').slice(1).filter(Boolean)[0]?.trim().split(/\s+/) ?? [];
-
-            const result = await exec.getExecOutput('helm', ['status', name, '-n', ns], {
-              ignoreReturnCode: true, silent: true
+      
+            // Parse the first data row of helmfile list's output (skiping the header); the first row gives the release name and namespace.
+            const release = list.stdout.split('\n').slice(1).find(Boolean)?.trim().split(/\s+/);
+            if (!release) {
+              await core.summary
+                .addHeading('Cluster installation error', 3)
+                .addQuote('Templates rendered successfully, but no release was found. No release matched the selector.')
+                .write();
+              return;
+            }
+            const [name, namespace] = release;
+      
+            const helmStatus = await exec.getExecOutput('helm', ['status', name, '-n', namespace], {
+              ignoreReturnCode: true,
+              silent: true,
             });
-            const output = result.stdout || result.stderr;
-            const status = output.match(/^STATUS:\s+(\S+)/m)?.[1] ?? 'not found';
-
+      
+            const rawOutput = helmStatus.stdout || helmStatus.stderr;
+            const status = rawOutput.match(/^STATUS:\s+(\S+)/m)?.[1] ?? 'not found';
+      
             await core.summary
               .addHeading('Cluster installation error', 3)
               .addQuote('Templates rendered successfully — the error occurred during installation on the cluster.')
               .addRaw(`**${statusIcon(status)} ${name}** — \`${status}\`\n\n`)
-              .addDetails('helm status output', `\n\n\`\`\`\n${output.trim()}\n\`\`\`\n`)
+              .addDetails('helm status output', `\n\n\`\`\`\n${rawOutput.trim()}\n\`\`\`\n`)
               .write();
