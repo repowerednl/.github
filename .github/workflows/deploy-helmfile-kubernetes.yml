@@ -18,8 +18,7 @@ on:
         required: true
 
 jobs:
-  deploy-helmfile:
-    name: Deploy ${{ inputs.selector || 'all' }}
+  deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
