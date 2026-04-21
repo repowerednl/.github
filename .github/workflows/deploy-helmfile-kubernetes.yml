@@ -19,6 +19,7 @@ on:
 
 jobs:
   deploy-helmfile:
+    name: Deploy ${{ inputs.selector || '' }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
@@ -61,18 +62,26 @@ jobs:
 
       - name: Deployment status summary
         if: success()
+        env:
+          DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
         run: |
-          echo "## Deployment succeeded" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Deployment succeeded" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Release status</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl status >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }} status >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
 
       - name: Deployment failure summary
         if: failure()
+        env:
+          DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
         run: |
           echo "## ❌ Deployment failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl"
+          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}"
 
           # Try rendering templates — catches values errors and helmfile.yaml.gotmpl errors
           TEMPLATE_ERRORS=$(helmfile $HELMFILE_ARGS template 2>&1 >/dev/null | grep 'STDERR' -A 2) || true
@@ -86,6 +95,6 @@ jobs:
             echo "### Cluster installation error" >> $GITHUB_STEP_SUMMARY
             echo "_The error occurred during installation on the cluster._" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            helmfile $HELMFILE_ARGS status 2>&1 >> $GITHUB_STEP_SUMMARY || true
+            helmfile $HELMFILE_ARGS status >> $GITHUB_STEP_SUMMARY 2>&1 || true
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
