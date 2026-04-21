@@ -48,13 +48,14 @@ jobs:
 
       - name: Deploy
         uses: helmfile/helmfile-action@v2.4.3
+        env:
+          DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
         with:
           helmfile-version: ${{ vars.HELMFILE_STABLE_VERSION }}
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml apply
             --concurrency 0
-            --state-values-set dockerImageTag=${{ inputs.docker_image_tag }}
             ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
 
       - name: Deployment status summary

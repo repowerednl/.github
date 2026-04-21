@@ -17,6 +17,6 @@ releases:
       - values_my-app.yml
     set:
       - name: image
-        value: '{{ .Values.dockerImageTag }}'
+        value: {{ requiredEnv "DOCKER_IMAGE_TAG" }}
 
   # Add more releases following the same pattern
