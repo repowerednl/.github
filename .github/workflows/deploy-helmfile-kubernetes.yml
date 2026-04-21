@@ -12,14 +12,14 @@ on:
       selector:
         type: string
         required: false
-        description: "Helmfile label selector to target specific releases, e.g. 'name=api'"
+        description: "Release name to target a specific release, e.g. 'api'. Leave empty to deploy all releases."
     secrets:
       digital_ocean_access_token:
         required: true
 
 jobs:
   deploy-helmfile:
-    name: Deploy ${{ inputs.selector || '' }}
+    name: Deploy ${{ inputs.selector || 'all' }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
@@ -58,7 +58,7 @@ jobs:
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl apply
             --concurrency 0
-            ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
+            ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }}
 
       - name: Deployment status summary
         if: success()
@@ -69,7 +69,7 @@ jobs:
           echo "<details><summary>Release status</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }} status >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }} status >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "</details>" >> $GITHUB_STEP_SUMMARY
 
@@ -81,7 +81,7 @@ jobs:
           echo "## ❌ Deployment failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}"
+          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }}"
 
           # Try rendering templates — catches values errors and helmfile.yaml.gotmpl errors
           TEMPLATE_ERRORS=$(helmfile $HELMFILE_ARGS template 2>&1 >/dev/null | grep 'STDERR' -A 2) || true
