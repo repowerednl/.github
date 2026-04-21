@@ -89,6 +89,11 @@ jobs:
               return (match?.[1] ?? raw).trim();
             };
 
+            const parseReleases = stdout => stdout.split('\n').slice(1).filter(Boolean).map(line => {
+              const [name, ns] = line.trim().split(/\s+/);
+              return { name, ns };
+            }).filter(r => r.name && r.ns);
+
             const baseArgs = ['-f', 'deployment/helmfile.yaml.gotmpl'];
             const selectorArgs = process.env.SELECTOR ? ['--selector', `name=${process.env.SELECTOR}`] : [];
             const helmfileArgs = cmd => [...baseArgs, cmd, ...selectorArgs];
@@ -98,28 +103,47 @@ jobs:
 
             await core.summary.addHeading('❌ Deployment failed', 2);
 
-            // Case 1 & 2: detect config/template errors
+            // Get release list — works even when templates/values fail
+            const list = await exec.getExecOutput('helmfile', helmfileArgs('list'), {
+              ignoreReturnCode: true, silent: true
+            });
+            const releases = parseReleases(list.stdout);
+
+            // Detect config/template errors
             const tmpl = await exec.getExecOutput('helmfile', helmfileArgs('template'), {
               ignoreReturnCode: true, silent: true
             });
             if (tmpl.exitCode !== 0) {
-              await core.summary
+              core.summary
                 .addHeading('Configuration error', 3)
-                .addQuote('The chart could not be rendered or processed. Check your helmfile.yaml.gotmpl or helm values.yaml file(s).')
-                .addCodeBlock(extractError(tmpl.stderr || tmpl.stdout))
-                .write();
+                .addQuote('The chart could not be rendered or processed. Check your helmfile.yaml.gotmpl or helm values.yaml file(s).');
+
+              if (releases.length > 1) {
+                // Check each release individually to show which ones fail
+                const perRelease = await Promise.all(releases.map(async ({ name, ns }) => {
+                  const r = await exec.getExecOutput('helmfile', [
+                    ...baseArgs, 'template', '--selector', `name=${name}`
+                  ], { ignoreReturnCode: true, silent: true });
+                  return { name, ns, ok: r.exitCode === 0, error: extractError(r.stderr || r.stdout) };
+                }));
+
+                core.summary.addTable([
+                  [{data: 'Release', header: true}, {data: 'Namespace', header: true}, {data: 'Status', header: true}],
+                  ...perRelease.map(({ name, ns, ok }) => [name, ns, ok ? '✅ ok' : '❌ error'])
+                ]);
+
+                for (const { name, error } of perRelease.filter(r => !r.ok)) {
+                  core.summary.addDetails(name, `\n\n\`\`\`\n${error}\n\`\`\`\n`);
+                }
+              } else {
+                core.summary.addCodeBlock(extractError(tmpl.stderr || tmpl.stdout));
+              }
+
+              await core.summary.write();
               return;
             }
 
-            // Case 3: cluster installation error — get releases then fetch statuses in parallel
-            const list = await exec.getExecOutput('helmfile', helmfileArgs('list'), {
-              ignoreReturnCode: true, silent: true
-            });
-            const releases = list.stdout.split('\n').slice(1).filter(Boolean).map(line => {
-              const [name, ns] = line.trim().split(/\s+/);
-              return { name, ns };
-            }).filter(r => r.name && r.ns);
-
+            // Cluster installation error — fetch helm status per release in parallel
             const statuses = await Promise.all(releases.map(async ({ name, ns }) => {
               const result = await exec.getExecOutput('helm', ['status', name, '-n', ns], {
                 ignoreReturnCode: true, silent: true
