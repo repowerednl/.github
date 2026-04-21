@@ -1,5 +1,4 @@
-# Copy this file to deployment/<environment>/helmfile.yaml.gotmpl in your app repo.
-# All releases for this environment are declared here.
+# Copy this file to deployment/helmfile.yaml.gotmpl in your app repo. All releases are declared here
 
 helmDefaults:
   atomic: true
@@ -14,7 +13,7 @@ releases:
     chart: oci://ghcr.io/repowerednl/helm-charts/deployment
     version: "1.0.1"  # update when upgrading the chart
     values:
-      - values_my-app.yml
+      - '{{ requiredEnv "ENVIRONMENT" }}/values_my-app.yml'
     set:
       - name: image
         value: '{{ requiredEnv "DOCKER_IMAGE_TAG" }}'

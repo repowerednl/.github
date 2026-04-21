@@ -51,6 +51,7 @@ jobs:
         uses: helmfile/helmfile-action@v2.4.3
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+          ENVIRONMENT: ${{ inputs.environment }}
         with:
           helmfile-version: ${{ vars.HELMFILE_STABLE_VERSION }}
           helm-version: ${{ vars.HELM_STABLE_VERSION }}
@@ -64,6 +65,7 @@ jobs:
         if: success()
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
           echo "## ✅ Deployment succeeded" >> $GITHUB_STEP_SUMMARY
           echo "<details><summary>Release status</summary>" >> $GITHUB_STEP_SUMMARY
@@ -82,7 +84,12 @@ jobs:
           SELECTOR: ${{ inputs.selector }}
         with:
           script: |
-            const baseArgs = ['-f', `deployment/${process.env.ENVIRONMENT}/helmfile.yaml.gotmpl`];
+            const extractError = raw => {
+              const match = raw.match(/^STDERR:\n([\s\S]+?)(?=\n(?:COMBINED OUTPUT|EXIT STATUS):|$)/m);
+              return (match?.[1] ?? raw).trim();
+            };
+
+            const baseArgs = ['-f', 'deployment/helmfile.yaml.gotmpl'];
             const selectorArgs = process.env.SELECTOR ? ['--selector', `name=${process.env.SELECTOR}`] : [];
             const helmfileArgs = cmd => [...baseArgs, cmd, ...selectorArgs];
 
@@ -99,7 +106,7 @@ jobs:
               await core.summary
                 .addHeading('Configuration error', 3)
                 .addQuote('The chart could not be rendered or processed. Check your helmfile.yaml.gotmpl or helm values.yaml file(s).')
-                .addCodeBlock((tmpl.stderr || tmpl.stdout).trim())
+                .addCodeBlock(extractError(tmpl.stderr || tmpl.stdout))
                 .write();
               return;
             }
