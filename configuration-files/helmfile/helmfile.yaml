@@ -1,12 +1,6 @@
 # Copy this file to deployment/<environment>/helmfile.yaml in your app repo.
 # All releases for this environment are declared here.
 
-registries:
-  - name: ghcr
-    url: ghcr.io
-    username: '{{ requiredEnv "GHCR_USERNAME" }}'
-    password: '{{ requiredEnv "GHCR_PASSWORD" }}'
-
 helmDefaults:
   atomic: true
   cleanupOnFail: true

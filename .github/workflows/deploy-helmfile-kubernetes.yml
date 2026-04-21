@@ -24,9 +24,6 @@ jobs:
     permissions:
       packages: read
       contents: read
-    env:
-      GHCR_USERNAME: repowerednl
-      GHCR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v6
@@ -41,11 +38,18 @@ jobs:
           expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
-      - name: Deploy
-        uses: helmfile/helmfile-action@v2
+      - name: Install Helm
+        uses: azure/setup-helm@v5
         with:
-          helmfile-version: "v0.171.0"
-          helm-version: "v3.18.0"
+          version: ${{ vars.HELM_STABLE_VERSION }}
+
+      - name: Helm packages login
+        run: helm registry login ghcr.io --username repowerednl --password ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy
+        uses: helmfile/helmfile-action@v2.4.3
+        with:
+          helmfile-version: ${{ vars.HELMFILE_STABLE_VERSION }}
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml apply
