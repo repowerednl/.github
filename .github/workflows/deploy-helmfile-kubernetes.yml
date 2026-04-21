@@ -93,8 +93,33 @@ jobs:
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
             echo "### Cluster installation error" >> $GITHUB_STEP_SUMMARY
-            echo "_The error occurred during installation on the cluster._" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            helmfile $HELMFILE_ARGS status >> $GITHUB_STEP_SUMMARY 2>&1 || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "_Templates rendered successfully — the error occurred during installation on the cluster._" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            declare -A helm_output
+            while read -r name ns; do
+              helm_output["$name:$ns"]=$(helm status "$name" -n "$ns" 2>&1) || true
+            done < <(helmfile $HELMFILE_ARGS list 2>/dev/null | awk 'NR>1 {print $1, $2}')
+
+            echo "| Release | Namespace | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
+            for key in "${!helm_output[@]}"; do
+              name="${key%%:*}"; ns="${key##*:}"
+              status=$(echo "${helm_output[$key]}" | awk '/^STATUS:/{print $2}')
+              case "${status:-not found}" in
+                deployed) icon="✅" ;;
+                failed|pending-install|pending-upgrade|pending-rollback) icon="❌" ;;
+                *) icon="⚠️" ;;
+              esac
+              echo "| $name | $ns | $icon ${status:-not found} |" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            for key in "${!helm_output[@]}"; do
+              name="${key%%:*}"
+              echo "<details><summary>$name</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "${helm_output[$key]}" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+            done
           fi
