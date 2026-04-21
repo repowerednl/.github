@@ -13,6 +13,11 @@ on:
         type: string
         required: true
         description: "Release name to deploy, e.g. 'api'. Must match a release name in helmfile.yaml.gotmpl."
+      release_prefix:
+        type: string
+        required: false
+        default: ''
+        description: "Optional prefix prepended to release names in helmfile (e.g. 'test-' for canary deploys)."
     secrets:
       digital_ocean_access_token:
         required: true
@@ -51,6 +56,7 @@ jobs:
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_PREFIX: ${{ inputs.release_prefix }}
         with:
           helmfile-version: ${{ vars.HELMFILE_STABLE_VERSION }}
           helm-version: ${{ vars.HELM_STABLE_VERSION }}
@@ -65,6 +71,7 @@ jobs:
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_PREFIX: ${{ inputs.release_prefix }}
         run: |
           echo "## ✅ Deployment succeeded" >> $GITHUB_STEP_SUMMARY
           echo "<details><summary>Release status</summary>" >> $GITHUB_STEP_SUMMARY
@@ -80,6 +87,7 @@ jobs:
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_PREFIX: ${{ inputs.release_prefix }}
           SELECTOR: ${{ inputs.selector }}
         with:
           script: |
