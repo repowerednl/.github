@@ -55,7 +55,7 @@ jobs:
           helm-version: ${{ vars.HELM_STABLE_VERSION }}
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
-            -f deployment/${{ inputs.environment }}/helmfile.yaml apply
+            -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl apply
             --concurrency 0
             ${{ inputs.selector != '' && format('--selector {0}', inputs.selector) || '' }}
 
@@ -64,7 +64,7 @@ jobs:
         run: |
           echo "## Deployment succeeded" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml status >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl status >> $GITHUB_STEP_SUMMARY 2>&1 || true
 
       - name: Deployment failure summary
         if: failure()
@@ -72,13 +72,13 @@ jobs:
           echo "## ❌ Deployment failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml"
+          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl"
 
-          # Try rendering templates — catches values errors and helmfile.yaml errors
+          # Try rendering templates — catches values errors and helmfile.yaml.gotmpl errors
           TEMPLATE_ERRORS=$(helmfile $HELMFILE_ARGS template 2>&1 >/dev/null | grep 'STDERR' -A 2) || true
           if [ -n "$TEMPLATE_ERRORS" ]; then
             echo "### Configuration error" >> $GITHUB_STEP_SUMMARY
-            echo "_The chart could not be rendered. Check your \`helmfile.yaml\` or helm \`values.yaml\` file(s)._" >> $GITHUB_STEP_SUMMARY
+            echo "_The chart could not be rendered. Check your \`helmfile.yaml.gotmpl\` or helm \`values.yaml\` file(s)._" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "$TEMPLATE_ERRORS" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
