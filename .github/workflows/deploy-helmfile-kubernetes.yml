@@ -59,10 +59,9 @@ jobs:
 
       - name: Deployment status summary
         if: always()
-        continue-on-error: true
         run: |
           echo "## Helmfile Status" >> $GITHUB_STEP_SUMMARY
-          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml status >> $GITHUB_STEP_SUMMARY
+          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml status >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo "Image tag: ${{ inputs.docker_image_tag }}" >> $GITHUB_STEP_SUMMARY
         env:
           ENVIRONMENT: ${{ inputs.environment }}
