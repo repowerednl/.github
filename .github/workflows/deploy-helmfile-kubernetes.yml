@@ -75,51 +75,63 @@ jobs:
 
       - name: Deployment failure summary
         if: failure()
+        uses: actions/github-script@v7
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
-        run: |
-          echo "## ❌ Deployment failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          ENVIRONMENT: ${{ inputs.environment }}
+          SELECTOR: ${{ inputs.selector }}
+        with:
+          script: |
+            const baseArgs = ['-f', `deployment/${process.env.ENVIRONMENT}/helmfile.yaml.gotmpl`];
+            const selectorArgs = process.env.SELECTOR ? ['--selector', `name=${process.env.SELECTOR}`] : [];
+            const helmfileArgs = cmd => [...baseArgs, cmd, ...selectorArgs];
 
-          HELMFILE_ARGS="-f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }}"
+            const failedStatuses = ['failed', 'pending-install', 'pending-upgrade', 'pending-rollback'];
+            const statusIcon = s => s === 'deployed' ? '✅' : failedStatuses.includes(s) ? '❌' : '⚠️';
 
-          # Try rendering templates — catches values errors and helmfile.yaml.gotmpl errors
-          TEMPLATE_ERRORS=$(helmfile $HELMFILE_ARGS template 2>&1 >/dev/null | grep 'STDERR' -A 2) || true
-          if [ -n "$TEMPLATE_ERRORS" ]; then
-            echo "### Configuration error" >> $GITHUB_STEP_SUMMARY
-            echo "_The chart could not be rendered. Check your \`helmfile.yaml.gotmpl\` or helm \`values.yaml\` file(s)._" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "$TEMPLATE_ERRORS" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### Cluster installation error" >> $GITHUB_STEP_SUMMARY
-            echo "_Templates rendered successfully — the error occurred during installation on the cluster._" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            declare -A helm_output
-            while read -r name ns; do
-              helm_output["$name:$ns"]=$(helm status "$name" -n "$ns" 2>&1) || true
-            done < <(helmfile $HELMFILE_ARGS list 2>/dev/null | awk 'NR>1 {print $1, $2}')
+            await core.summary.addHeading('❌ Deployment failed', 2);
 
-            echo "| Release | Namespace | Status |" >> $GITHUB_STEP_SUMMARY
-            echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
-            for key in "${!helm_output[@]}"; do
-              name="${key%%:*}"; ns="${key##*:}"
-              status=$(echo "${helm_output[$key]}" | awk '/^STATUS:/{print $2}')
-              case "${status:-not found}" in
-                deployed) icon="✅" ;;
-                failed|pending-install|pending-upgrade|pending-rollback) icon="❌" ;;
-                *) icon="⚠️" ;;
-              esac
-              echo "| $name | $ns | $icon ${status:-not found} |" >> $GITHUB_STEP_SUMMARY
-            done
-            echo "" >> $GITHUB_STEP_SUMMARY
-            for key in "${!helm_output[@]}"; do
-              name="${key%%:*}"
-              echo "<details><summary>$name</summary>" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo "${helm_output[$key]}" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo "</details>" >> $GITHUB_STEP_SUMMARY
-            done
-          fi
+            // Case 1 & 2: detect config/template errors
+            const tmpl = await exec.getExecOutput('helmfile', helmfileArgs('template'), {
+              ignoreReturnCode: true, silent: true
+            });
+            if (tmpl.exitCode !== 0) {
+              await core.summary
+                .addHeading('Configuration error', 3)
+                .addRaw('_The chart could not be rendered or processed. Check your `helmfile.yaml.gotmpl` or helm `values.yaml` file(s)._\n\n')
+                .addCodeBlock((tmpl.stderr || tmpl.stdout).trim())
+                .write();
+              return;
+            }
+
+            // Case 3: cluster installation error — get releases then fetch statuses in parallel
+            const list = await exec.getExecOutput('helmfile', helmfileArgs('list'), {
+              ignoreReturnCode: true, silent: true
+            });
+            const releases = list.stdout.split('\n').slice(1).filter(Boolean).map(line => {
+              const [name, ns] = line.trim().split(/\s+/);
+              return { name, ns };
+            }).filter(r => r.name && r.ns);
+
+            const statuses = await Promise.all(releases.map(async ({ name, ns }) => {
+              const result = await exec.getExecOutput('helm', ['status', name, '-n', ns], {
+                ignoreReturnCode: true, silent: true
+              });
+              const output = result.stdout || result.stderr;
+              const status = output.match(/^STATUS:\s+(\S+)/m)?.[1] ?? 'not found';
+              return { name, ns, status, output };
+            }));
+
+            core.summary
+              .addHeading('Cluster installation error', 3)
+              .addRaw('_Templates rendered successfully — the error occurred during installation on the cluster._\n\n')
+              .addTable([
+                [{data: 'Release', header: true}, {data: 'Namespace', header: true}, {data: 'Status', header: true}],
+                ...statuses.map(({ name, ns, status }) => [name, ns, `${statusIcon(status)} ${status}`])
+              ]);
+
+            for (const { name, output } of statuses) {
+              core.summary.addDetails(name, `\n\n\`\`\`\n${output.trim()}\n\`\`\`\n`);
+            }
+
+            await core.summary.write();
