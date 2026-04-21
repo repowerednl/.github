@@ -52,6 +52,7 @@ jobs:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
         with:
           helmfile-version: ${{ vars.HELMFILE_STABLE_VERSION }}
+          helm-version: ${{ vars.HELM_STABLE_VERSION }}
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
             -f deployment/${{ inputs.environment }}/helmfile.yaml apply
