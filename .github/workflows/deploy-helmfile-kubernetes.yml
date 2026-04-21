@@ -56,7 +56,7 @@ jobs:
           helm-version: ${{ vars.HELM_STABLE_VERSION }}
           helm-plugins: https://github.com/databus23/helm-diff
           helmfile-args: >-
-            -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl apply
+            -f deployment/helmfile.yaml.gotmpl apply
             --concurrency 0
             ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }}
 
@@ -69,7 +69,7 @@ jobs:
           echo "<details><summary>Release status</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          helmfile -f deployment/${{ inputs.environment }}/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }} status >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          helmfile -f deployment/helmfile.yaml.gotmpl ${{ inputs.selector != '' && format('--selector name={0}', inputs.selector) || '' }} status >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "</details>" >> $GITHUB_STEP_SUMMARY
 
@@ -98,7 +98,7 @@ jobs:
             if (tmpl.exitCode !== 0) {
               await core.summary
                 .addHeading('Configuration error', 3)
-                .addRaw('_The chart could not be rendered or processed. Check your `helmfile.yaml.gotmpl` or helm `values.yaml` file(s)._\n\n')
+                .addQuote('The chart could not be rendered or processed. Check your helmfile.yaml.gotmpl or helm values.yaml file(s).')
                 .addCodeBlock((tmpl.stderr || tmpl.stdout).trim())
                 .write();
               return;
@@ -124,7 +124,7 @@ jobs:
 
             core.summary
               .addHeading('Cluster installation error', 3)
-              .addRaw('_Templates rendered successfully — the error occurred during installation on the cluster._\n\n')
+              .addQuote('Templates rendered successfully — the error occurred during installation on the cluster.')
               .addTable([
                 [{data: 'Release', header: true}, {data: 'Namespace', header: true}, {data: 'Status', header: true}],
                 ...statuses.map(({ name, ns, status }) => [name, ns, `${statusIcon(status)} ${status}`])
