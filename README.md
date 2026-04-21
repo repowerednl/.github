@@ -7,16 +7,17 @@ We use reusable workflows: [Reuse workflows](https://docs.github.com/en/actions/
 If you want to create/update one, there are a few rules to adhere:
 - Make sure they are backwards compatible (if that is not possible; make sure you update all the repositories where this workflow is used)
 - Add proof of a successfull workflow run to the PR description (backwards compatability including if applicable)
+- Do not use bash scripting unless it is _really_ needed. Use actions/tools/github-script instead
 - Create/update the accompanying workflow template (_see below_)
 
-## Workflow Templates
+### Workflow Templates
 To have consistent workflows that can easily be maintained, templates have been created under the folder 'workflow_templates'. 
 - Templates have one goal and can be modified to specific needs. Current goals are; `deploy to ..`, `test stack ..`, `release package pypi/npm`
 - For creating such a template here: [Create template](https://docs.github.com/en/actions/sharing-automations/creating-workflow-templates-for-your-organization)
 - For using such a template in a repository: [Use template](https://docs.github.com/en/actions/writing-workflows/using-workflow-templates)
 - For testing such a template including explanations: [workflow-tests](https://github.com/repowerednl/workflow-tests)
 
-## Test workflow locally
+### Test workflow locally
 It can be very frustrating to check if a workflow on GitHub is valid/runs. There are two tools that can be installed to check locally:
 ### actionlint
 This is a github action linter and works pretty well. It is [open source](https://github.com/rhysd/actionlint)
