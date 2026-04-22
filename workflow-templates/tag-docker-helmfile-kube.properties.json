@@ -5,6 +5,6 @@
     "categories": ["Repowered"],
     "filePatterns": [
         "(.*\\/)?Dockerfile(\\.{1}[^.].*)?",
-        "^deployment\\/.*\\/helmfile\\.ya?ml$"
+        "^deployment\\/helmfile\\.ya?ml(\\.gotmpl)?$"
     ]
 }

@@ -1,11 +1,27 @@
 # Copy this file to deployment/helmfile.yaml.gotmpl in your app repo. All releases are declared here
 
 helmDefaults:
-  atomic: true
-  cleanupOnFail: true
-  timeout: 600
-  wait: true
-  force: true
+# atomic: ensures all-or-nothing deployments; automatically rolls back on failure
+atomic: true
+# cleanupOnFail: removes resources created during a failed deployment attempt
+cleanupOnFail: true
+# timeout: maximum time (seconds) for a deployment to finish
+timeout: 600
+# wait: waits for all resources to be ready before marking the release as successful
+wait: true
+# force: forces resource updates through delete/recreate if needed (use with caution)
+force: true
+# createNamespace: automatically creates the namespace if it doesn't exist
+createNamespace: true
+# recreatePods: forces pods to be recreated during updates
+recreatePods: false
+# historyMax: maximum number of release revisions to keep (0 = unlimited)
+historyMax: 10
+# verify: verify the chart before installing/upgrading (requires signed charts)
+verify: false
+# skipDeps: skip running 'helm dependency update' before install/upgrade
+skipDeps: false
+
 
 releases:
   - name: my-app

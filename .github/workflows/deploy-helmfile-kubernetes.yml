@@ -57,6 +57,7 @@ jobs:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
           RELEASE_PREFIX: ${{ inputs.release_prefix }}
+          SELECTOR: ${{ inputs.selector }}
         with:
           helmfile-version: ${{ vars.HELMFILE_STABLE_VERSION }}
           helm-version: ${{ vars.HELM_STABLE_VERSION }}
@@ -64,7 +65,7 @@ jobs:
           helmfile-args: >-
             -f deployment/helmfile.yaml.gotmpl apply
             --concurrency 0
-            --selector name=${{ inputs.selector }}
+            --selector name=${{ env.SELECTOR }}
 
       - name: Deployment status summary
         if: success()
