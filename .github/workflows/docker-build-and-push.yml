@@ -58,6 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.docker-image-tag-env.outputs.image_tag }}
+      docker_tags: ${{ steps.docker-image-tag-env.outputs.docker_tags }}
       environment: ${{ steps.docker-image-tag-env.outputs.environment }}
     steps:
       # Sets the docker image tag according to the file system structure of Dockerhub with versioning
@@ -72,10 +73,11 @@ jobs:
         run: |
           DOCKERFILE=${{ inputs.dockerfile_name }}
           DOCKERFILE_NAME=$(echo $DOCKERFILE | sed 's/Dockerfile./-/;s/Dockerfile//')
+          echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
           if [ ${{ contains(github.ref,'main') }} == true ]; then
-            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }} , ${{ env.hub_repo }}${DOCKERFILE_NAME}:latest" >> $GITHUB_OUTPUT
+            echo "docker_tags=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }},${{ env.hub_repo }}${DOCKERFILE_NAME}:latest" >> $GITHUB_OUTPUT
           else
-            echo "image_tag=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "docker_tags=${{ env.hub_repo }}${DOCKERFILE_NAME}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
           fi
           echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
 
@@ -101,7 +103,7 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile_name }}
           push: true
-          tags: ${{ needs.generate-image-tag-set-environment.outputs.image_tag }}
+          tags: ${{ needs.generate-image-tag-set-environment.outputs.docker_tags }}
           build-args: |
             ARG_1=${{ inputs.build_argument_one }}
             ARG_2=${{ inputs.build_argument_two }}
