@@ -122,3 +122,30 @@ jobs:
             --datetime_until "$datetime_until" \
             --log-level "${{ inputs.log_level }}" \
             ${{ inputs.continue_on_error != 'false' && '--continue-on-error' || '' }}
+
+      - name: Fix table ownership and apply fake initial migrations
+        continue-on-error: true
+        run: |
+          PGPASSWORD="${{ secrets.target_pw }}" psql \
+            -h "${{ secrets.target_host }}" \
+            -U "${{ secrets.target_user }}" \
+            -d "${{ secrets.target_db }}" \
+            -c "REASSIGN OWNED BY \"${{ secrets.target_user }}\" TO doadmin;"
+          
+          # Needed for older django versions 
+          # initial migrations fail on non-existing column 'name' in django_content_type
+          # name was deleted since django 1.8 but is still referenced in old migration files
+          
+          PGPASSWORD="${{ secrets.target_pw }}" psql \
+            -h "${{ secrets.target_host }}" \
+            -U "${{ secrets.target_user }}" \
+            -d "${{ secrets.target_db }}" \
+            -c "ALTER TABLE django_content_type ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '';"
+          
+          uv run python manage.py migrate --fake-initial
+          
+          PGPASSWORD="${{ secrets.target_pw }}" psql \
+            -h "${{ secrets.target_host }}" \
+            -U "${{ secrets.target_user }}" \
+            -d "${{ secrets.target_db }}" \
+            -c "ALTER TABLE django_content_type DROP COLUMN IF EXISTS name;"
