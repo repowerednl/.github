@@ -29,7 +29,7 @@ on:
         default: "0.9.8"
         required: false
       log_level:
-        description: "Logging level (default is INFO))"
+        description: "Logging level (default is INFO)"
         required: false
         default: INFO
         type: string
@@ -77,7 +77,7 @@ on:
 jobs:
   run-daphne:
     runs-on: ${{ inputs.runner }}
-    environment: ${{ inputs.environment || null }}
+    environment: ${{ inputs.environment || '' }}
 
     steps:
       - name: Checkout repository
@@ -87,8 +87,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget ca-certificates
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/keyrings/pgdg.asc > /dev/null
+          sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/pgdg.asc] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
           echo "PostgreSQL 17 client installed"
@@ -102,23 +102,71 @@ jobs:
           private_pypi_password: ${{ secrets.private_pypi_password }}
 
       - name: Run Daphne sync
-        run: |
-          datetime_until="${{ inputs.datetime_until }}" && datetime_until=${datetime:-$(date +"%Y-%m-%d %H:%M:%S")}
-          uv run python -m daphne.main \
-            --source-db-name "${{ secrets.source_db }}" \
-            --source-host "${{ secrets.source_host }}" \
-            --source-password "${{ secrets.source_pw }}" \
-            --source-user "${{ secrets.source_user }}" \
-            --source-port "${{ secrets.source_port }}" \
-            --target-db-name "${{ secrets.target_db }}" \
-            --target-host "${{ secrets.target_host }}" \
-            --target-password "${{ secrets.target_pw }}" \
-            --target-user "${{ secrets.target_user }}" \
-            --target-port "${{ secrets.target_port }}" \
-            --interval-unit "${{ inputs.interval_unit }}" \
-            --interval-amount "${{ inputs.interval_amount }}" \
-            --exclude-tables "${{ inputs.exclude_tables }}" \
-            --include-tables "${{ inputs.include_tables }}" \
-            --datetime_until "$datetime_until" \
-            --log-level "${{ inputs.log_level }}" \
-            ${{ inputs.continue_on_error != 'false' && '--continue-on-error' || '' }}
+        uses: actions/github-script@v7
+        env:
+          SOURCE_DB: ${{ secrets.source_db }}
+          SOURCE_HOST: ${{ secrets.source_host }}
+          SOURCE_PW: ${{ secrets.source_pw }}
+          SOURCE_USER: ${{ secrets.source_user }}
+          SOURCE_PORT: ${{ secrets.source_port }}
+          TARGET_DB: ${{ secrets.target_db }}
+          TARGET_HOST: ${{ secrets.target_host }}
+          TARGET_PW: ${{ secrets.target_pw }}
+          TARGET_USER: ${{ secrets.target_user }}
+          TARGET_PORT: ${{ secrets.target_port }}
+          DATETIME_UNTIL: ${{ inputs.datetime_until }}
+        with:
+          script: |
+            const e = process.env;
+            const datetimeUntil = e.DATETIME_UNTIL || new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const args = [
+              'run', 'python', '-m', 'daphne.main',
+              '--source-db-name', e.SOURCE_DB,
+              '--source-host', e.SOURCE_HOST,
+              '--source-password', e.SOURCE_PW,
+              '--source-user', e.SOURCE_USER,
+              '--source-port', e.SOURCE_PORT,
+              '--target-db-name', e.TARGET_DB,
+              '--target-host', e.TARGET_HOST,
+              '--target-password', e.TARGET_PW,
+              '--target-user', e.TARGET_USER,
+              '--target-port', e.TARGET_PORT,
+              '--interval-unit', '${{ inputs.interval_unit }}',
+              '--interval-amount', '${{ inputs.interval_amount }}',
+              '--exclude-tables', '${{ inputs.exclude_tables }}',
+              '--include-tables', '${{ inputs.include_tables }}',
+              '--datetime_until', datetimeUntil,
+              '--log-level', '${{ inputs.log_level }}',
+            ];
+            if ('${{ inputs.continue_on_error }}' !== 'false') args.push('--continue-on-error');
+            await exec.exec('uv', args);
+
+      - name: Fix table ownership and apply fake initial migrations
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          PGPASSWORD: ${{ secrets.target_pw }}
+          SQL_DATABASE: ${{ secrets.target_db }}
+          SQL_USER: ${{ secrets.target_user }}
+          SQL_PASSWORD: ${{ secrets.target_pw }}
+          SQL_HOST: ${{ secrets.target_host }}
+          SQL_PORT: ${{ secrets.target_port }}
+        with:
+          script: |
+            const { SQL_HOST, SQL_USER, SQL_DATABASE } = process.env;
+            const psqlBase = ['-h', SQL_HOST, '-U', SQL_USER, '-d', SQL_DATABASE];
+
+            const psql = async (label, command) => {
+              const rc = await exec.exec('psql', [...psqlBase, '-c', command], { ignoreReturnCode: true });
+              if (rc !== 0) core.warning(`${label} failed`);
+            };
+
+            await psql('REASSIGN OWNED BY', `REASSIGN OWNED BY "${SQL_USER}" TO doadmin;`);
+
+            // Needed for older django versions — name column removed in 1.8 but still referenced in old migrations
+            await psql('Adding name column', "ALTER TABLE django_content_type ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '';");
+
+            const migrateRc = await exec.exec('uv', ['run', 'python', 'manage.py', 'migrate', '--fake-initial'], { ignoreReturnCode: true });
+            if (migrateRc !== 0) core.warning('migrate --fake-initial failed');
+
+            await psql('Dropping name column', 'ALTER TABLE django_content_type DROP COLUMN IF EXISTS name;');
