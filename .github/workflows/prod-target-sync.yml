@@ -161,12 +161,12 @@ jobs:
               if (rc !== 0) core.warning(`${label} failed`);
             };
 
-            await psql('REASSIGN OWNED BY', `REASSIGN OWNED BY "${SQL_USER}" TO doadmin;`);
-
             // Needed for older django versions — name column removed in 1.8 but still referenced in old migrations
+
             await psql('Adding name column', "ALTER TABLE django_content_type ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '';");
-
             const migrateRc = await exec.exec('uv', ['run', 'python', 'manage.py', 'migrate', '--fake-initial'], { ignoreReturnCode: true });
-            if (migrateRc !== 0) core.warning('migrate --fake-initial failed');
 
+            if (migrateRc !== 0) core.warning('migrate --fake-initial failed');
             await psql('Dropping name column', 'ALTER TABLE django_content_type DROP COLUMN IF EXISTS name;');
+
+            await psql('REASSIGN OWNED BY', `REASSIGN OWNED BY "${SQL_USER}" TO "backend-service";`);
