@@ -115,6 +115,12 @@ jobs:
           TARGET_USER: ${{ secrets.target_user }}
           TARGET_PORT: ${{ secrets.target_port }}
           DATETIME_UNTIL: ${{ inputs.datetime_until }}
+          INTERVAL_UNIT: ${{ inputs.interval_unit }}
+          INTERVAL_AMOUNT: ${{ inputs.interval_amount }}
+          EXCLUDE_TABLES: ${{ inputs.exclude_tables }}
+          INCLUDE_TABLES: ${{ inputs.include_tables }}
+          LOG_LEVEL: ${{ inputs.log_level }}
+          CONTINUE_ON_ERROR: ${{ inputs.continue_on_error }}
         with:
           script: |
             const e = process.env;
@@ -131,14 +137,14 @@ jobs:
               '--target-password', e.TARGET_PW,
               '--target-user', e.TARGET_USER,
               '--target-port', e.TARGET_PORT,
-              '--interval-unit', '${{ inputs.interval_unit }}',
-              '--interval-amount', '${{ inputs.interval_amount }}',
-              '--exclude-tables', '${{ inputs.exclude_tables }}',
-              '--include-tables', '${{ inputs.include_tables }}',
+              '--interval-unit', e.INTERVAL_UNIT,
+              '--interval-amount', e.INTERVAL_AMOUNT,
+              '--exclude-tables', e.EXCLUDE_TABLES,
+              '--include-tables', e.INCLUDE_TABLES,
               '--datetime_until', datetimeUntil,
-              '--log-level', '${{ inputs.log_level }}',
+              '--log-level', e.LOG_LEVEL,
             ];
-            if ('${{ inputs.continue_on_error }}' !== 'false') args.push('--continue-on-error');
+            if (e.CONTINUE_ON_ERROR !== 'false') args.push('--continue-on-error');
             await exec.exec('uv', args);
 
       - name: Fix table ownership and apply fake initial migrations
