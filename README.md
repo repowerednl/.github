@@ -29,3 +29,4 @@ _Linux install:_ Download and unpack in `usr/local/bin`: https://github.com/rhys
 This runs your workflows locally using the Docker API (so the Docker Engine needs to be installed). It is [open-source](https://github.com/nektos/act) with well defined [docs](https://nektosact.com/) including installations instructions for every OS.
 
 💡 **Install act using the `medium` sized image.** If there are actions that cannot be installed using this image, the action should _not_ be used. Note that any workflow that uses cloud tooling (like SonarCloud or Github artifacts), will not work locally
+ 
