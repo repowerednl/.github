@@ -1,4 +1,4 @@
-name: Run Pytest with Coverage, Check the Django Migration and run the Sonar Analysis
+name: Classify, run Pytest with Coverage, check Django Migration, run Sonar and enforce CI Gate
 
 on:
   push:
