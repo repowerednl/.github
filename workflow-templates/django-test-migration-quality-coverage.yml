@@ -138,8 +138,22 @@ jobs:
             const migration = '${{ needs.django-migration-test.result }}';
             const pytestOk = pytest === 'success' || pytest === 'skipped';
             const migrationOk = migration === 'success';
-            core.info(`pytest=${pytest}, migration=${migration}`);
-            if (!pytestOk || !migrationOk) {
+            const passed = pytestOk && migrationOk;
+            core.info(`pytest=${pytest}, migration=${migration}, passed=${passed}`);
+
+            // Surface the gate outcome on the run page so anyone can see what happened.
+            await core.summary
+              .addHeading('CI Gate', 3)
+              .addTable([
+                [{ data: 'Job', header: true }, { data: 'Result', header: true },
+                  { data: 'Requirement', header: true }],
+                ['pytest-with-coverage', pytest, 'success or skipped (skipped on merge sync)'],
+                ['django-migration-test', migration, 'success (always required)'],
+                ['Gate verdict', passed ? '✅ pass' : '❌ fail', ''],
+              ])
+              .write();
+
+            if (!passed) {
               core.setFailed(
                 `CI gate failed: pytest=${pytest} (allowed: success|skipped), `
                 + `migration=${migration} (required: success).`);
