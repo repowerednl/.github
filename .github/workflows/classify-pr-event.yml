@@ -1,0 +1,82 @@
+name: Classify PR Event
+# Early classification used to skip the (expensive) pytest + sonar jobs when a PR
+# 'synchronize' event is just a GitHub "Update branch" merge sync (base merged into
+# head, no developer changes). The classifier is intentionally biased towards 'false'
+# (i.e. run pytest) whenever anything is uncertain.
+
+on:
+  workflow_call:
+    outputs:
+      is-merge-sync:
+        description: "true when this synchronize is a GitHub 'Update branch' merge sync"
+        value: ${{ jobs.classify.outputs.is-merge-sync }}
+
+jobs:
+  classify:
+    name: Classify PR event
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # NOTE: this job must ALWAYS run. A skipped job's output resolves to '' (not
+    # 'false'), so we never gate the job off; the step below emits an explicit value.
+    outputs:
+      is-merge-sync: ${{ steps.detect.outputs.is_merge_sync }}
+    steps:
+      - name: Detect merge sync
+        id: detect
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const setResult = (value) => core.setOutput('is_merge_sync', value);
+
+            // Only PR 'synchronize' events can be a merge sync. Everything else
+            // (push, opened, reopened, ready_for_review) runs the full suite.
+            if (context.eventName !== 'pull_request'
+                || context.payload.action !== 'synchronize') {
+              core.info(`Not a synchronize event (event=${context.eventName}, `
+                + `action=${context.payload.action}); not a merge sync.`);
+              return setResult('false');
+            }
+
+            const pr = context.payload.pull_request;
+            // Never use payload.before: it is all-zeros on first push / force-push.
+            const headSha = context.payload.after || pr.head.sha;
+
+            const { data: head } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: headSha,
+            });
+
+            // The "Update branch" button always produces a 2-parent merge commit.
+            if (!head.parents || head.parents.length !== 2) {
+              core.info(`Head ${headSha} has ${head.parents?.length ?? 0} parent(s); `
+                + `not a merge commit.`);
+              return setResult('false');
+            }
+
+            // ...committed by GitHub web-flow, guaranteeing no developer edits were
+            // bundled into this push (a manual `git merge` would not match).
+            const committerLogin = head.committer && head.committer.login;
+            const committerEmail = head.commit.committer && head.commit.committer.email;
+            const isWebFlow = committerLogin === 'web-flow'
+              || committerEmail === 'noreply@github.com';
+            if (!isWebFlow) {
+              core.info(`Committer (login=${committerLogin}, email=${committerEmail}) `
+                + `is not GitHub web-flow; treating as developer work.`);
+              return setResult('false');
+            }
+
+            // The incoming side of the merge must be contained in the base branch.
+            const incoming = head.parents[1].sha;
+            const { data: cmp } = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: pr.base.ref,
+              head: incoming,
+            });
+            const contained = cmp.status === 'identical' || cmp.status === 'behind';
+            core.info(`Incoming parent ${incoming} vs base '${pr.base.ref}': `
+              + `status=${cmp.status}, contained=${contained}.`);
+
+            return setResult(contained ? 'true' : 'false');
