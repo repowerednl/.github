@@ -1,4 +1,4 @@
-name: Pytest with Coverage, Report and Job summary
+name: [Deprecated] Pytest with Coverage (use uv instead)
 
 on:
   workflow_call:

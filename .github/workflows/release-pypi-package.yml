@@ -1,4 +1,4 @@
-name: Release PyPi package
+name: Deprecated - Release PyPi package (use uv instead)
 
 on:
   workflow_call:

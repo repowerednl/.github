@@ -1,4 +1,4 @@
-name: Do a Helm deployment
+name: Deprecated - Do a Helm deployment (use helmfile instead)
 
 on:
   workflow_call:
