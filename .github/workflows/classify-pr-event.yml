@@ -1,8 +1,8 @@
 name: Classify PR Event
-# Early classification used to skip the (expensive) pytest + sonar jobs when a PR
+# Early classification used to skip the (expensive) test suite + sonar jobs when a PR
 # 'synchronize' event is just a GitHub "Update branch" merge sync (base merged into
 # head, no developer changes). The classifier is intentionally biased towards 'false'
-# (i.e. run pytest) whenever anything is uncertain.
+# (i.e. run the test suite) whenever anything is uncertain.
 
 on:
   workflow_call:
@@ -17,8 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    # NOTE: this job must ALWAYS run. A skipped job's output resolves to '' (not
-    # 'false'), so we never gate the job off; the step below emits an explicit value.
     outputs:
       is-merge-sync: ${{ steps.detect.outputs.is_merge_sync }}
     steps:
