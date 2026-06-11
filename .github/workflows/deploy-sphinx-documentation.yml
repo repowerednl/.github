@@ -1,4 +1,4 @@
-name: Deploy sphinx documentation
+name: Deprecated - Deploy sphinx documentation (poetry)
 
 on:
   workflow_call:

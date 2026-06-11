@@ -1,0 +1,69 @@
+name: Run Pytest with Coverage and run the Sonar Analysis
+
+on:
+  push:
+    branches:
+      - dev
+      - hotfix**
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+    branches-ignore:
+      - main
+
+jobs:
+  draft-pr-check:
+    uses: repowerednl/.github/.github/workflows/check-draft.yml@main
+    with:
+      is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
+
+  # Choose the correct test setup for your repository
+
+  # Option 1: with parallelization and postgres service (uncomment and remove option 2 to use)
+  # pytest-with-coverage:
+  #   needs: draft-pr-check
+  #   uses: repowerednl/.github/.github/workflows/python-uv-test-coverage.yml@main
+  #   permissions:
+  #     pull-requests: write
+  #     contents: write
+  #     actions: read
+  #   strategy:
+  #     matrix:
+  #       # Make sure that the configured uv versions are available here.
+  #       # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
+  #       uv_version: [ "1.8.4" ]
+  #   with:
+  #     postgres_db: ${{ vars.POSTGRES_DB }}
+  #     postgres_user: ${{ vars.POSTGRES_USER }}
+  #     postgres_host: ${{ vars.POSTGRES_HOST }}
+  #     uv_version: ${{ matrix.uv_version }}
+  #     # For parallelisation of the tests (requires packages pytest-split and the `test_durations` file)
+  #     # test_groups: "[1, 2]" #Optional, defaults to "[1,2,3,4,5,6,7,8]"
+  #   secrets:
+  #     postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+  #     private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+  #     private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+  #     private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  # Option 2: simple (no postgres service)
+  pytest-with-coverage:
+    needs: draft-pr-check
+    uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
+    permissions:
+      pull-requests: write
+      contents: write
+      actions: read
+    strategy:
+      matrix:
+        uv_version: [ "1.8.4" ]
+    with:
+      uv_version: ${{ matrix.uv_version }}
+    secrets:
+      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  sonar-cloud:
+    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
+    # with:
+      # coverage_report_name: # Optional, defaults to 'coverage.xml'
+    secrets: inherit

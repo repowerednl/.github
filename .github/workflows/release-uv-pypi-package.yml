@@ -1,4 +1,4 @@
-name: Release PyPi package (uv)
+name: Release PyPi package
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: Pytest with Coverage, Report and Job summary
+name: Parallelized pytest with postgres service, Coverage, Report and Job summary
 
 on:
   workflow_call:
