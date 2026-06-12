@@ -26,7 +26,7 @@ jobs:
       UV_INDEX_REPOWERED_PASSWORD: ${{ secrets.private_pypi_password }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: UV and Python Setup
       id: cache
