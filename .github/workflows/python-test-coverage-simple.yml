@@ -1,4 +1,4 @@
-name: [Deprecated] Pytest with Coverage (use uv version instead)
+name: "[Deprecated] Pytest with Coverage (use uv version instead)"
 # This is a basic pytest implementation without a postgres service and without parallelization
 
 on:
