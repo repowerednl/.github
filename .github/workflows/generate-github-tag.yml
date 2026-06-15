@@ -30,7 +30,7 @@ jobs:
 
       - name: Set prerelease flag
         id: set-prerelease-flag
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const branch = context.payload.workflow_run?.head_branch
