@@ -1,5 +1,4 @@
-name: [Deprecated] Pytest with Coverage (use uv instead)
-
+name: "[Deprecated] Pytest with Coverage (use uv instead)"
 on:
   workflow_call:
     inputs:
