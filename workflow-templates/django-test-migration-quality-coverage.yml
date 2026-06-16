@@ -29,9 +29,6 @@ jobs:
 
   pytest-with-coverage:
     needs: [draft-pr-check, classify]
-    # Skip the (expensive) test suite on a merge sync; it is enforced as mandatory
-    # via the always-running 'ci-gate' job below (use that as the required check).
-    if: needs.classify.outputs.is-merge-sync != 'true'
     # For uv, use
     uses: repowerednl/.github/.github/workflows/python-test-coverage-uv.yml@main
     # For poetry, use:
@@ -111,51 +108,9 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   sonar-cloud:
-    # Chained to pytest, so it naturally skips on a merge sync (a skipped need does
-    # not satisfy a normal 'needs').
     needs: pytest-with-coverage
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
     secrets:
       sonar_token: inherit
-
-  # Stable, always-running required status check. Mark THIS job (not the
-  # matrix-expanded pytest job) as the required check in branch protection / rulesets.
-  # pytest may be legitimately 'skipped' on a merge sync; the migration check must
-  # always actually pass.
-  ci-gate:
-    name: CI Gate
-    needs: [pytest-with-coverage, django-migration-test]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Enforce required CI results
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const pytest = '${{ needs.pytest-with-coverage.result }}';
-            const migration = '${{ needs.django-migration-test.result }}';
-            const pytestOk = pytest === 'success' || pytest === 'skipped';
-            const migrationOk = migration === 'success';
-            const passed = pytestOk && migrationOk;
-            core.info(`pytest=${pytest}, migration=${migration}, passed=${passed}`);
-
-            // Surface the gate outcome on the run page so anyone can see what happened.
-            await core.summary
-              .addHeading('CI Gate', 3)
-              .addTable([
-                [{ data: 'Job', header: true }, { data: 'Result', header: true },
-                  { data: 'Requirement', header: true }],
-                ['pytest-with-coverage', pytest, 'success or skipped (skipped on merge sync)'],
-                ['django-migration-test', migration, 'success (always required)'],
-                ['Gate verdict', passed ? '✅ pass' : '❌ fail', ''],
-              ])
-              .write();
-
-            if (!passed) {
-              core.setFailed(
-                `CI gate failed: pytest=${pytest} (allowed: success|skipped), `
-                + `migration=${migration} (required: success).`);
-            }
-
