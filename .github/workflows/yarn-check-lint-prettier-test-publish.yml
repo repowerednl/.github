@@ -105,7 +105,7 @@ jobs:
           cat test.html >> $GITHUB_STEP_SUMMARY
 
       - name: Archive 'coverage.xml' report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage.xml
           path: ${{ inputs.working_directory }}/coverage/clover.xml
