@@ -87,7 +87,7 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       #  Log in to the desired docker hub space
       - name: Login to Docker Hub

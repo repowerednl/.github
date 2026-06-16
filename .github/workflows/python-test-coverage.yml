@@ -1,4 +1,4 @@
-name: Pytest with Coverage, Report and Job summary
+name: [Deprecated] Pytest with Coverage (use uv instead)
 
 on:
   workflow_call:
@@ -80,7 +80,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: (Cached) Python and Poetry
         uses: repowerednl/.github/composite-actions/python-poetry-cache@main
