@@ -1,4 +1,4 @@
-name: Run Pytest with Coverage and run the Sonar Analysis
+name: Classify, run Pytest with Coverage, check Django Migration, run Sonar and enforce CI Gate
 
 on:
   push:
@@ -10,17 +10,29 @@ on:
     branches-ignore:
       - main
 
+# Cancel a superseded run so a stale (e.g. skipped-on-merge-sync) result never
+# remains the authoritative status for the PR.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   draft-pr-check:
     uses: repowerednl/.github/.github/workflows/check-draft.yml@main
     with:
       is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
 
+  # Early classification: detects a GitHub "Update branch" merge sync so pytest and
+  # sonar can be skipped for it (django-migration-test always runs regardless).
+  classify:
+    uses: repowerednl/.github/.github/workflows/classify-pr-event.yml@main
+
+
   # Choose the correct test setup for your repository
 
   # Option 1: with parallelization and postgres service (uncomment and remove option 2 to use)
   # pytest-with-coverage:
-  #   needs: draft-pr-check
+  #   needs: [draft-pr-check, classify]
   #   uses: repowerednl/.github/.github/workflows/python-uv-test-coverage.yml@main
   #   permissions:
   #     pull-requests: write
@@ -46,7 +58,7 @@ jobs:
 
   # Option 2: simple (no postgres service)
   pytest-with-coverage:
-    needs: draft-pr-check
+    needs: [draft-pr-check, classify]
     uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
     permissions:
       pull-requests: write
