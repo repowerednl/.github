@@ -1,0 +1,101 @@
+name: Classify PR Event
+# Early classification used to skip the (expensive) test suite + sonar jobs when a PR
+# 'synchronize' event is just a GitHub "Update branch" merge sync (base merged into
+# head, no developer changes). The classifier is intentionally biased towards 'false'
+# (i.e. run the test suite) whenever anything is uncertain.
+
+on:
+  workflow_call:
+    outputs:
+      is-merge-sync:
+        description: "true when this synchronize is a GitHub 'Update branch' merge sync"
+        value: ${{ jobs.classify.outputs.is-merge-sync }}
+
+jobs:
+  classify:
+    name: Classify PR event
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      is-merge-sync: ${{ steps.detect.outputs.is_merge_sync }}
+    steps:
+      - name: Detect merge sync
+        id: detect
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Returns { value, reason }; biased to 'false' (run tests) when unsure.
+            const decide = async () => {
+              // Only PR 'synchronize' events can be a merge sync. Everything else
+              // (push, opened, reopened, ready_for_review) runs the full suite.
+              if (context.eventName !== 'pull_request'
+                  || context.payload.action !== 'synchronize') {
+                return { value: 'false', reason: `Not a PR synchronize event `
+                  + `(event=${context.eventName}, action=${context.payload.action ?? '-'}).` };
+              }
+
+              const pr = context.payload.pull_request;
+              // Never use payload.before: it is all-zeros on first push / force-push.
+              const headSha = context.payload.after || pr.head.sha;
+
+              const { data: head } = await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: headSha,
+              });
+
+              // The "Update branch" button always produces a 2-parent merge commit.
+              if (!head.parents || head.parents.length !== 2) {
+                return { value: 'false', reason: `Head ${headSha.slice(0, 7)} has `
+                  + `${head.parents?.length ?? 0} parent(s); not a merge commit.` };
+              }
+
+              // ...committed by GitHub web-flow, guaranteeing no developer edits were
+              // bundled into this push (a manual `git merge` would not match).
+              const committerLogin = head.committer && head.committer.login;
+              const committerEmail = head.commit.committer && head.commit.committer.email;
+              const isWebFlow = committerLogin === 'web-flow'
+                || committerEmail === 'noreply@github.com';
+              if (!isWebFlow) {
+                return { value: 'false', reason: `Merge commit committed by `
+                  + `${committerLogin ?? committerEmail ?? 'unknown'} (not GitHub `
+                  + `web-flow); treated as developer work.` };
+              }
+
+              // The incoming side of the merge must be contained in the base branch.
+              const incoming = head.parents[1].sha;
+              const { data: cmp } = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: pr.base.ref,
+                head: incoming,
+              });
+              const contained = cmp.status === 'identical' || cmp.status === 'behind';
+              return {
+                value: contained ? 'true' : 'false',
+                reason: contained
+                  ? `GitHub "Update branch" merge of '${pr.base.ref}' into head `
+                    + `(incoming parent ${incoming.slice(0, 7)} is contained in base).`
+                  : `Merge commit, but incoming parent ${incoming.slice(0, 7)} is not `
+                    + `contained in base '${pr.base.ref}' (status=${cmp.status}).`,
+              };
+            };
+
+            const { value, reason } = await decide();
+            core.info(`is_merge_sync=${value} :: ${reason}`);
+
+            // Surface the decision on the run page so anyone can see what happened.
+            await core.summary
+              .addHeading('PR event classification', 3)
+              .addTable([
+                [{ data: 'Field', header: true }, { data: 'Value', header: true }],
+                ['Event', `${context.eventName} / ${context.payload.action ?? '-'}`],
+                ['Merge sync?', value === 'true'
+                  ? '✅ yes — pytest & sonar are skipped'
+                  : '❌ no — full test suite runs'],
+                ['Reason', reason],
+              ])
+              .write();
+
+            core.setOutput('is_merge_sync', value);
