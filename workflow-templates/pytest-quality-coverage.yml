@@ -1,4 +1,4 @@
-name: Classify, run Pytest with Coverage, check Django Migration, run Sonar and enforce CI Gate
+name: Classify, run Pytest with Coverage and run Sonar
 
 on:
   push:
@@ -59,6 +59,8 @@ jobs:
   # Option 2: simple (no postgres service)
   pytest-with-coverage:
     needs: [draft-pr-check, classify]
+    # Skip the test suite on a merge sync (the code was already validated before the sync).
+    if: needs.classify.outputs.is-merge-sync != 'true'
     uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
     permissions:
       pull-requests: write
@@ -75,6 +77,9 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   sonar-cloud:
+    # Chained to pytest, so it naturally skips on a merge sync and the coverage
+    # artifact is guaranteed to exist when it runs.
+    needs: pytest-with-coverage
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # coverage_report_name: # Optional, defaults to 'coverage.xml'
