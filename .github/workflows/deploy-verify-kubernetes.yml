@@ -27,7 +27,7 @@ jobs:
         container_name: ${{ fromJSON(inputs.container_names) }}
     steps:
       - name: Install doctl
-        uses: digitalocean/action-doctl@v2
+        uses: digitalocean/action-doctl@v2.5.2
         with:
           token: ${{ secrets.digital_ocean_access_token }}
 

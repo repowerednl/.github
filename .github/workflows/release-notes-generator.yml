@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Generate GitHub Release
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@v7
         with:
           tag: ${{ inputs.tag }}
           name: ${{ github.event.repository.name }} ${{ inputs.tag }}
