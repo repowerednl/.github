@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Detect merge sync
         id: detect
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Returns { value, reason }; biased to 'false' (run tests) when unsure.
