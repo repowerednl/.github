@@ -160,3 +160,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
+
+      # Coverage gate: previously enforced by the SonarCloud quality gate. Runs after the
+      # comment so the report is always posted, then fails the run if coverage is below 80%.
+      - name: Enforce coverage threshold
+        working-directory: ${{ inputs.working_directory }}
+        run: poetry run coverage report --fail-under=80
