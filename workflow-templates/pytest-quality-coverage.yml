@@ -77,9 +77,9 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   sonar-cloud:
-    # Chained to pytest, so it naturally skips on a merge sync and the coverage
-    # artifact is guaranteed to exist when it runs.
-    needs: pytest-with-coverage
+    # Parallel to pytest, so it naturally skips on a merge sync. Coverage is done by pytest-with-coverage
+    # Skipped to save 3-4 minutes on each PR run
+    needs: [draft-pr-check, classify]
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # coverage_report_name: # Optional, defaults to 'coverage.xml'

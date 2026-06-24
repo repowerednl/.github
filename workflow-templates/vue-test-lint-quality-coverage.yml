@@ -46,7 +46,7 @@ jobs:
 
 
   sonar-cloud:
-    needs: yarn-check-lint-prettier-test-publish
+    needs: [draft-pr-check, classify]
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
     # with:
       # coverage_report_name: # Optional, defaults to 'coverage.xml'

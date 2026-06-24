@@ -152,7 +152,6 @@ jobs:
         run: |
           poetry run coverage combine group*/.coverage
           poetry run coverage report
-          poetry run coverage xml
 
       - name: Coverage comment
         id: coverage-comment
@@ -161,10 +160,3 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
-
-      - name: Upload 'coverage.xml' report
-        uses: actions/upload-artifact@v7
-        with:
-          path: coverage.xml
-          name: coverage.xml
-          if-no-files-found: 'error'
