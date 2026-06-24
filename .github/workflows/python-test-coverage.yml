@@ -168,7 +168,7 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           steps.coverage-comment.outputs.diff_total_num_lines > 0 &&
-          steps.coverage-comment.outputs.diff_total_percent_covered < 80
+          steps.coverage-comment.outputs.diff_total_percent_covered < 0.8
         run: |
           echo "::error::PR coverage ${{ steps.coverage-comment.outputs.diff_total_percent_covered }}% (new/changed lines) is below the required 80%."
           exit 1

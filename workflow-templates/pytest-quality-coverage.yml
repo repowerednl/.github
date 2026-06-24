@@ -77,7 +77,7 @@ jobs:
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
   sonar-cloud:
-    # Parallel to pytest, so it naturally skips on a merge sync. Coverage is done by pytest-with-coverage
+    # Parallel to pytest, skips on a merge sync. Coverage is done by pytest-with-coverage
     # Skipped to save 3-4 minutes on each PR run
     needs: [draft-pr-check, classify]
     if: needs.classify.outputs.is-merge-sync != 'true'
