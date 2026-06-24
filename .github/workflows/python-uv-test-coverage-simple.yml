@@ -80,5 +80,6 @@ jobs:
           steps.coverage-comment.outputs.diff_total_num_lines > 0 &&
           steps.coverage-comment.outputs.diff_total_percent_covered < 0.8
         run: |
-          echo "::error::PR coverage ${{ steps.coverage-comment.outputs.diff_total_percent_covered }}% (new/changed lines) is below the required 80%."
+          pct=$(awk "BEGIN { printf \"%.1f\", ${{ steps.coverage-comment.outputs.diff_total_percent_covered }} * 100 }")
+          echo "::error::PR coverage ${pct}% (new/changed lines) is below the required 80%."
           exit 1
