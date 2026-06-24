@@ -161,8 +161,14 @@ jobs:
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
 
-      # Coverage gate: previously enforced by the SonarCloud quality gate. Runs after the
-      # comment so the report is always posted, then fails the run if coverage is below 80%.
-      - name: Enforce coverage threshold
-        working-directory: ${{ inputs.working_directory }}
-        run: poetry run coverage report --fail-under=80
+      # Coverage gate (replaces SonarCloud's "Coverage on New Code"): fails the run if the
+      # PR/diff coverage shown in the comment above is below 80%. Runs after the comment so it
+      # is always posted; only on PRs, and skipped when the PR changes no coverable lines.
+      - name: Enforce PR coverage threshold
+        if: >-
+          github.event_name == 'pull_request' &&
+          steps.coverage-comment.outputs.diff_total_num_lines > 0 &&
+          steps.coverage-comment.outputs.diff_total_percent_covered < 80
+        run: |
+          echo "::error::PR coverage ${{ steps.coverage-comment.outputs.diff_total_percent_covered }}% (new/changed lines) is below the required 80%."
+          exit 1
