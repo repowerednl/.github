@@ -1,5 +1,4 @@
-name: Pytest with Coverage, Report and Job summary
-
+name: "[Deprecated] Pytest with Coverage (use uv instead)"
 on:
   workflow_call:
     inputs:
@@ -80,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -113,7 +112,7 @@ jobs:
           POSTGRES_PORT: 5432
 
       - name: Upload partial coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: group${{ matrix.group }}
           path: |
@@ -127,7 +126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: (Cached) Python and Poetry
         uses: repowerednl/.github/composite-actions/python-poetry-cache@main
@@ -143,7 +142,7 @@ jobs:
 
       - name: Download all group artifacts from branch
         # Download coverage1, coverage2, etc. of the current branch
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ${{ inputs.working_directory }}
           pattern: group*
@@ -164,7 +163,7 @@ jobs:
           MINIMUM_ORANGE: 80
 
       - name: Upload 'coverage.xml' report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: coverage.xml
           name: coverage.xml

@@ -1,4 +1,4 @@
-name: Run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run the Sonar Analysis
+name: Classify, run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run Sonar
 
 on:
   push:
@@ -10,13 +10,27 @@ on:
     branches-ignore:
       - main
 
+# Cancel a superseded run so a stale (e.g. skipped-on-merge-sync) result never
+# remains the authoritative status for the PR.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   draft-pr-check:
         uses: repowerednl/.github/.github/workflows/check-draft.yml@main
         with:
           is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
+
+  # Early classification: detects a GitHub "Update branch" merge sync so the yarn
+  # checks and sonar can be skipped for it.
+  classify:
+    uses: repowerednl/.github/.github/workflows/classify-pr-event.yml@main
+
   yarn-check-lint-prettier-test-publish:
-    needs: draft-pr-check
+    needs: [draft-pr-check, classify]
+    # Skip the yarn checks on a merge sync (the code was already validated before the sync).
+    if: needs.classify.outputs.is-merge-sync != 'true'
     permissions:
       contents: write
       packages: read

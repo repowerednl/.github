@@ -1,0 +1,85 @@
+name: Classify, run Pytest with Coverage and run Sonar
+
+on:
+  push:
+    branches:
+      - dev
+      - hotfix**
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+    branches-ignore:
+      - main
+
+# Cancel a superseded run so a stale (e.g. skipped-on-merge-sync) result never
+# remains the authoritative status for the PR.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  draft-pr-check:
+    uses: repowerednl/.github/.github/workflows/check-draft.yml@main
+    with:
+      is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
+
+  # Early classification: detects a GitHub "Update branch" merge sync so pytest and
+  # sonar can be skipped for it (django-migration-test always runs regardless).
+  classify:
+    uses: repowerednl/.github/.github/workflows/classify-pr-event.yml@main
+
+
+  # Choose the correct test setup for your repository
+
+  # Option 1: with parallelization and postgres service (uncomment and remove option 2 to use)
+  # pytest-with-coverage:
+  #   needs: [draft-pr-check, classify]
+  #   uses: repowerednl/.github/.github/workflows/python-uv-test-coverage.yml@main
+  #   permissions:
+  #     pull-requests: write
+  #     contents: write
+  #     actions: read
+  #   strategy:
+  #     matrix:
+  #       # Make sure that the configured uv versions are available here.
+  #       # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
+  #       uv_version: [ "1.8.4" ]
+  #   with:
+  #     postgres_db: ${{ vars.POSTGRES_DB }}
+  #     postgres_user: ${{ vars.POSTGRES_USER }}
+  #     postgres_host: ${{ vars.POSTGRES_HOST }}
+  #     uv_version: ${{ matrix.uv_version }}
+  #     # For parallelisation of the tests (requires packages pytest-split and the `test_durations` file)
+  #     # test_groups: "[1, 2]" #Optional, defaults to "[1,2,3,4,5,6,7,8]"
+  #   secrets:
+  #     postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+  #     private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
+  #     private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+  #     private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  # Option 2: simple (no postgres service)
+  pytest-with-coverage:
+    needs: [draft-pr-check, classify]
+    # Skip the test suite on a merge sync (the code was already validated before the sync).
+    if: needs.classify.outputs.is-merge-sync != 'true'
+    uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
+    permissions:
+      pull-requests: write
+      contents: write
+      actions: read
+    strategy:
+      matrix:
+        uv_version: [ "0.11.21" ]
+    with:
+      uv_version: ${{ matrix.uv_version }}
+    secrets:
+      private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
+      private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  sonar-cloud:
+    # Chained to pytest, so it naturally skips on a merge sync and the coverage
+    # artifact is guaranteed to exist when it runs.
+    needs: pytest-with-coverage
+    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
+    # with:
+      # coverage_report_name: # Optional, defaults to 'coverage.xml'
+    secrets: inherit

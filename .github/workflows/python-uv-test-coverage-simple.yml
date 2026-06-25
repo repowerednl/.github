@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -34,10 +34,8 @@ jobs:
         uses: repowerednl/.github/composite-actions/python-uv-cache@main
         with:
           uv_version: ${{ inputs.uv_version }}
-          working_directory: ${{ inputs.working_directory }}
           private_pypi_user: ${{ secrets.private_pypi_user }}
           private_pypi_password: ${{ secrets.private_pypi_password }}
-          enable_cache: true
 
       - name: Install dependencies
         run: |
@@ -53,7 +51,7 @@ jobs:
           CI: true
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: ${{ inputs.working_directory }}/.coverage
           if-no-files-found: 'error'
@@ -73,3 +71,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
+      
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage.xml
+          path: ${{ inputs.working_directory }}/coverage.xml
+          if-no-files-found: 'error'
+          overwrite: true

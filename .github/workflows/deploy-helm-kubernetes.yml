@@ -1,4 +1,4 @@
-name: Do a Helm deployment
+name: Deprecated - Do a Helm deployment (use helmfile instead)
 
 on:
   workflow_call:
@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     strategy:
+      fail-fast: false
       matrix:
         include: ${{ fromJson(inputs.deployment_name-values_file) }}
     permissions:
@@ -49,14 +50,14 @@ jobs:
 
       - name: Save DigitalOcean kubeconfig with short-lived credentials
         env:
-          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
+          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 900 }}
         run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
 
       - name: Install Helm
         uses: azure/setup-helm@v4.3.0
 
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -93,7 +94,7 @@ jobs:
             helm upgrade $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
               --namespace $NAMESPACE --reuse-values --set image=$VERSIONED_TAG \
               --version $CONFIGURED_HELM_VERSION \
-              --atomic --cleanup-on-fail --timeout 10m
+              --atomic --take-ownership --cleanup-on-fail --timeout 10m
           else
             # Set the namespace creation flag if it's an initial deployment
             if [[ "$CURRENT_HELM_VERSION" = "null" ]]; then
@@ -109,7 +110,7 @@ jobs:
             helm upgrade --install $DEPLOYMENT_NAME oci://ghcr.io/repowerednl/helm-charts/deployment \
               --version $CONFIGURED_HELM_VERSION --namespace $NAMESPACE $CREATE_NAMESPACE_COMMAND \
               --values ${{ steps.set-values.outputs.VALUES_FILEPATH }} --set image=$VERSIONED_TAG \
-              --atomic --cleanup-on-fail --timeout 10m
+              --atomic --take-ownership --cleanup-on-fail --timeout 10m
           fi
 
       - name: Helm deployment status as summary

@@ -15,29 +15,29 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.github-tag.outputs.tag }}
-    if: ${{ github.event_name == 'push' 
-      || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') 
-      || contains(github.event.workflow_run.head_branch, 'main') 
+    if: ${{ github.event_name == 'push'
+      || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev')
+      || contains(github.event.workflow_run.head_branch, 'main')
       || contains(github.event.workflow_run.head_branch, 'hotfix/')
-      || contains(github.event.workflow_run.head_commit.message, '[deploy]'))) 
+      || contains(github.event.workflow_run.head_commit.message, '[deploy]')))
       || github.event.label.name == 'deploy' || github.event_name == 'workflow_dispatch' }}
     steps:
       # Checkout the repository with all commit history
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: '0'
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set prerelease flag
         id: set-prerelease-flag
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const branch = context.payload.workflow_run?.head_branch
-              ?? process.env.GITHUB_HEAD_REF
-              ?? context.ref?.replace('refs/heads/', '')
-              ?? '';
+              || process.env.GITHUB_HEAD_REF
+              || context.ref?.replace('refs/heads/', '')
+              || '';
             const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
             const label = context.payload.label?.name ?? '';
             const prHead = context.payload.pull_request?.head?.ref ?? '';

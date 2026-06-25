@@ -1,4 +1,4 @@
-name: Release PyPi package (uv)
+name: Release PyPi package
 
 on:
   workflow_call:
@@ -26,17 +26,15 @@ jobs:
       UV_INDEX_REPOWERED_PASSWORD: ${{ secrets.private_pypi_password }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: UV and Python Setup
       id: cache
       uses: repowerednl/.github/composite-actions/python-uv-cache@main
       with:
         uv_version: ${{ inputs.uv_version }}
-        working_directory: .
         private_pypi_user: ${{ secrets.private_pypi_user }}
         private_pypi_password: ${{ secrets.private_pypi_password }}
-        enable_cache: true
 
     - name: Install build dependencies
       run: |
