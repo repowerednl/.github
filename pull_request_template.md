@@ -4,8 +4,11 @@
 ## Summary
 ...
 
+## Human comment
+_Pending — author must write this in their own words before marking the PR Ready for review._
+
 ### Jira ticket
-[PLAT-]
+[TEAM-]
 
 ### Media / Screenshot
 ...

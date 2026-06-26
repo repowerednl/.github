@@ -34,8 +34,8 @@ jobs:
         with:
           script: |
             const branch = context.payload.workflow_run?.head_branch
-              ?? process.env.GITHUB_HEAD_REF
-              ?? process.env.GITHUB_REF.split('/').pop();
+              || process.env.GITHUB_HEAD_REF
+              || process.env.GITHUB_REF?.split('/').pop();
             const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
             const label = context.payload.label?.name ?? '';
             const prHead = context.payload.pull_request?.head?.ref ?? '';
