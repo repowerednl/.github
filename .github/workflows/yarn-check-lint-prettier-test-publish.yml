@@ -24,11 +24,19 @@ on:
         type: string
         description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
         default: .
+      run_sonar:
+        type: boolean
+        description: Run the parallel SonarCloud analysis job. Requires SONAR_TOKEN and a SonarCloud project for the repo.
+        default: false
     secrets:
       # The token that is used to pull repowerednl packages from GitHub.
       # Note: The repository needs to be added to the allowed list within the package!
       packages_auth_token:
         required: true
+      # Needed by the parallel sonar-quality-control job. Optional so callers that
+      # have not migrated keep running their checks (only the Sonar job fails).
+      SONAR_TOKEN:
+        required: false
 
 jobs:
   yarn-check-lint-prettier-test-publish:
@@ -115,3 +123,20 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         if: ${{ inputs.should_publish }}
         run: yarn build && yarn npm publish
+
+  sonar-quality-control:
+    name: Run SonarCloud Quality Control
+    if: ${{ inputs.run_sonar }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: SonarCloud analysis
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     

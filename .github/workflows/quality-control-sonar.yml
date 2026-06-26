@@ -1,12 +1,12 @@
-name: Sonar Quality Control
+name: [Deprecated] Sonar Quality Control
 
 on:
   workflow_call:
     inputs:
-      # Optional
       coverage_report_name:
         type: string
-        default: coverage.xml
+        required: false
+        default: ""
 
 jobs:
   quality-control-sonar:
