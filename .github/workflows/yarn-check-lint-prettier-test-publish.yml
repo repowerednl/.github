@@ -29,6 +29,10 @@ on:
       # Note: The repository needs to be added to the allowed list within the package!
       packages_auth_token:
         required: true
+      # Needed by the parallel sonar-quality-control job. Optional so callers that
+      # have not migrated keep running their checks (only the Sonar job fails).
+      SONAR_TOKEN:
+        required: false
 
 jobs:
   yarn-check-lint-prettier-test-publish:
