@@ -24,6 +24,10 @@ on:
         type: string
         description: Whenever the app (i.e. package.json) is not in the root; the location can be specified here
         default: .
+      run_sonar:
+        type: boolean
+        description: Run the parallel SonarCloud analysis job. Requires SONAR_TOKEN and a SonarCloud project for the repo.
+        default: false
     secrets:
       # The token that is used to pull repowerednl packages from GitHub.
       # Note: The repository needs to be added to the allowed list within the package!
@@ -122,6 +126,7 @@ jobs:
 
   sonar-quality-control:
     name: Run SonarCloud Quality Control
+    if: ${{ inputs.run_sonar }}
     runs-on: ubuntu-latest
 
     steps:

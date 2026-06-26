@@ -39,6 +39,10 @@ on:
         type: string
         description: Minimum required coverage (%) on a PR's new/changed lines. Set via a repo variable to override.
         default: "80"
+      run_sonar:
+        type: boolean
+        description: Run the parallel SonarCloud analysis job. Requires SONAR_TOKEN and a SonarCloud project for the repo.
+        default: false
 
     secrets:
       postgres_password:
@@ -115,6 +119,7 @@ jobs:
           overwrite: true
   sonar-quality-control:
     name: Run SonarCloud Quality Control
+    if: ${{ inputs.run_sonar }}
     runs-on: ubuntu-latest
 
     steps:

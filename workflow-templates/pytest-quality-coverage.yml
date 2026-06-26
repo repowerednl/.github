@@ -48,6 +48,7 @@ jobs:
   #     postgres_user: ${{ vars.POSTGRES_USER }}
   #     postgres_host: ${{ vars.POSTGRES_HOST }}
   #     uv_version: ${{ matrix.uv_version }}
+  #     run_sonar: true # Opt in to the parallel SonarCloud job (needs SONAR_TOKEN + a SonarCloud project)
   #     # For parallelisation of the tests (requires packages pytest-split and the `test_durations` file)
   #     # test_groups: "[1, 2]" #Optional, defaults to "[1,2,3,4,5,6,7,8]"
   #   secrets:
@@ -73,6 +74,7 @@ jobs:
         uv_version: [ "1.8.4" ]
     with:
       uv_version: ${{ matrix.uv_version }}
+      run_sonar: true # Opt in to the parallel SonarCloud job (needs SONAR_TOKEN + a SonarCloud project)
     secrets:
       private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
