@@ -45,10 +45,3 @@ jobs:
       packages_auth_token: ${{ secrets.GITHUB_TOKEN }}
 
 
-  sonar-cloud:
-    needs: [draft-pr-check, classify]
-    if: needs.classify.outputs.is-merge-sync != 'true'
-    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
-    secrets: inherit
-
-
