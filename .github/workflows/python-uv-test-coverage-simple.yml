@@ -73,7 +73,7 @@ jobs:
           uv run coverage xml
 
       - name: Coverage comment and PR diff-coverage gate
-        uses: repowerednl/.github/composite-actions/coverage-comment-and-gate@IN-104-move-sonarcloud-to-test-level
+        uses: repowerednl/.github/composite-actions/coverage-comment-and-gate@main
         with:
           github_token: ${{ github.token }}
           coverage_path: ${{ inputs.working_directory }}
