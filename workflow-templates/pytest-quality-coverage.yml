@@ -76,12 +76,9 @@ jobs:
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
 
+  # Runs in parallel with pytest-with-coverage; coverage is no longer fed to Sonar.
   sonar-cloud:
-    # Parallel to pytest, skips on a merge sync. Coverage is done by pytest-with-coverage
-    # Skipped to save 3-4 minutes on each PR run
     needs: [draft-pr-check, classify]
     if: needs.classify.outputs.is-merge-sync != 'true'
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
-    # with:
-      # coverage_report_name: # Optional, defaults to 'coverage.xml'
     secrets: inherit

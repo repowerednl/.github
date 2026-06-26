@@ -49,8 +49,6 @@ jobs:
     needs: [draft-pr-check, classify]
     if: needs.classify.outputs.is-merge-sync != 'true'
     uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
-    # with:
-      # coverage_report_name: # Optional, defaults to 'coverage.xml'
     secrets: inherit
 
 
