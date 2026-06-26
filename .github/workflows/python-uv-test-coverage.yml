@@ -35,6 +35,10 @@ on:
         type: boolean
         description: Whether to fail fast on the first test failure
         default: false
+      coverage_threshold:
+        type: string
+        description: Minimum required coverage (%) on a PR's new/changed lines. Set via a repo variable to override.
+        default: "80"
 
     secrets:
       postgres_password:
@@ -43,6 +47,10 @@ on:
         required: true
       private_pypi_password:
         required: true
+      # Needed by the parallel sonar-quality-control job. Optional so callers that
+      # have not migrated keep running their tests (only the Sonar job fails).
+      SONAR_TOKEN:
+        required: false
 
 jobs:
   pytest-with-coverage:
@@ -105,6 +113,21 @@ jobs:
           if-no-files-found: 'error'
           include-hidden-files: true
           overwrite: true
+  sonar-quality-control:
+    name: Run SonarCloud Quality Control
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: SonarCloud analysis
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
 
   combine-and-report:
     needs: pytest-with-coverage
@@ -134,24 +157,20 @@ jobs:
           uv run coverage report
           uv run coverage xml
 
-      - name: Coverage comment
-        id: coverage-comment
-        uses: py-cov-action/python-coverage-comment-action@v3
+      - name: Coverage comment and PR diff-coverage gate
+        uses: repowerednl/.github/composite-actions/coverage-comment-and-gate@main
         with:
-          GITHUB_TOKEN: ${{ github.token }}
-          COVERAGE_PATH: ${{ inputs.working_directory }}
-          MINIMUM_ORANGE: 80
+          github_token: ${{ github.token }}
+          coverage_path: ${{ inputs.working_directory }}
+          coverage_threshold: ${{ inputs.coverage_threshold }}
 
-      # Coverage gate (replaces SonarCloud's "Coverage on New Code"): fails the run if the
-      # PR/diff coverage shown in the comment above is below 80%. Runs after the comment so it
-      # is always posted; only on PRs, and skipped when the PR changes no coverable lines.
-      - name: Enforce PR coverage threshold
-        if: >-
-          github.event_name == 'pull_request' &&
-          steps.coverage-comment.outputs.diff_total_num_lines > 0 &&
-          steps.coverage-comment.outputs.diff_total_percent_covered < 80
-        run: |
-          pct=$(awk "BEGIN { printf \"%.1f\", ${{ steps.coverage-comment.outputs.diff_total_percent_covered }} * 100 }")
-          echo "::error::PR coverage ${pct}% (new/changed lines) is below the required 80%."
-          exit 1
+      # [Deprecated] Coverage is no longer fed to SonarCloud (the diff-coverage gate
+      # above replaces it). Kept for backward compatibility with callers that still
+      # download this artifact for a chained Sonar job; safe to drop once migrated.
+      - name: Upload 'coverage.xml' report
+        uses: actions/upload-artifact@v7
+        with:
+          path: coverage.xml
+          name: coverage.xml
+          if-no-files-found: 'error'
 

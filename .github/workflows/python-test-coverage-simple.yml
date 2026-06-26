@@ -84,3 +84,4 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           COVERAGE_PATH: ${{ inputs.working_directory }}
           MINIMUM_ORANGE: 80
+

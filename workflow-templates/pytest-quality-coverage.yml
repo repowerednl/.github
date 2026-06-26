@@ -75,10 +75,3 @@ jobs:
       private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
-
-  # Runs in parallel with pytest-with-coverage; coverage is no longer fed to Sonar.
-  sonar-cloud:
-    needs: [draft-pr-check, classify]
-    if: needs.classify.outputs.is-merge-sync != 'true'
-    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
-    secrets: inherit
