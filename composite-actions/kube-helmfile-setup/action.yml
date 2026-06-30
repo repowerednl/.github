@@ -9,7 +9,7 @@ inputs:
     description: Name of the DigitalOcean Kubernetes cluster.
     required: true
   helm_version:
-    description: Helm version to install. Defaults to the org's HELM_STABLE_VERSION.
+    description: Helm version to install. Callers typically pass the org's HELM_STABLE_VERSION.
     required: false
     default: v3.20.2
   kube_cred_expiry_seconds:
