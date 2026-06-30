@@ -93,7 +93,7 @@ jobs:
               });
               const runs = prevChecks.check_runs;
               if (!runs.length) {
-                return { value: 'false', reason: `Update branch merge sync, but previous `
+                return { value: 'false', reason: `Previous `
                   + `head ${prevHead.slice(0, 7)} has no check runs to confirm it was green; `
                   + `running the suite.` };
               }
@@ -101,13 +101,13 @@ jobs:
                 ['failure', 'timed_out', 'cancelled', 'action_required', 'stale']
                   .includes(r.conclusion));
               if (failing.length) {
-                return { value: 'false', reason: `Update branch merge sync, but previous `
+                return { value: 'false', reason: `Previous `
                   + `head ${prevHead.slice(0, 7)} had failing checks `
                   + `(${failing.map(r => r.name).join(', ')}); running the suite.` };
               }
               const pending = runs.filter(r => r.status !== 'completed');
               if (pending.length) {
-                return { value: 'false', reason: `Update branch merge sync, but previous `
+                return { value: 'false', reason: `Previous `
                   + `head ${prevHead.slice(0, 7)} still has unfinished checks `
                   + `(${pending.map(r => r.name).join(', ')}); running the suite.` };
               }
