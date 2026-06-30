@@ -1,0 +1,39 @@
+name: Digital Ocean + Helm setup (Kubernetes)
+description: Installs doctl and Helm, saves a short-lived DigitalOcean kubeconfig and logs in to the GHCR Helm registry. Pair with helmfile/helmfile-action for the actual sync.
+
+inputs:
+  digitalocean_token:
+    description: DigitalOcean API token used to fetch the kubeconfig.
+    required: true
+  cluster_name:
+    description: Name of the DigitalOcean Kubernetes cluster.
+    required: true
+  helm_version:
+    description: Helm version to install. Callers typically pass the org's HELM_STABLE_VERSION.
+    required: false
+    default: v3.20.2
+  kube_cred_expiry_seconds:
+    description: Lifetime of the fetched kubeconfig credentials.
+    required: false
+    default: "300"
+
+runs:
+  using: composite
+  steps:
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2.5.1
+      with:
+        token: ${{ inputs.digitalocean_token }}
+
+    - name: Save DigitalOcean kubeconfig with short-lived credentials
+      shell: bash
+      run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ inputs.kube_cred_expiry_seconds }} ${{ inputs.cluster_name }}
+
+    - name: Install Helm
+      uses: azure/setup-helm@v5
+      with:
+        version: ${{ inputs.helm_version }}
+
+    - name: Helm registry login
+      shell: bash
+      run: helm registry login ghcr.io --username repowerednl --password ${{ github.token }}

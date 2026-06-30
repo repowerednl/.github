@@ -33,23 +33,13 @@ jobs:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v6
 
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2.5.1
+      - name: Digital Ocean + Helm setup (Kubernetes)
+        uses: repowerednl/.github/composite-actions/kube-helmfile-setup@main
         with:
-          token: ${{ secrets.digital_ocean_access_token }}
-
-      - name: Save DigitalOcean kubeconfig with short-lived credentials
-        env:
-          expiry-seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
-        run: doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.expiry-seconds }} ${{ vars.CLUSTER_NAME }}
-
-      - name: Install Helm
-        uses: azure/setup-helm@v5
-        with:
-          version: ${{ vars.HELM_STABLE_VERSION }}
-
-      - name: Helm packages login
-        run: helm registry login ghcr.io --username repowerednl --password ${{ secrets.GITHUB_TOKEN }}
+          digitalocean_token: ${{ secrets.digital_ocean_access_token }}
+          cluster_name: ${{ vars.CLUSTER_NAME }}
+          helm_version: ${{ vars.HELM_STABLE_VERSION }}
+          kube_cred_expiry_seconds: ${{ vars.KUBE_CRED_EXPIRY_SECOND || 300 }}
 
       - name: Deploy
         uses: helmfile/helmfile-action@v2.4.3

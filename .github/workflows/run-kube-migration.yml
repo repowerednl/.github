@@ -1,5 +1,5 @@
 #TODO(REP-2945): Move migration Job to infra
-name: Run Kubernetes migration Job
+name: "[Deprecated] Run Kubernetes migration Job"
 
 on:
   workflow_call:
