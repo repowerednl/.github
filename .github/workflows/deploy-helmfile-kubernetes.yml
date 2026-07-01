@@ -31,10 +31,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install doctl
-        uses: digitalocean/action-doctl@v2.5.1
+        uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.digital_ocean_access_token }}
 
@@ -52,7 +52,7 @@ jobs:
         run: helm registry login ghcr.io --username repowerednl --password ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy
-        uses: helmfile/helmfile-action@v2.4.3
+        uses: helmfile/helmfile-action@v2.4.5
         env:
           DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
