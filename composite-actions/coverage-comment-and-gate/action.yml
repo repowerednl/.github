@@ -1,0 +1,72 @@
+name: Coverage comment and PR diff-coverage gate
+description: >-
+  Posts the coverage comment via py-cov-action and fails the run when a PR's
+  new/changed-line coverage is below the configured threshold. Writes a job
+  summary with the result.
+
+inputs:
+  github_token:
+    description: Token used to post the coverage comment.
+    required: true
+  coverage_path:
+    description: Path that contains the combined .coverage file.
+    required: false
+    default: .
+  minimum_orange:
+    description: Coverage percentage below which the comment badge turns orange.
+    required: false
+    default: "80"
+  coverage_threshold:
+    description: Minimum required coverage (%) on a PR's new/changed lines.
+    required: false
+    default: "80"
+
+runs:
+  using: composite
+  steps:
+    - name: Coverage comment
+      id: coverage-comment
+      uses: py-cov-action/python-coverage-comment-action@v3
+      with:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        COVERAGE_PATH: ${{ inputs.coverage_path }}
+        MINIMUM_ORANGE: ${{ inputs.minimum_orange }}
+
+    - name: Enforce PR coverage threshold
+      uses: actions/github-script@v7
+      env:
+        DIFF_PERCENT: ${{ steps.coverage-comment.outputs.diff_total_percent_covered }}
+        DIFF_NUM_LINES: ${{ steps.coverage-comment.outputs.diff_total_num_lines }}
+        COVERAGE_THRESHOLD: ${{ inputs.coverage_threshold }}
+      with:
+        script: |
+          const threshold = Number(process.env.COVERAGE_THRESHOLD);
+          const numLines = Number(process.env.DIFF_NUM_LINES);
+          // py-cov-action reports diff coverage as a 0–1 fraction.
+          const percent = Number(process.env.DIFF_PERCENT) * 100;
+          const isPullRequest = context.eventName === 'pull_request';
+
+          if (!isPullRequest || !Number.isFinite(numLines) || numLines === 0) {
+            await core.summary
+              .addHeading('PR coverage gate')
+              .addRaw('No new or changed coverable lines to check — gate skipped.')
+              .write();
+            return;
+          }
+
+          const percentText = percent.toFixed(1);
+          await core.summary
+            .addHeading('PR coverage gate')
+            .addTable([
+              [{ data: 'Metric', header: true }, { data: 'Value', header: true }],
+              ['New/changed lines', String(numLines)],
+              ['Diff coverage', `${percentText}%`],
+              ['Required', `${threshold}%`],
+            ])
+            .write();
+
+          if (percent < threshold) {
+            core.setFailed(
+              `PR coverage ${percentText}% (new/changed lines) is below the required ${threshold}%.`
+            );
+          }

@@ -38,18 +38,12 @@ jobs:
     with:
       should_publish: false # Replace with ${{ endsWith( GITHUB.REF, 'main') }} to enable publishing
       should_test: true
+      run_sonar: true # Opt in to the parallel SonarCloud job (needs SONAR_TOKEN + a SonarCloud project)
       # prettier_check_content: # Optional, defaults to "{json-server,src}/**/*.{js,vue,json,html,css,md}"
       # node_version: # Optional, defaults to "20"
       # working_directory: # Optional, defaults to '.'
     secrets:
       packages_auth_token: ${{ secrets.GITHUB_TOKEN }}
-
-
-  sonar-cloud:
-    needs: yarn-check-lint-prettier-test-publish
-    uses: repowerednl/.github/.github/workflows/quality-control-sonar.yml@main
-    # with:
-      # coverage_report_name: # Optional, defaults to 'coverage.xml'
-    secrets: inherit
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 
