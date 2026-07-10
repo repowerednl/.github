@@ -1,6 +1,6 @@
 {
-    "name": "Pytests and Django migration check with test coverage",
-    "description": "Runs the python unit tests (pytests) with coverage",
+    "name": "Pytests with test coverage",
+    "description": "Runs the python unit tests (pytests) with coverage and checks for django migrations",
     "iconName": "octicon check-circle",
     "categories": [
         "Repowered"
