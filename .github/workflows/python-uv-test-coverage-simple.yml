@@ -13,6 +13,10 @@ on:
         type: string
         description: Whenever the app (i.e. manage.py) is not in the root, the location can be specified here
         default: .
+      coverage_threshold:
+        type: string
+        description: Minimum required coverage (%) on a PR's new/changed lines. Set via a repo variable to override.
+        default: "80"
     secrets:
       private_pypi_user:
         required: true
@@ -62,20 +66,10 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         run: |
           uv run coverage report
-          uv run coverage xml
 
-      - name: Coverage comment
-        id: coverage-comment
-        uses: py-cov-action/python-coverage-comment-action@v3
+      - name: Coverage comment and PR diff-coverage gate
+        uses: repowerednl/.github/composite-actions/coverage-comment-and-gate@main
         with:
-          GITHUB_TOKEN: ${{ github.token }}
-          COVERAGE_PATH: ${{ inputs.working_directory }}
-          MINIMUM_ORANGE: 80
-      
-      - name: Upload coverage XML
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage.xml
-          path: ${{ inputs.working_directory }}/coverage.xml
-          if-no-files-found: 'error'
-          overwrite: true
+          github_token: ${{ github.token }}
+          coverage_path: ${{ inputs.working_directory }}
+          coverage_threshold: ${{ inputs.coverage_threshold }}
