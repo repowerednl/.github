@@ -39,13 +39,13 @@ runs:
   using: "composite"
   steps:
     - name: Setup python ${{ inputs.python_version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python_version }}
 
     - name: Load cache
       id: cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{ inputs.file_paths_to_cache }}
         key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}
@@ -81,7 +81,7 @@ runs:
 
     - name: Save cache once
       if: ${{ inputs.save_cache == true && steps.cache.outputs.cache-hit != 'true' }}
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{ inputs.file_paths_to_cache }}
         key: cache-python-${{ inputs.python_version }}-poetry-${{ inputs.poetry_version }}-${{ hashFiles('**/poetry.lock') }}

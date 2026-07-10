@@ -1,13 +1,12 @@
 {
     "name": "Pytests and Django migration check with test coverage",
-    "description": "Runs the python unit tests (pytests) with coverage and checks for django migrations",
+    "description": "Runs the python unit tests (pytests) with coverage",
     "iconName": "octicon check-circle",
     "categories": [
         "Repowered"
     ],
     "filePatterns": [
         ".*.py",
-        "poetry.lock",
         "uv.lock",
         "pyproject.toml"
     ]

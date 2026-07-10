@@ -17,12 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: read
     outputs:
       is-merge-sync: ${{ steps.detect.outputs.is_merge_sync }}
     steps:
       - name: Detect merge sync
         id: detect
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Returns { value, reason }; biased to 'false' (run tests) when unsure.
@@ -72,13 +73,49 @@ jobs:
                 head: incoming,
               });
               const contained = cmp.status === 'identical' || cmp.status === 'behind';
+              if (!contained) {
+                return { value: 'false', reason: `Merge commit, but incoming parent `
+                  + `${incoming.slice(0, 7)} is not contained in base '${pr.base.ref}' `
+                  + `(status=${cmp.status}).` };
+              }
+
+              // It IS a genuine "Update branch" merge sync. But only skip the suite if the
+              // developer's actual code (parent[0], the previous PR head) was ALREADY green.
+              // Skipping pytest on the sync would otherwise mask a prior failing/cancelled
+              // run, leaving a green, mergeable PR with failing tests. Bias to 'false'
+              // (run tests) whenever the previous head is not provably green.
+              const prevHead = head.parents[0].sha;
+              const { data: prevChecks } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: prevHead,
+                per_page: 100,
+              });
+              const runs = prevChecks.check_runs;
+              if (!runs.length) {
+                return { value: 'false', reason: `Previous `
+                  + `head ${prevHead.slice(0, 7)} has no check runs to confirm it was green; `
+                  + `running the suite.` };
+              }
+              const failing = runs.filter(r =>
+                ['failure', 'timed_out', 'cancelled', 'action_required', 'stale']
+                  .includes(r.conclusion));
+              if (failing.length) {
+                return { value: 'false', reason: `Previous `
+                  + `head ${prevHead.slice(0, 7)} had failing checks `
+                  + `(${failing.map(r => r.name).join(', ')}); running the suite.` };
+              }
+              const pending = runs.filter(r => r.status !== 'completed');
+              if (pending.length) {
+                return { value: 'false', reason: `Previous `
+                  + `head ${prevHead.slice(0, 7)} still has unfinished checks `
+                  + `(${pending.map(r => r.name).join(', ')}); running the suite.` };
+              }
               return {
-                value: contained ? 'true' : 'false',
-                reason: contained
-                  ? `GitHub "Update branch" merge of '${pr.base.ref}' into head `
-                    + `(incoming parent ${incoming.slice(0, 7)} is contained in base).`
-                  : `Merge commit, but incoming parent ${incoming.slice(0, 7)} is not `
-                    + `contained in base '${pr.base.ref}' (status=${cmp.status}).`,
+                value: 'true',
+                reason: `GitHub "Update branch" merge of '${pr.base.ref}' into head `
+                  + `(incoming parent ${incoming.slice(0, 7)} contained in base; previous `
+                  + `head ${prevHead.slice(0, 7)} was green).`,
               };
             };
 

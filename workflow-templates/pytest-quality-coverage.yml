@@ -68,10 +68,9 @@ jobs:
       actions: read
     strategy:
       matrix:
-        uv_version: [ "1.8.4" ]
+        uv_version: [ "0.11.21" ]
     with:
       uv_version: ${{ matrix.uv_version }}
     secrets:
-      private_pypi_url: ${{ secrets.PRIVATE_PYPI_URL }}
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}

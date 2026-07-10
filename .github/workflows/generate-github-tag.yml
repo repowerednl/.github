@@ -23,7 +23,7 @@ jobs:
     steps:
       # Checkout the repository with all commit history
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: '0'
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -34,8 +34,8 @@ jobs:
         with:
           script: |
             const branch = context.payload.workflow_run?.head_branch
-              ?? process.env.GITHUB_HEAD_REF
-              ?? process.env.GITHUB_REF.split('/').pop();
+              || process.env.GITHUB_HEAD_REF
+              || process.env.GITHUB_REF?.split('/').pop();
             const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
             const label = context.payload.label?.name ?? '';
             const prHead = context.payload.pull_request?.head?.ref ?? '';
@@ -72,7 +72,7 @@ jobs:
       # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag
         id: github-tag
-        uses: anothrNick/github-tag-action@1.71.0 # (7/5/25) Pinned version needed: https://github.com/anothrNick/github-tag-action/issues/341
+        uses: anothrNick/github-tag-action@1.75.0 # (7/5/25) Pinned version needed: https://github.com/anothrNick/github-tag-action/issues/341
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
