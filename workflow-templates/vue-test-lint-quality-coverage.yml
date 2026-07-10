@@ -1,4 +1,4 @@
-name: Classify, run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish) and run Sonar
+name: Classify and run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish)
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
           is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
 
   # Early classification: detects a GitHub "Update branch" merge sync so the yarn
-  # checks and sonar can be skipped for it.
+  # checks can be skipped for it.
   classify:
     uses: repowerednl/.github/.github/workflows/classify-pr-event.yml@main
 
@@ -38,12 +38,10 @@ jobs:
     with:
       should_publish: false # Replace with ${{ endsWith( GITHUB.REF, 'main') }} to enable publishing
       should_test: true
-      run_sonar: true # Opt in to the parallel SonarCloud job (needs SONAR_TOKEN + a SonarCloud project)
       # prettier_check_content: # Optional, defaults to "{json-server,src}/**/*.{js,vue,json,html,css,md}"
       # node_version: # Optional, defaults to "20"
       # working_directory: # Optional, defaults to '.'
     secrets:
       packages_auth_token: ${{ secrets.GITHUB_TOKEN }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 

@@ -1,6 +1,6 @@
 {
-    "name": "Pytests, Django migration check and Sonar with test coverage",
-    "description": "Runs the python unit tests (pytests) with coverage, checks for django migrations and analyses the quality via sonarcloud",
+    "name": "Pytests and Django migration check with test coverage",
+    "description": "Runs the python unit tests (pytests) with coverage and checks for django migrations",
     "iconName": "octicon check-circle",
     "categories": [
         "Repowered"
