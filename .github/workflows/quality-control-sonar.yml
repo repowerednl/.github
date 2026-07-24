@@ -1,4 +1,4 @@
-name: [Deprecated] Sonar Quality Control
+name: "[Deprecated] Sonar Quality Control"
 
 on:
   workflow_call:
