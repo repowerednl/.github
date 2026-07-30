@@ -1,0 +1,53 @@
+name: Merge main back to dev
+description: >-
+  Creates the pull request that merges 'main' back into 'dev', merges it with a
+  merge commit as soon as GitHub reports it as mergeable and otherwise leaves it
+  open with the reviewers requested and assigned. Writes the result to the job
+  summary.
+
+inputs:
+  github_token:
+    description: Token of the GitHub App that creates, reviews and merges the pull request.
+    required: true
+  reviewers:
+    description: >-
+      Comma separated GitHub usernames to request when the merge cannot be done
+      automatically. Defaults to the authors of the commits that are merged back.
+    required: false
+    default: ""
+  labels:
+    description: Comma separated labels added to the pull request when it is created.
+    required: false
+    default: ignore-for-release
+  conflict_label:
+    description: Label added to the pull request when it cannot be merged automatically.
+    required: false
+    default: merge-conflict
+
+outputs:
+  status:
+    description: "One of: up-to-date, merged, auto-merge-enabled, conflict, blocked, unknown"
+    value: ${{ steps.merge-back.outputs.status }}
+  pull_request_number:
+    description: Number of the pull request, empty when there was nothing to merge.
+    value: ${{ steps.merge-back.outputs.pull_request_number }}
+  pull_request_url:
+    description: URL of the pull request, empty when there was nothing to merge.
+    value: ${{ steps.merge-back.outputs.pull_request_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Merge main back to dev
+      id: merge-back
+      uses: actions/github-script@v9
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        REVIEWERS: ${{ inputs.reviewers }}
+        LABELS: ${{ inputs.labels }}
+        CONFLICT_LABEL: ${{ inputs.conflict_label }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const mergeMainToDev = require(`${process.env.ACTION_PATH}/merge-main-to-dev.js`);
+          await mergeMainToDev({ github, context, core });
