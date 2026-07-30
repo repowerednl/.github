@@ -72,3 +72,14 @@ jobs:
       selector: ${{ matrix.selector }}
     secrets:
       digital_ocean_access_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+  merge-main-to-dev:
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    permissions:
+      contents: read
+    uses: repowerednl/.github/.github/workflows/merge-main-to-dev.yml@main
+    with:
+      app-id: ${{ vars.APP_ID }}
+      # reviewers: # Optional, defaults to the authors of the commits that are merged back upon conflict
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
