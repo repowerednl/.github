@@ -1,30 +1,21 @@
-const SOURCE = "main";
-const TARGET = "dev";
 const CONFLICT_MARKER = "<!-- repowered-merge-back-conflict -->";
-const MERGEABLE_POLL_ATTEMPTS = 12;
-const MERGEABLE_POLL_SECONDS = 5;
 const MAX_REVIEWERS = 15;
 const MAX_ASSIGNEES = 10;
 
 const RESULTS = {
-  "up-to-date": `✅ ${TARGET} already contains ${SOURCE}`,
-  merged: `✅ ${SOURCE} has been merged into ${TARGET}`,
-  "auto-merge-enabled":
-    "⏳ auto-merge is enabled, the pull request merges once the required checks pass",
+  "up-to-date": "✅ dev already contains main",
+  merged: "✅ main has been merged into dev",
   conflict: "⚠️ merge conflict, the pull request stays open",
   blocked: "⚠️ GitHub refused the merge, the pull request stays open",
-  unknown:
-    "⚠️ GitHub could not determine the mergeability, the pull request stays open",
 };
+
+const FAILING = ["conflict", "blocked"];
 
 const toList = (value) =>
   (value || "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-
-const sleepSeconds = (seconds) =>
-  new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 
 const humanAuthors = (commits) => [
   ...new Set(
@@ -41,13 +32,7 @@ const humanAuthors = (commits) => [
   ),
 ];
 
-module.exports = async ({
-  github,
-  context,
-  core,
-  env = process.env,
-  sleep = sleepSeconds,
-}) => {
+module.exports = async ({ github, context, core, env = process.env }) => {
   const { owner, repo } = context.repo;
 
   const report = async (status, detail, pullRequest) => {
@@ -58,11 +43,8 @@ module.exports = async ({
     );
     core.setOutput("pull_request_url", pullRequest ? pullRequest.html_url : "");
     core.info(`status=${status} :: ${detail}`);
-    if (status !== "merged" && status !== "up-to-date") {
-      core.warning(`${RESULTS[status]} :: ${detail}`);
-    }
     await core.summary
-      .addHeading(`Merge ${SOURCE} back into ${TARGET}`, 3)
+      .addHeading("Merge main back into dev", 3)
       .addTable([
         [
           { data: "Field", header: true },
@@ -78,6 +60,9 @@ module.exports = async ({
         ["Detail", detail],
       ])
       .write();
+    if (FAILING.includes(status)) {
+      core.setFailed(`${RESULTS[status]} :: ${detail}`);
+    }
     return status;
   };
 
@@ -95,8 +80,8 @@ module.exports = async ({
     const { data: open } = await github.rest.pulls.list({
       owner,
       repo,
-      base: TARGET,
-      head: `${owner}:${SOURCE}`,
+      base: "dev",
+      head: `${owner}:main`,
       state: "open",
     });
     return open[0];
@@ -106,16 +91,19 @@ module.exports = async ({
     const { data: pullRequest } = await github.rest.pulls.create({
       owner,
       repo,
-      base: TARGET,
-      head: SOURCE,
-      title: `Merge ${SOURCE} back into ${TARGET}`,
+      base: "dev",
+      head: "main",
+      title: "Merge main back into dev",
       body: [
-        `Automated merge of \`${SOURCE}\` back into \`${TARGET}\`, containing ` +
-          `${comparison.ahead_by} commit(s) that only exist on \`${SOURCE}\`.`,
+        "Automated merge of `main` back into `dev`, containing " +
+          `${comparison.ahead_by} commit(s) that only exist on \`main\`.`,
         "",
-        "This pull request is merged automatically with a merge commit (never a " +
-          "squash) as soon as GitHub reports it as mergeable. It only stays open when " +
-          "that is not possible, in which case the requested reviewers have to resolve it.",
+        "This pull request is merged automatically." +
+        "It only stays open when that is not possible, in which case the " +
+          "requested reviewer(s) has/have to resolve it.",
+        "",
+        "⚠️ Do not press **Update branch**: on this pull request that merges `dev` " +
+          "into `main` instead, which puts unreleased `dev` code on `main`.",
       ].join("\n"),
     });
     core.info(`Created pull request #${pullRequest.number}.`);
@@ -132,26 +120,6 @@ module.exports = async ({
       );
     }
     return pullRequest;
-  };
-
-  const waitForMergeability = async (pullRequest) => {
-    let current = pullRequest;
-    for (
-      let poll = 0;
-      poll < MERGEABLE_POLL_ATTEMPTS && current.mergeable == null;
-      poll += 1
-    ) {
-      await sleep(MERGEABLE_POLL_SECONDS);
-      ({ data: current } = await github.rest.pulls.get({
-        owner,
-        repo,
-        pull_number: current.number,
-      }));
-    }
-    core.info(
-      `mergeable=${current.mergeable} mergeable_state=${current.mergeable_state}`,
-    );
-    return current;
   };
 
   const requestReviewers = async (pullRequest, comparison) => {
@@ -218,15 +186,11 @@ module.exports = async ({
         issue_number: pullRequest.number,
         body: [
           CONFLICT_MARKER,
-          `⚠️ \`${SOURCE}\` could not be merged into \`${TARGET}\` automatically.`,
+          "⚠️ `main` could not be merged into `dev` automatically.",
           "",
           detail,
           "",
-          `Resolve this by merging \`${SOURCE}\` into \`${TARGET}\` locally ` +
-            `(\`git switch ${TARGET} && git pull && git merge origin/${SOURCE}\`), ` +
-            "pushing the resolution and merging this pull request with a **merge " +
-            "commit**. Do not squash it and do not close it, since that would keep " +
-            `\`${TARGET}\` behind \`${SOURCE}\`.`,
+          "Create a hotfix to resolve this.",
         ].join("\n"),
       }),
     );
@@ -248,51 +212,16 @@ module.exports = async ({
     await commentOnce(pullRequest, detail);
   };
 
-  const merge = async (pullRequest) => {
-    try {
-      const { data: merged } = await github.rest.pulls.merge({
-        owner,
-        repo,
-        pull_number: pullRequest.number,
-        merge_method: "merge",
-        commit_title: `Merge ${SOURCE} back into ${TARGET} (#${pullRequest.number})`,
-      });
-      return merged.sha;
-    } catch (error) {
-      core.info(
-        `Merging pull request #${pullRequest.number} failed: ${error.message}`,
-      );
-      return null;
-    }
-  };
-
-  const enableAutoMerge = async (pullRequest) => {
-    try {
-      await github.graphql(
-        `mutation ($pullRequestId: ID!) {
-          enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: MERGE }) {
-            clientMutationId
-          }
-        }`,
-        { pullRequestId: pullRequest.node_id },
-      );
-      return true;
-    } catch (error) {
-      core.info(`Enabling auto-merge failed: ${error.message}`);
-      return false;
-    }
-  };
-
   const { data: comparison } = await github.rest.repos.compareCommits({
     owner,
     repo,
-    base: TARGET,
-    head: SOURCE,
+    base: "dev",
+    head: "main",
   });
   if (comparison.ahead_by === 0) {
     return report(
       "up-to-date",
-      `${SOURCE} has no commits that are missing in ${TARGET} (status=${comparison.status}).`,
+      `main has no commits that are missing in dev (status=${comparison.status}).`,
     );
   }
 
@@ -303,59 +232,33 @@ module.exports = async ({
     pullRequest = await createPullRequest(comparison);
   }
 
-  pullRequest = await waitForMergeability(pullRequest);
-
-  if (pullRequest.mergeable == null) {
+  try {
+    const { data: merged } = await github.rest.repos.merge({
+      owner,
+      repo,
+      base: "dev",
+      head: "main",
+      commit_message: `Merge main back into dev (#${pullRequest.number})`,
+    });
+    const sha = merged && merged.sha;
+    return report(
+      "merged",
+      sha ? `Merged as ${sha.slice(0, 7)}.` : "dev already contained main.",
+      pullRequest,
+    );
+  } catch (error) {
+    const conflict = error.status === 409;
     await escalate(
       pullRequest,
       comparison,
-      "GitHub did not report a mergeable state in time.",
+      conflict
+        ? "Merging main into dev results in merge conflicts."
+        : `GitHub refused the merge: ${error.message}`,
     );
     return report(
-      "unknown",
-      "The mergeability was still unknown after " +
-        `${MERGEABLE_POLL_ATTEMPTS * MERGEABLE_POLL_SECONDS} seconds.`,
+      conflict ? "conflict" : "blocked",
+      `Merging main into dev failed (status=${error.status}): ${error.message}`,
       pullRequest,
     );
   }
-
-  if (pullRequest.mergeable === false) {
-    await escalate(
-      pullRequest,
-      comparison,
-      `GitHub reports \`${pullRequest.mergeable_state}\`, which means both branches ` +
-        "contain conflicting changes.",
-    );
-    return report(
-      "conflict",
-      `The pull request is not mergeable (state=${pullRequest.mergeable_state}).`,
-      pullRequest,
-    );
-  }
-
-  const sha = await merge(pullRequest);
-  if (sha) {
-    return report("merged", `Merged as ${sha.slice(0, 7)}.`, pullRequest);
-  }
-
-  if (await enableAutoMerge(pullRequest)) {
-    return report(
-      "auto-merge-enabled",
-      `Merging was refused (state=${pullRequest.mergeable_state}), so auto-merge has ` +
-        "been enabled instead.",
-      pullRequest,
-    );
-  }
-
-  await escalate(
-    pullRequest,
-    comparison,
-    `GitHub refused the merge (state \`${pullRequest.mergeable_state}\`) and auto-merge ` +
-      "could not be enabled, so this pull request needs a manual merge.",
-  );
-  return report(
-    "blocked",
-    `Merging and enabling auto-merge both failed (state=${pullRequest.mergeable_state}).`,
-    pullRequest,
-  );
 };

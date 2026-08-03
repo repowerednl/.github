@@ -27,7 +27,7 @@ on:
         required: true
     outputs:
       status:
-        description: "One of: up-to-date, merged, auto-merge-enabled, conflict, blocked, unknown"
+        description: "One of: up-to-date, merged, conflict, blocked"
         value: ${{ jobs.merge-back.outputs.status }}
       pull-request-number:
         description: "Number of the pull request, empty when there was nothing to merge"

@@ -20,9 +20,17 @@ const failing = (message) =>
     throw new Error(message);
   });
 
+const httpError = (status, message) =>
+  stub(async () => {
+    const error = new Error(message);
+    error.status = status;
+    throw error;
+  });
+
 const buildCore = () => {
   const outputs = {};
   const warnings = [];
+  const failures = [];
   const summary = {
     addHeading: () => summary,
     addTable: () => summary,
@@ -32,8 +40,10 @@ const buildCore = () => {
   return {
     outputs,
     warnings,
+    failures,
     info: () => {},
     warning: (message) => warnings.push(message),
+    setFailed: (message) => failures.push(message),
     setOutput: (name, value) => {
       outputs[name] = value;
     },
@@ -44,21 +54,19 @@ const buildCore = () => {
 const buildGithub = ({
   comparison = { ahead_by: 2, status: "ahead", commits: [] },
   openPullRequests = [],
-  pullRequest = {},
   comments = [],
   merge = stub(async () => ({ data: { sha: "abcdef1234567890" } })),
-  graphql = stub(),
 } = {}) => ({
-  graphql,
   rest: {
-    repos: { compareCommits: stub(async () => ({ data: comparison })) },
+    repos: {
+      compareCommits: stub(async () => ({ data: comparison })),
+      merge,
+    },
     pulls: {
       list: stub(async () => ({ data: openPullRequests })),
       create: stub(async () => ({
-        data: { number: 42, html_url: "https://github.test/pull/42", node_id: "PR_42" },
+        data: { number: 42, html_url: "https://github.test/pull/42" },
       })),
-      get: stub(async () => ({ data: pullRequest })),
-      merge,
       requestReviewers: stub(),
     },
     issues: {
@@ -70,15 +78,21 @@ const buildGithub = ({
   },
 });
 
+const conflictingCommits = {
+  ahead_by: 3,
+  status: "ahead",
+  commits: [
+    { author: { login: "fanna", type: "User" } },
+    { author: { login: "fanna", type: "User" } },
+    { author: { login: "colleague", type: "User" } },
+    { author: { login: "repowered-bot[bot]", type: "Bot" } },
+    { author: null },
+  ],
+};
+
 const run = async (github, env = {}) => {
   const core = buildCore();
-  const status = await mergeMainToDev({
-    github,
-    context,
-    core,
-    env,
-    sleep: async () => {},
-  });
+  const status = await mergeMainToDev({ github, context, core, env });
   return { status, core };
 };
 
@@ -91,78 +105,76 @@ test("does nothing when dev already contains main", async () => {
 
   assert.equal(status, "up-to-date");
   assert.equal(github.rest.pulls.create.calls.length, 0);
+  assert.equal(github.rest.repos.merge.calls.length, 0);
   assert.equal(core.outputs.pull_request_number, "");
+  assert.deepEqual(core.failures, []);
 });
 
-test("creates the pull request and merges it with a merge commit", async () => {
-  const github = buildGithub({
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      node_id: "PR_42",
-      mergeable: true,
-      mergeable_state: "clean",
-    },
-  });
+test("creates the pull request and merges main into dev with a merge commit", async () => {
+  const github = buildGithub();
 
   const { status, core } = await run(github, { LABELS: "ignore-for-release" });
 
   assert.equal(status, "merged");
   assert.equal(github.rest.pulls.create.calls.length, 1);
-  assert.deepEqual(github.rest.pulls.create.calls[0].base, "dev");
-  assert.deepEqual(github.rest.pulls.create.calls[0].head, "main");
-  assert.equal(github.rest.pulls.merge.calls[0].merge_method, "merge");
+  assert.equal(github.rest.pulls.create.calls[0].base, "dev");
+  assert.equal(github.rest.pulls.create.calls[0].head, "main");
+  assert.match(
+    github.rest.pulls.create.calls[0].body,
+    /Do not press \*\*Update branch\*\*/,
+  );
   assert.deepEqual(github.rest.issues.addLabels.calls[0].labels, [
     "ignore-for-release",
   ]);
+  assert.equal(github.rest.repos.merge.calls[0].base, "dev");
+  assert.equal(github.rest.repos.merge.calls[0].head, "main");
+  assert.match(
+    github.rest.repos.merge.calls[0].commit_message,
+    /Merge main back into dev \(#42\)/,
+  );
   assert.equal(github.rest.issues.createComment.calls.length, 0);
   assert.equal(core.outputs.pull_request_number, "42");
   assert.equal(core.outputs.pull_request_url, "https://github.test/pull/42");
+  assert.deepEqual(core.failures, []);
+});
+
+test("reports a merge that turned out to be a no-op", async () => {
+  const github = buildGithub({ merge: stub(async () => ({ data: undefined })) });
+
+  const { status, core } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.deepEqual(core.failures, []);
 });
 
 test("reuses an already open pull request", async () => {
   const github = buildGithub({
     openPullRequests: [{ number: 7, html_url: "https://github.test/pull/7" }],
-    pullRequest: {
-      number: 7,
-      html_url: "https://github.test/pull/7",
-      mergeable: true,
-      mergeable_state: "clean",
-    },
   });
 
   const { status } = await run(github);
 
   assert.equal(status, "merged");
   assert.equal(github.rest.pulls.create.calls.length, 0);
-  assert.equal(github.rest.pulls.merge.calls[0].pull_number, 7);
+  assert.match(
+    github.rest.repos.merge.calls[0].commit_message,
+    /Merge main back into dev \(#7\)/,
+  );
 });
 
 test("leaves the pull request open and assigns the commit authors on a conflict", async () => {
   const github = buildGithub({
-    comparison: {
-      ahead_by: 3,
-      status: "ahead",
-      commits: [
-        { author: { login: "fanna", type: "User" } },
-        { author: { login: "fanna", type: "User" } },
-        { author: { login: "colleague", type: "User" } },
-        { author: { login: "repowered-bot[bot]", type: "Bot" } },
-        { author: null },
-      ],
-    },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      mergeable: false,
-      mergeable_state: "dirty",
-    },
+    comparison: conflictingCommits,
+    merge: httpError(409, "Merge conflict"),
   });
 
-  const { status } = await run(github, { CONFLICT_LABEL: "merge-conflict" });
+  const { status, core } = await run(github, {
+    CONFLICT_LABEL: "merge-conflict",
+  });
 
   assert.equal(status, "conflict");
-  assert.equal(github.rest.pulls.merge.calls.length, 0);
+  assert.equal(core.failures.length, 1);
+  assert.match(core.failures[0], /merge conflict/);
   assert.deepEqual(github.rest.pulls.requestReviewers.calls[0].reviewers, [
     "fanna",
     "colleague",
@@ -175,21 +187,33 @@ test("leaves the pull request open and assigns the commit authors on a conflict"
     "merge-conflict",
   ]);
   assert.equal(github.rest.issues.createComment.calls.length, 1);
+  assert.match(
+    github.rest.issues.createComment.calls[0].body,
+    /results in merge conflicts/,
+  );
+});
+
+test("reports blocked when GitHub refuses the merge for another reason", async () => {
+  const github = buildGithub({
+    comparison: conflictingCommits,
+    merge: httpError(403, "Resource not accessible by integration"),
+  });
+
+  const { status, core } = await run(github);
+
+  assert.equal(status, "blocked");
+  assert.equal(core.failures.length, 1);
+  assert.match(core.failures[0], /Resource not accessible by integration/);
+  assert.match(
+    github.rest.issues.createComment.calls[0].body,
+    /GitHub refused the merge/,
+  );
 });
 
 test("prefers the configured reviewers over the commit authors", async () => {
   const github = buildGithub({
-    comparison: {
-      ahead_by: 1,
-      status: "ahead",
-      commits: [{ author: { login: "fanna", type: "User" } }],
-    },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      mergeable: false,
-      mergeable_state: "dirty",
-    },
+    comparison: conflictingCommits,
+    merge: httpError(409, "Merge conflict"),
   });
 
   await run(github, { REVIEWERS: "reviewer-one, reviewer-two" });
@@ -210,14 +234,11 @@ test("requests the reviewers one by one when the combined request fails", async 
         { author: { login: "left-the-company", type: "User" } },
       ],
     },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      mergeable: false,
-      mergeable_state: "dirty",
-    },
+    merge: httpError(409, "Merge conflict"),
   });
-  github.rest.pulls.requestReviewers = failing("Reviews may only be requested from collaborators");
+  github.rest.pulls.requestReviewers = failing(
+    "Reviews may only be requested from collaborators",
+  );
 
   const { status, core } = await run(github);
 
@@ -226,22 +247,15 @@ test("requests the reviewers one by one when the combined request fails", async 
     github.rest.pulls.requestReviewers.calls.map((call) => call.reviewers),
     [["fanna", "left-the-company"], ["fanna"], ["left-the-company"]],
   );
-  assert.ok(core.warnings.some((warning) => warning.includes("left-the-company")));
+  assert.ok(
+    core.warnings.some((warning) => warning.includes("left-the-company")),
+  );
 });
 
 test("does not comment twice about the same conflict", async () => {
   const github = buildGithub({
-    comparison: {
-      ahead_by: 1,
-      status: "ahead",
-      commits: [{ author: { login: "fanna", type: "User" } }],
-    },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      mergeable: false,
-      mergeable_state: "dirty",
-    },
+    comparison: conflictingCommits,
+    merge: httpError(409, "Merge conflict"),
     comments: [{ body: "<!-- repowered-merge-back-conflict -->\nearlier run" }],
   });
 
@@ -250,86 +264,14 @@ test("does not comment twice about the same conflict", async () => {
   assert.equal(github.rest.issues.createComment.calls.length, 0);
 });
 
-test("falls back to auto-merge when GitHub refuses the merge", async () => {
-  const github = buildGithub({
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      node_id: "PR_42",
-      mergeable: true,
-      mergeable_state: "blocked",
-    },
-    merge: failing("Required status check is expected"),
-  });
-
-  const { status } = await run(github);
-
-  assert.equal(status, "auto-merge-enabled");
-  assert.equal(github.graphql.calls.length, 1);
-  assert.equal(github.rest.issues.createComment.calls.length, 0);
-});
-
-test("escalates when both merging and auto-merge fail", async () => {
-  const github = buildGithub({
-    comparison: {
-      ahead_by: 1,
-      status: "ahead",
-      commits: [{ author: { login: "fanna", type: "User" } }],
-    },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      node_id: "PR_42",
-      mergeable: true,
-      mergeable_state: "blocked",
-    },
-    merge: failing("Base branch was modified"),
-    graphql: failing("Auto merge is not allowed for this repository"),
-  });
-
-  const { status } = await run(github);
-
-  assert.equal(status, "blocked");
-  assert.deepEqual(github.rest.pulls.requestReviewers.calls[0].reviewers, ["fanna"]);
-  assert.equal(github.rest.issues.createComment.calls.length, 1);
-});
-
-test("escalates when GitHub keeps reporting an unknown mergeable state", async () => {
-  const github = buildGithub({
-    comparison: {
-      ahead_by: 1,
-      status: "ahead",
-      commits: [{ author: { login: "fanna", type: "User" } }],
-    },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      mergeable: null,
-      mergeable_state: "unknown",
-    },
-  });
-
-  const { status } = await run(github);
-
-  assert.equal(status, "unknown");
-  assert.equal(github.rest.pulls.get.calls.length, 12);
-  assert.equal(github.rest.pulls.merge.calls.length, 0);
-  assert.equal(github.rest.issues.createComment.calls.length, 1);
-});
-
-test("warns instead of failing when no reviewer can be determined", async () => {
+test("warns when no reviewer can be determined", async () => {
   const github = buildGithub({
     comparison: {
       ahead_by: 1,
       status: "ahead",
       commits: [{ author: { login: "repowered-bot[bot]", type: "Bot" } }],
     },
-    pullRequest: {
-      number: 42,
-      html_url: "https://github.test/pull/42",
-      mergeable: false,
-      mergeable_state: "dirty",
-    },
+    merge: httpError(409, "Merge conflict"),
   });
 
   const { status, core } = await run(github);

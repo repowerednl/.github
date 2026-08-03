@@ -26,7 +26,7 @@ inputs:
 
 outputs:
   status:
-    description: "One of: up-to-date, merged, auto-merge-enabled, conflict, blocked, unknown"
+    description: "One of: up-to-date, merged, conflict, blocked"
     value: ${{ steps.merge-back.outputs.status }}
   pull_request_number:
     description: Number of the pull request, empty when there was nothing to merge.
