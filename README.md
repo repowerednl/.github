@@ -18,7 +18,7 @@ To have consistent workflows that can easily be maintained, templates have been 
 - For testing such a template including explanations: [workflow-tests](https://github.com/repowerednl/workflow-tests)
 
 ### GitHub App token
-Bot actions (pushing a commit, creating a pull request, merging it) are done with a token of our GitHub App instead of `secrets.GITHUB_TOKEN` or a (a big no-go!) Personal Access Token (PAT). That keeps the action traceable to the app, gives it the rights it needs on protected branches and - unlike `GITHUB_TOKEN` or PATs - the events it creates do trigger other workflows.
+Bot actions (pushing a commit, creating a pull request, merging it) are done with a token of our GitHub App instead of `secrets.GITHUB_TOKEN`. That keeps the action traceable to the app, gives it the rights it needs on protected branches and - unlike `GITHUB_TOKEN` - the events it creates do trigger other workflows. The use of personal access tokens (PATs) is not allowed.
 - The token is generated inside the reusable workflow with [actions/create-github-app-token](https://github.com/actions/create-github-app-token)
 - The caller only passes `app-id: ${{ vars.APP_ID }}` and `private-key: ${{ secrets.APP_PRIVATE_KEY }}`
 - Never write the token to a file, an output or a log; only pass it to the step that needs it
