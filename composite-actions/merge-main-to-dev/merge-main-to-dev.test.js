@@ -264,6 +264,52 @@ test("does not comment twice about the same conflict", async () => {
   assert.equal(github.rest.issues.createComment.calls.length, 0);
 });
 
+test("fails with a message when main or dev is missing", async () => {
+  const github = buildGithub();
+  github.rest.repos.compareCommits = httpError(404, "Not Found");
+
+  await assert.rejects(run(github), {
+    message:
+      "Comparing dev with main in repowerednl/repower-django failed: Not Found. " +
+      "This workflow needs both a main and a dev branch.",
+  });
+  assert.equal(github.rest.pulls.create.calls.length, 0);
+  assert.equal(github.rest.repos.merge.calls.length, 0);
+});
+
+test("adopts the pull request of a parallel run when creating one fails", async () => {
+  const github = buildGithub();
+  const listed = [[], [{ number: 9, html_url: "https://github.test/pull/9" }]];
+  github.rest.pulls.list = stub(async () => ({ data: listed.shift() || [] }));
+  github.rest.pulls.create = httpError(
+    422,
+    "A pull request already exists for repowerednl:main.",
+  );
+
+  const { status, core } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(github.rest.pulls.list.calls.length, 2);
+  assert.match(
+    github.rest.repos.merge.calls[0].commit_message,
+    /Merge main back into dev \(#9\)/,
+  );
+  assert.deepEqual(core.failures, []);
+});
+
+test("fails when creating the pull request fails and there is none to adopt", async () => {
+  const github = buildGithub();
+  github.rest.pulls.create = httpError(
+    403,
+    "Resource not accessible by integration",
+  );
+
+  await assert.rejects(run(github), {
+    message: "Resource not accessible by integration",
+  });
+  assert.equal(github.rest.repos.merge.calls.length, 0);
+});
+
 test("warns when no reviewer can be determined", async () => {
   const github = buildGithub({
     comparison: {

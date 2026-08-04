@@ -36,6 +36,10 @@ on:
         description: "URL of the pull request, empty when there was nothing to merge"
         value: ${{ jobs.merge-back.outputs.pull-request-url }}
 
+concurrency:
+  group: merge-main-to-dev-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   merge-back:
     name: Merge main back to dev

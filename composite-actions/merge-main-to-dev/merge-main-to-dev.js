@@ -76,6 +76,25 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     }
   };
 
+  const compareBranches = async () => {
+    try {
+      const { data } = await github.rest.repos.compareCommits({
+        owner,
+        repo,
+        base: "dev",
+        head: "main",
+      });
+      return data;
+    } catch (error) {
+      throw new Error(
+        `Comparing dev with main in ${owner}/${repo} failed: ${error.message}. ` +
+          "This job merges main into dev so what branches does it need?" +
+          " Right, main and dev....and it doesn't have both" +
+          " Remove this job from your workflow."
+      );
+    }
+  };
+
   const findOpenPullRequest = async () => {
     const { data: open } = await github.rest.pulls.list({
       owner,
@@ -120,6 +139,27 @@ module.exports = async ({ github, context, core, env = process.env }) => {
       );
     }
     return pullRequest;
+  };
+
+  const findOrCreatePullRequest = async (comparison) => {
+    const open = await findOpenPullRequest();
+    if (open) {
+      core.info(`Reusing open pull request #${open.number}.`);
+      return open;
+    }
+    try {
+      return await createPullRequest(comparison);
+    } catch (error) {
+      const raced = await findOpenPullRequest();
+      if (!raced) {
+        throw error;
+      }
+      core.info(
+        `Creating the pull request failed (${error.message}), reusing ` +
+          `#${raced.number} from a parallel run instead.`,
+      );
+      return raced;
+    }
   };
 
   const requestReviewers = async (pullRequest, comparison) => {
@@ -212,12 +252,7 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     await commentOnce(pullRequest, detail);
   };
 
-  const { data: comparison } = await github.rest.repos.compareCommits({
-    owner,
-    repo,
-    base: "dev",
-    head: "main",
-  });
+  const comparison = await compareBranches();
   if (comparison.ahead_by === 0) {
     return report(
       "up-to-date",
@@ -225,12 +260,7 @@ module.exports = async ({ github, context, core, env = process.env }) => {
     );
   }
 
-  let pullRequest = await findOpenPullRequest();
-  if (pullRequest) {
-    core.info(`Reusing open pull request #${pullRequest.number}.`);
-  } else {
-    pullRequest = await createPullRequest(comparison);
-  }
+  const pullRequest = await findOrCreatePullRequest(comparison);
 
   try {
     const { data: merged } = await github.rest.repos.merge({
