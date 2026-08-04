@@ -1,0 +1,11 @@
+{
+  "name": "merge-main-to-dev",
+  "version": "1.0.0",
+  "description": "Composite action that merges main back into dev",
+  "private": true,
+  "type": "commonjs",
+  "main": "merge-main-to-dev.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

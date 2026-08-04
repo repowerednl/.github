@@ -1,0 +1,68 @@
+name: Merge main back to dev
+
+on:
+  workflow_call:
+    inputs:
+      app-id:
+        required: true
+        type: string
+        description: "Client ID of the GitHub App that creates and merges the pull request"
+      reviewers:
+        required: false
+        type: string
+        default: ""
+        description: "Comma separated GitHub usernames to request on a conflict. Defaults to the authors of the commits that are merged back"
+      labels:
+        required: false
+        type: string
+        default: "ignore-for-release"
+        description: "Comma separated labels added to the pull request when it is created"
+      conflict_label:
+        required: false
+        type: string
+        default: "merge-conflict"
+        description: "Label added to the pull request when it cannot be merged automatically"
+    secrets:
+      private-key:
+        required: true
+    outputs:
+      status:
+        description: "One of: up-to-date, merged, conflict, blocked"
+        value: ${{ jobs.merge-back.outputs.status }}
+      pull-request-number:
+        description: "Number of the pull request, empty when there was nothing to merge"
+        value: ${{ jobs.merge-back.outputs.pull-request-number }}
+      pull-request-url:
+        description: "URL of the pull request, empty when there was nothing to merge"
+        value: ${{ jobs.merge-back.outputs.pull-request-url }}
+
+concurrency:
+  group: merge-main-to-dev-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  merge-back:
+    name: Merge main back to dev
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.merge-back.outputs.status }}
+      pull-request-number: ${{ steps.merge-back.outputs.pull_request_number }}
+      pull-request-url: ${{ steps.merge-back.outputs.pull_request_url }}
+    steps:
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.private-key }}
+
+      - name: Merge main back to dev
+        id: merge-back
+        uses: repowerednl/.github/composite-actions/merge-main-to-dev@IN-221-merge-main-back-to-dev
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          reviewers: ${{ inputs.reviewers }}
+          labels: ${{ inputs.labels }}
+          conflict_label: ${{ inputs.conflict_label }}

@@ -99,3 +99,14 @@ jobs:
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
       publish_pypi_url: ${{ secrets.PRIVATE_PYPI_PUBLISH_URL}}
+
+  merge-main-to-dev:
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    permissions:
+      contents: read
+    uses: repowerednl/.github/.github/workflows/merge-main-to-dev.yml@main
+    with:
+      app-id: ${{ vars.APP_ID }}
+      # reviewers: # Optional, defaults to the authors of the commits that are merged back upon conflict
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
