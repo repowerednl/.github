@@ -23,6 +23,13 @@ inputs:
     description: Label added to the pull request when it cannot be merged automatically.
     required: false
     default: merge-conflict
+  version_files:
+    description: >-
+      Comma separated files whose version declaration on its own does not count as a
+      code change. When 'main' brings nothing but such a change the merge commit is
+      marked '[skip ci]' so it does not trigger a build, a tag and a deployment.
+    required: false
+    default: package.json,pyproject.toml,setup.cfg,Chart.yaml
 
 outputs:
   status:
@@ -46,6 +53,7 @@ runs:
         REVIEWERS: ${{ inputs.reviewers }}
         LABELS: ${{ inputs.labels }}
         CONFLICT_LABEL: ${{ inputs.conflict_label }}
+        VERSION_FILES: ${{ inputs.version_files }}
       with:
         github-token: ${{ inputs.github_token }}
         script: |
