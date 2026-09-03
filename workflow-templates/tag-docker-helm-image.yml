@@ -60,7 +60,7 @@ jobs:
       infisical_client_project_id: ${{ secrets.INFISICAL_PROJECT_ID }}
 
   update-image-tag:
-    uses: repowerednl/.github/.github/workflows/update-helm-image-tag.yml@main
+    uses: repowerednl/.github/.github/workflows/update-image-tag.yml@main
     needs: [ docker ]
     with:
       image_tag: ${{ needs.docker.outputs.image_tag }}
