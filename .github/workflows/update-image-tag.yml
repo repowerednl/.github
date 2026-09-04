@@ -9,12 +9,23 @@ on:
       image_tag:
         required: true
         type: string
+      branch:
+        required: true
+        type: string
+      values_pattern:
+        required: false
+        type: string
+        default: "values*.yml"
       app-id:
         required: true
         type: string
     secrets:
       private-key:
         required: true
+
+concurrency:
+  group: update-image-tag-${{ inputs.branch }}-${{ inputs.environment }}
+  cancel-in-progress: false
 
 jobs:
   update-tag:
@@ -33,18 +44,21 @@ jobs:
         uses: actions/checkout@v7
         with:
           token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ inputs.branch }}
 
       - name: Update image tag and commit
         uses: actions/github-script@v7
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           IMAGE_TAG: ${{ inputs.image_tag }}
+          BRANCH: ${{ inputs.branch }}
+          VALUES_PATTERN: ${{ inputs.values_pattern }}
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const fs = require('fs');
             const path = require('path');
-            const { ENVIRONMENT, IMAGE_TAG } = process.env;
+            const { ENVIRONMENT, IMAGE_TAG, BRANCH, VALUES_PATTERN } = process.env;
             const dir = `deployment/${ENVIRONMENT}`;
 
             if (!fs.existsSync(dir)) {
@@ -52,10 +66,10 @@ jobs:
               return;
             }
 
-            const globber = await glob.create(`${dir}/values*.yml`);
+            const globber = await glob.create(`${dir}/${VALUES_PATTERN}`);
             const files = await globber.glob();
             if (files.length === 0) {
-              core.setFailed(`No values*.yml files found under ${dir}`);
+              core.setFailed(`No files matching "${VALUES_PATTERN}" found under ${dir}`);
               return;
             }
 
@@ -81,41 +95,44 @@ jobs:
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const branch = context.ref.replace('refs/heads/', '');
 
-            const { data: refData } = await github.rest.git.getRef({ owner, repo, ref: `heads/${branch}` });
-            const baseCommitSha = refData.object.sha;
-            const { data: baseCommit } = await github.rest.git.getCommit({ owner, repo, commit_sha: baseCommitSha });
+            try {
+              const { data: refData } = await github.rest.git.getRef({ owner, repo, ref: `heads/${BRANCH}` });
+              const baseCommitSha = refData.object.sha;
+              const { data: baseCommit } = await github.rest.git.getCommit({ owner, repo, commit_sha: baseCommitSha });
 
-            const treeItems = await Promise.all(files.map(async (file) => {
-              const { data: blob } = await github.rest.git.createBlob({
-                owner, repo,
-                content: fs.readFileSync(file, 'utf8'),
-                encoding: 'utf-8',
+              const treeItems = await Promise.all(files.map(async (file) => {
+                const { data: blob } = await github.rest.git.createBlob({
+                  owner, repo,
+                  content: fs.readFileSync(file, 'utf8'),
+                  encoding: 'utf-8',
+                });
+                return {
+                  path: path.relative(process.cwd(), file),
+                  mode: '100644',
+                  type: 'blob',
+                  sha: blob.sha,
+                };
+              }));
+
+              const { data: newTree } = await github.rest.git.createTree({
+                owner, repo, base_tree: baseCommit.tree.sha, tree: treeItems,
               });
-              return {
-                path: path.relative(process.cwd(), file),
-                mode: '100644',
-                type: 'blob',
-                sha: blob.sha,
-              };
-            }));
 
-            const { data: newTree } = await github.rest.git.createTree({
-              owner, repo, base_tree: baseCommit.tree.sha, tree: treeItems,
-            });
+              if (newTree.sha === baseCommit.tree.sha) {
+                core.info('No changes to commit.');
+                return;
+              }
 
-            if (newTree.sha === baseCommit.tree.sha) {
-              core.info('No changes to commit.');
-              return;
+              const { data: newCommit } = await github.rest.git.createCommit({
+                owner, repo,
+                message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG} [skip ci]`,
+                tree: newTree.sha,
+                parents: [baseCommitSha],
+              });
+
+              await github.rest.git.updateRef({ owner, repo, ref: `heads/${BRANCH}`, sha: newCommit.sha });
+              core.info(`Pushed commit ${newCommit.sha} to ${BRANCH}`);
+            } catch (err) {
+              core.setFailed(`Failed to commit updated values to ${BRANCH}: ${err.message}`);
             }
-
-            const { data: newCommit } = await github.rest.git.createCommit({
-              owner, repo,
-              message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG} [skip ci]`,
-              tree: newTree.sha,
-              parents: [baseCommitSha],
-            });
-
-            await github.rest.git.updateRef({ owner, repo, ref: `heads/${branch}`, sha: newCommit.sha });
-            core.info(`Pushed commit ${newCommit.sha} to ${branch}`);

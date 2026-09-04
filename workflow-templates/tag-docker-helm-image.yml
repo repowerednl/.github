@@ -6,7 +6,7 @@ on:
       - main
   workflow_run:
     workflows:
-!      - # The actual name of your TEST workflow (example: Run Pytest with Coverage, Check the Django Migration and run the Sonar Analysis)
+      - "TODO: replace with your test workflow name" # e.g. "Run Pytest with Coverage"
     types:
       - completed
     branches:
@@ -65,6 +65,7 @@ jobs:
     with:
       image_tag: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ needs.docker.outputs.environment }}
+      branch: ${{ github.event.workflow_run.head_branch || github.ref_name }}
       app-id: ${{ vars.APP_ID }}
     secrets:
       private-key: ${{ secrets.APP_PRIVATE_KEY }}
