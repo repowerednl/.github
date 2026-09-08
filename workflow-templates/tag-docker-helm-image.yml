@@ -65,7 +65,6 @@ jobs:
     with:
       image_tag: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ needs.docker.outputs.environment }}
-      branch: ${{ github.event.workflow_run.head_branch || github.ref_name }}
       app-id: ${{ vars.APP_ID }}
     secrets:
       private-key: ${{ secrets.APP_PRIVATE_KEY }}
