@@ -1,3 +1,10 @@
+const {
+  DEFAULT_VERSION_FILES,
+  isVersionOnlyPatch,
+  isVersionFile,
+  toList,
+} = require("../update-version-files/version-lines.js");
+
 const CONFLICT_MARKER = "<!-- repowered-merge-back-conflict -->";
 const MAX_REVIEWERS = 15;
 const MAX_ASSIGNEES = 10;
@@ -11,42 +18,17 @@ const RESULTS = {
 
 const FAILING = ["conflict", "blocked"];
 
-const DEFAULT_VERSION_FILES = "package.json,pyproject.toml,setup.cfg,Chart.yaml";
-const VERSION_LINE =
-  /^ {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?v?\d[\w.+-]*["']?,?\s*$/;
-
-const isVersionOnlyPatch = (patch) => {
-  if (typeof patch !== "string") {
-    return false;
-  }
-  const changed = patch
-    .split("\n")
-    .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
-  return (
-    changed.length > 0 &&
-    changed.every((line) => VERSION_LINE.test(line.slice(1)))
-  );
-};
-
 const onlyVersionChanges = (comparison, versionFiles) => {
   const files = comparison.files;
   if (!Array.isArray(files)) {
     return false;
   }
-  const isVersionFile = (filename) =>
-    versionFiles.some(
-      (entry) => filename === entry || filename.endsWith(`/${entry}`),
-    );
   return files.every(
-    (file) => isVersionFile(file.filename) && isVersionOnlyPatch(file.patch),
+    (file) =>
+      isVersionFile(file.filename, versionFiles) &&
+      isVersionOnlyPatch(file.patch),
   );
 };
-
-const toList = (value) =>
-  (value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
 
 const humanAuthors = (commits) => [
   ...new Set(

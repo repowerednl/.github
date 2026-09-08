@@ -1,0 +1,11 @@
+{
+  "name": "update-version-files",
+  "version": "1.0.0",
+  "description": "Composite action that writes a tag's version into every configured version file",
+  "private": true,
+  "type": "commonjs",
+  "main": "update-version-files.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

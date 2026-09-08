@@ -1,0 +1,43 @@
+name: Bump the version files
+description: >-
+  Writes the version of a SemVer tag into every configured version file, in one pass, so the files
+  cannot drift apart. Supports package.json, pyproject.toml, setup.cfg, Chart.yaml and Dockerfile
+  (ARG/ENV VERSION and LABEL version). Reports a per-file table in the job summary and does nothing
+  when every file already holds the target version.
+
+inputs:
+  tag:
+    description: The SemVer tag to write, with or without a leading 'v'.
+    required: true
+  version_files:
+    description: >-
+      Comma separated files to bump. Every one of them must hold a version declaration; a missing
+      declaration fails the action rather than being skipped silently.
+    required: false
+    default: package.json,pyproject.toml,setup.cfg,Chart.yaml,Dockerfile
+
+outputs:
+  needs_bump:
+    description: "'true' when at least one file was behind the target version"
+    value: ${{ steps.bump.outputs.needs_bump }}
+  version:
+    description: The version that was written, without the leading 'v'
+    value: ${{ steps.bump.outputs.version }}
+  bumped_files:
+    description: Comma separated files that were actually rewritten
+    value: ${{ steps.bump.outputs.bumped_files }}
+
+runs:
+  using: composite
+  steps:
+    - name: Bump ${{ inputs.version_files }} to ${{ inputs.tag }}
+      id: bump
+      uses: actions/github-script@v9
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        TAG: ${{ inputs.tag }}
+        VERSION_FILES: ${{ inputs.version_files }}
+      with:
+        script: |
+          const updateVersionFiles = require(`${process.env.ACTION_PATH}/update-version-files.js`);
+          await updateVersionFiles({ core });
