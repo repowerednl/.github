@@ -1,10 +1,8 @@
 const fs = require("fs");
 
-const {
-  DEFAULT_VERSION_FILES,
-  matchVersion,
-  toList,
-} = require("./version-lines.js");
+const { matchVersion, toList } = require("./version-lines.js");
+
+const DEFAULT_VERSION_FILES = "package.json";
 
 module.exports = async ({ core, env = process.env }) => {
   const target = (env.TAG || "").replace(/^v/, "");
