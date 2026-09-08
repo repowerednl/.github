@@ -85,14 +85,6 @@ jobs:
 
             core.setOutput('is_prerelease', isPrerelease);
 
-            if (isPrerelease) {
-              await core.summary.addHeading('🚀 Creating a **prerelease** tag', 3)
-                .addRaw(`**Reason:** ${reason}`)
-                .write();
-            } else {
-              await core.summary.addHeading('🎉 Creating a **full release** tag', 3).write();
-            }
-
       - name: Check for code changes since the latest tag
         id: code-changes
         uses: actions/github-script@v9
