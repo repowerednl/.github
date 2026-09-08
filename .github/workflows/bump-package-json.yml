@@ -1,4 +1,4 @@
-name: Update the version file with a given tag
+name: "[Deprecated] Update package.json with a given tag (use update-version-files instead)"
 
 on:
   workflow_call:
@@ -7,63 +7,32 @@ on:
         required: true
         type: string
         description: "The Semantic Versioning GitHub tag used for version control"
+      app-id:
+        required: true
+        type: string
       # Optional
       version_files:
         required: false
         type: string
         default: "package.json"
-        description: "Comma separated files holding the version declaration to bump (package.json, pyproject.toml, setup.cfg, Chart.yaml, Dockerfile, ...). All are bumped in a single commit so they cannot drift apart"
+        description: "Comma separated files to bump"
       node_version:
         required: false
         type: string
         default: "20"
-      app-id:
-        required: true
-        type: string
+        description: "[Deprecated] No longer used, the bump no longer runs npm"
     secrets:
       private-key:
         required: true
 
 jobs:
   update-package-json:
-    runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - name: Generate GitHub App token
-        uses: actions/create-github-app-token@v3
-        id: app-token
-        with:
-          client-id: ${{ inputs.app-id }}
-          private-key: ${{ secrets.private-key }}
-
-      - name: Checkout ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ inputs.node_version }}
-
-      - name: Set the version in ${{ inputs.version_files }} to ${{ inputs.tag }}
-        id: current-version
-        uses: repowerednl/.github/composite-actions/update-version-files@IN-598-extend-bump-other-versioning-files
-        with:
-          tag: ${{ inputs.tag }}
-          version_files: ${{ inputs.version_files }}
-
-      - name: Commit and push ${{ inputs.version_files }}
-        if: steps.current-version.outputs.needs_bump == 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          VERSION: ${{ steps.current-version.outputs.version }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
-        run: |
-          git config user.name "${APP_SLUG}[bot]"
-          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
-          git add -u
-          git commit -m "Automated version bump to $VERSION [skip ci]"
-          git push origin HEAD
+    uses: repowerednl/.github/.github/workflows/update-version-files.yml@IN-598-extend-bump-other-versioning-files
+    with:
+      tag: ${{ inputs.tag }}
+      app-id: ${{ inputs.app-id }}
+      version_files: ${{ inputs.version_files }}
+    secrets:
+      private-key: ${{ secrets.private-key }}

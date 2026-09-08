@@ -14,7 +14,7 @@ inputs:
       Comma separated files to bump. Every one of them must hold a version declaration; a missing
       declaration fails the action rather than being skipped silently.
     required: false
-    default: package.json,pyproject.toml,setup.cfg,Chart.yaml,Dockerfile
+    default: package.json
 
 outputs:
   needs_bump:
