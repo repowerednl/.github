@@ -8,11 +8,11 @@ on:
         type: string
         description: "The Semantic Versioning GitHub tag used for version control"
       # Optional
-      version_file:
+      version_files:
         required: false
         type: string
         default: "package.json"
-        description: "File holding the version declaration to bump (package.json, pyproject.toml, setup.cfg, Chart.yaml, ...)"
+        description: "Comma separated files holding the version declaration to bump (package.json, pyproject.toml, setup.cfg, Chart.yaml, Dockerfile, ...). All are bumped in a single commit so they cannot drift apart"
       node_version:
         required: false
         type: string
@@ -48,56 +48,22 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Set the version in ${{ inputs.version_file }} to ${{ inputs.tag }}
+      - name: Set the version in ${{ inputs.version_files }} to ${{ inputs.tag }}
         id: current-version
-        uses: actions/github-script@v9
-        env:
-          TAG: ${{ inputs.tag }}
-          VERSION_FILE: ${{ inputs.version_file }}
+        uses: repowerednl/.github/composite-actions/update-version-files@main
         with:
-          script: |
-            const fs = require('fs');
-            const file = process.env.VERSION_FILE;
-            const target = (process.env.TAG || '').replace(/^v/, '');
-            const versionLine =
-              /^( {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?)(v?\d[\w.+-]*)(["']?,?\s*)$/;
+          tag: ${{ inputs.tag }}
+          version_files: ${{ inputs.version_files }}
 
-            const raw = fs.readFileSync(file, 'utf8');
-            const lines = raw.split('\n');
-            const index = lines.findIndex((line) => versionLine.test(line));
-
-            if (index === -1) {
-              core.setFailed(`No version declaration found in ${file}.`);
-              return;
-            }
-
-            const [, prefix, current, suffix] = lines[index].match(versionLine);
-            const needsBump = current !== target;
-
-            if (needsBump) {
-              lines[index] = `${prefix}${target}${suffix}`;
-              fs.writeFileSync(file, lines.join('\n'));
-            }
-
-            core.setOutput('needs_bump', needsBump);
-            core.setOutput('version', target);
-            await core.summary
-              .addHeading(needsBump ? '⬆️ Bumping the version' : '♻️ Leaving the version alone', 3)
-              .addRaw(needsBump
-                ? `\`${file}\` goes from \`${current}\` to \`${target}\`.`
-                : `\`${file}\` is already at \`${target}\`.`)
-              .write();
-
-      - name: Commit and push ${{ inputs.version_file }}
+      - name: Commit and push ${{ inputs.version_files }}
         if: steps.current-version.outputs.needs_bump == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ steps.current-version.outputs.version }}
-          VERSION_FILE: ${{ inputs.version_file }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
-          git add "$VERSION_FILE"
+          git add -u
           git commit -m "Automated version bump to $VERSION [skip ci]"
           git push origin HEAD

@@ -6,7 +6,7 @@ on:
       version_files:
         required: false
         type: string
-        default: "package.json,pyproject.toml,setup.cfg,Chart.yaml"
+        default: "package.json,pyproject.toml,setup.cfg,Chart.yaml,Dockerfile"
         description: "Comma separated files whose version declaration on its own does not count as a code change"
     outputs:
       tag:
@@ -101,8 +101,13 @@ jobs:
         with:
           script: |
             const semver = /^v?\d+\.\d+\.\d+$/;
-            const versionLine =
-              /^ {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?v?\d[\w.+-]*["']?,?\s*$/;
+            const versionLines = [
+              /^ {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?v?\d[\w.+-]*["']?,?\s*$/,
+              /^(?:ARG|ENV)\s+(?:APP_)?VERSION\s*=\s*["']?v?\d[\w.+-]*["']?\s*$/i,
+              /^LABEL\s+(?:org\.opencontainers\.image\.)?version\s*=\s*["']?v?\d[\w.+-]*["']?\s*$/i,
+            ];
+            const isVersionLine = (line) =>
+              versionLines.some((pattern) => pattern.test(line));
             const versionFiles = (process.env.VERSION_FILES || '')
               .split(',')
               .map((file) => file.trim())
@@ -158,7 +163,7 @@ jobs:
                 .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
               return (
                 changed.length > 0 &&
-                changed.every((line) => versionLine.test(line.slice(1)))
+                changed.every((line) => isVersionLine(line.slice(1)))
               );
             };
 
