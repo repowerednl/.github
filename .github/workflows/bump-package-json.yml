@@ -50,7 +50,7 @@ jobs:
 
       - name: Set the version in ${{ inputs.version_files }} to ${{ inputs.tag }}
         id: current-version
-        uses: repowerednl/.github/composite-actions/update-version-files@main
+        uses: repowerednl/.github/composite-actions/update-version-files@IN-598-extend-bump-other-versioning-files
         with:
           tag: ${{ inputs.tag }}
           version_files: ${{ inputs.version_files }}
