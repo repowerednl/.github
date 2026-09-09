@@ -1,0 +1,10 @@
+{
+    "name": "Tag, Docker, Update Helm image tag",
+    "description": "Create and publish a SemVer GitHub Tag, build the Docker image, update the image tag in the helm values file(s)",
+    "iconName": "octicon container",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        "(.*\\/)?Dockerfile(\\.{1}[^.].*)?",
+        "^deployment\\/.+\\/values\\.ya?ml$"
+    ]
+}

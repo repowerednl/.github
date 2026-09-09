@@ -1,0 +1,127 @@
+name: Update image tag in Helm deployment values files
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      values_pattern:
+        required: false
+        type: string
+        default: "values*.yml"
+      app-id:
+        required: true
+        type: string
+    secrets:
+      private-key:
+        required: true
+
+concurrency:
+  group: update-image-tag-${{ inputs.environment == 'prod' && 'main' || github.event.repository.default_branch }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  update-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate GitHub App token
+        uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.private-key }}
+
+      - name: Checkout ${{ github.repository }}
+        uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ inputs.environment == 'prod' && 'main' || github.event.repository.default_branch }}
+
+      - name: Update image tag and commit
+        uses: actions/github-script@v7
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          BRANCH: ${{ inputs.environment == 'prod' && 'main' || github.event.repository.default_branch }}
+          VALUES_PATTERN: ${{ inputs.values_pattern }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const { ENVIRONMENT, IMAGE_TAG, BRANCH, VALUES_PATTERN } = process.env;
+            const dir = `deployment/${ENVIRONMENT}`;
+
+            if (!fs.existsSync(dir)) {
+              core.setFailed(`Deployment directory not found: ${dir}`);
+              return;
+            }
+
+            const globber = await glob.create(`${dir}/${VALUES_PATTERN}`);
+            const files = await globber.glob();
+            if (files.length === 0) {
+              core.setFailed(`No files found in ${dir}`);
+              return;
+            }
+
+            for (const file of files) {
+              try {
+                await exec.exec('yq', ['e', '-i', `.image = "${IMAGE_TAG}"`, file]);
+              } catch (err) {
+                core.setFailed(`Failed to update ${path.basename(file)}: ${err.message}`);
+                return;
+              }
+            }
+            core.info(`Updated ${files.length} file(s) under ${dir}`);
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            try {
+              await exec.exec('git', ['add', ...files]);
+              const changesExitCode = await exec.exec('git', ['diff', '--cached', '--quiet'], { ignoreReturnCode: true });
+              if (changesExitCode === 0) {
+                core.info('No changes to commit.');
+                return;
+              }
+
+              const { data: refData } = await github.rest.git.getRef({ owner, repo, ref: `heads/${BRANCH}` });
+              const baseCommitSha = refData.object.sha;
+              const { data: baseCommit } = await github.rest.git.getCommit({ owner, repo, commit_sha: baseCommitSha });
+
+              const treeItems = await Promise.all(files.map(async (file) => {
+                const { data: blob } = await github.rest.git.createBlob({
+                  owner, repo,
+                  content: fs.readFileSync(file, 'utf8'),
+                  encoding: 'utf-8',
+                });
+                return {
+                  path: path.relative(process.cwd(), file),
+                  mode: '100644',
+                  type: 'blob',
+                  sha: blob.sha,
+                };
+              }));
+
+              const { data: newTree } = await github.rest.git.createTree({
+                owner, repo, base_tree: baseCommit.tree.sha, tree: treeItems,
+              });
+
+              const { data: newCommit } = await github.rest.git.createCommit({
+                owner, repo,
+                message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG} [skip ci]`,
+                tree: newTree.sha,
+                parents: [baseCommitSha],
+              });
+
+              await github.rest.git.updateRef({ owner, repo, ref: `heads/${BRANCH}`, sha: newCommit.sha });
+              core.info(`Pushed commit ${newCommit.sha} to ${BRANCH}`);
+            } catch (err) {
+              core.setFailed(`Failed to commit updated values to ${BRANCH}: ${err.message}`);
+            }
