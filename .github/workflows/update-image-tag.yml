@@ -113,9 +113,10 @@ jobs:
                 owner, repo, base_tree: baseCommit.tree.sha, tree: treeItems,
               });
 
+              const actor = context.actor;
               const { data: newCommit } = await github.rest.git.createCommit({
                 owner, repo,
-                message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG} [skip ci]`,
+                message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG} [triggered by @${actor}] [skip ci]`,
                 tree: newTree.sha,
                 parents: [baseCommitSha],
               });
