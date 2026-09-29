@@ -1,4 +1,4 @@
-name: Update package.json with a given tag
+name: Update the version file with a given tag
 
 on:
   workflow_call:
@@ -8,6 +8,11 @@ on:
         type: string
         description: "The Semantic Versioning GitHub tag used for version control"
       # Optional
+      version_file:
+        required: false
+        type: string
+        default: "package.json"
+        description: "File holding the version declaration to bump (package.json, pyproject.toml, setup.cfg, Chart.yaml, ...)"
       node_version:
         required: false
         type: string
@@ -32,10 +37,10 @@ jobs:
           client-id: ${{ inputs.app-id }}
           private-key: ${{ secrets.private-key }}
 
-      - name: Checkout code on dev
+      - name: Checkout ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Node.js
@@ -43,17 +48,56 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
-      - name: Bump package.json version to ${{ inputs.tag }}
-        run: |
-          VERSION="${{ inputs.tag }}"
-          VERSION="${VERSION#v}"  # Remove leading 'v' if present
-          npm version "$VERSION" --no-git-tag-version
-          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
-          git config user.email "${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
-          git add package.json || true
-          git commit -m "Automated version bump to $VERSION [skip ci]" || echo "No changes to commit"
+      - name: Set the version in ${{ inputs.version_file }} to ${{ inputs.tag }}
+        id: current-version
+        uses: actions/github-script@v9
+        env:
+          TAG: ${{ inputs.tag }}
+          VERSION_FILE: ${{ inputs.version_file }}
+        with:
+          script: |
+            const fs = require('fs');
+            const file = process.env.VERSION_FILE;
+            const target = (process.env.TAG || '').replace(/^v/, '');
+            const versionLine =
+              /^( {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?)(v?\d[\w.+-]*)(["']?,?\s*)$/;
 
-      - name: Push changes
+            const raw = fs.readFileSync(file, 'utf8');
+            const lines = raw.split('\n');
+            const index = lines.findIndex((line) => versionLine.test(line));
+
+            if (index === -1) {
+              core.setFailed(`No version declaration found in ${file}.`);
+              return;
+            }
+
+            const [, prefix, current, suffix] = lines[index].match(versionLine);
+            const needsBump = current !== target;
+
+            if (needsBump) {
+              lines[index] = `${prefix}${target}${suffix}`;
+              fs.writeFileSync(file, lines.join('\n'));
+            }
+
+            core.setOutput('needs_bump', needsBump);
+            core.setOutput('version', target);
+            await core.summary
+              .addHeading(needsBump ? '⬆️ Bumping the version' : '♻️ Leaving the version alone', 3)
+              .addRaw(needsBump
+                ? `\`${file}\` goes from \`${current}\` to \`${target}\`.`
+                : `\`${file}\` is already at \`${target}\`.`)
+              .write();
+
+      - name: Commit and push ${{ inputs.version_file }}
+        if: steps.current-version.outputs.needs_bump == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: git push origin HEAD
+          VERSION: ${{ steps.current-version.outputs.version }}
+          VERSION_FILE: ${{ inputs.version_file }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
+          git add "$VERSION_FILE"
+          git commit -m "Automated version bump to $VERSION [skip ci]"
+          git push origin HEAD

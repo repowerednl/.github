@@ -11,6 +11,37 @@ const RESULTS = {
 
 const FAILING = ["conflict", "blocked"];
 
+const DEFAULT_VERSION_FILES = "package.json,pyproject.toml,setup.cfg,Chart.yaml";
+const VERSION_LINE =
+  /^ {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?v?\d[\w.+-]*["']?,?\s*$/;
+
+const isVersionOnlyPatch = (patch) => {
+  if (typeof patch !== "string") {
+    return false;
+  }
+  const changed = patch
+    .split("\n")
+    .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
+  return (
+    changed.length > 0 &&
+    changed.every((line) => VERSION_LINE.test(line.slice(1)))
+  );
+};
+
+const onlyVersionChanges = (comparison, versionFiles) => {
+  const files = comparison.files;
+  if (!Array.isArray(files)) {
+    return false;
+  }
+  const isVersionFile = (filename) =>
+    versionFiles.some(
+      (entry) => filename === entry || filename.endsWith(`/${entry}`),
+    );
+  return files.every(
+    (file) => isVersionFile(file.filename) && isVersionOnlyPatch(file.patch),
+  );
+};
+
 const toList = (value) =>
   (value || "")
     .split(",")
@@ -262,18 +293,30 @@ module.exports = async ({ github, context, core, env = process.env }) => {
 
   const pullRequest = await findOrCreatePullRequest(comparison);
 
+  const skipCi = onlyVersionChanges(
+    comparison,
+    toList(env.VERSION_FILES || DEFAULT_VERSION_FILES),
+  );
+
   try {
     const { data: merged } = await github.rest.repos.merge({
       owner,
       repo,
       base: "dev",
       head: "main",
-      commit_message: `Merge main back into dev (#${pullRequest.number})`,
+      commit_message:
+        `Merge main back into dev (#${pullRequest.number})` +
+        (skipCi ? " [skip ci]" : ""),
     });
     const sha = merged && merged.sha;
+    const detail = sha
+      ? `Merged as ${sha.slice(0, 7)}.`
+      : "dev already contained main.";
     return report(
       "merged",
-      sha ? `Merged as ${sha.slice(0, 7)}.` : "dev already contained main.",
+      skipCi
+        ? `${detail} main carries no code changes, so the merge is marked [skip ci].`
+        : detail,
       pullRequest,
     );
   } catch (error) {

@@ -22,6 +22,11 @@ on:
         type: string
         default: "merge-conflict"
         description: "Label added to the pull request when it cannot be merged automatically"
+      version_files:
+        required: false
+        type: string
+        default: "package.json,pyproject.toml,setup.cfg,Chart.yaml"
+        description: "Comma separated files whose version declaration on its own does not count as a code change"
     secrets:
       private-key:
         required: true
@@ -66,3 +71,4 @@ jobs:
           reviewers: ${{ inputs.reviewers }}
           labels: ${{ inputs.labels }}
           conflict_label: ${{ inputs.conflict_label }}
+          version_files: ${{ inputs.version_files }}
