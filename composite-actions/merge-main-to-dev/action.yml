@@ -29,7 +29,7 @@ inputs:
       code change. When 'main' brings nothing but such a change the merge commit is
       marked '[skip ci]' so it does not trigger a build, a tag and a deployment.
     required: false
-    default: package.json,pyproject.toml,setup.cfg,Chart.yaml
+    default: package.json,pyproject.toml,setup.cfg,Chart.yaml,Dockerfile
 
 outputs:
   status:
