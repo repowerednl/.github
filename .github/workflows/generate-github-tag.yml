@@ -20,6 +20,7 @@ jobs:
   generate-tag:
     permissions:
       contents: write
+      pull-requests: read
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.github-tag.outputs.tag || steps.code-changes.outputs.existing_tag }}
@@ -45,7 +46,8 @@ jobs:
           script: |
             const branch = context.payload.workflow_run?.head_branch
               || process.env.GITHUB_HEAD_REF
-              || process.env.GITHUB_REF?.split('/').pop();
+              || context.ref?.replace('refs/heads/', '')
+              || '';
             const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
             const label = context.payload.label?.name ?? '';
             const prHead = context.payload.pull_request?.head?.ref ?? '';
@@ -67,6 +69,18 @@ jobs:
                        (prHead === 'dev' || prHead.startsWith('hotfix/'))) {
               isPrerelease = true;
               reason = `PR from \`${prHead}\` to \`main\`.`;
+            } else {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                base: 'main',
+                head: `${context.repo.owner}:${branch}`,
+              });
+              if (prs.length > 0) {
+                isPrerelease = true;
+                reason = `Open PR from \`${branch}\` to \`main\`.`;
+              }
             }
 
             core.setOutput('is_prerelease', isPrerelease);
