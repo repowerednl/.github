@@ -1,8 +1,9 @@
 name: Classify PR Event
 # Early classification used to skip the (expensive) test suite + sonar jobs when a PR
-# 'synchronize' event is just a GitHub "Update branch" merge sync (base merged into
-# head, no developer changes). The classifier is intentionally biased towards 'false'
-# (i.e. run the test suite) whenever anything is uncertain.
+# 'synchronize' event is either a GitHub "Update branch" merge sync (base merged into
+# head, no developer changes) or a commit from our own automation bot (e.g. an
+# image-tag bump). The classifier is intentionally biased towards 'false' (i.e. run
+# the test suite) whenever anything is uncertain.
 
 on:
   workflow_call:
@@ -11,7 +12,7 @@ on:
         description: "true when this synchronize is a GitHub 'Update branch' merge sync"
         value: ${{ jobs.classify.outputs.is-merge-sync }}
       is-bot-commit:
-        description: "true when the head commit was authored by one of vars.BOT_NAMES"
+        description: "true when the triggering actor is one of vars.BOT_NAMES and the previous commit was provably green"
         value: ${{ jobs.classify.outputs.is-bot-commit }}
 
 jobs:
@@ -25,19 +26,47 @@ jobs:
       is-merge-sync: ${{ steps.detect.outputs.is_merge_sync }}
       is-bot-commit: ${{ steps.detect.outputs.is_bot_commit }}
     steps:
-      - name: Detect merge sync
+      - name: Classify synchronize event
         id: detect
         uses: actions/github-script@v9
         env:
           # Comma-separated bot logins, e.g. "repowered-token-generator[bot],dependabot[bot]".
-          # Set once as an organization variable — add/rename/remove a bot there, not here.
+          # Set as an organization or repo variable, whichever scope fits.
           BOT_NAMES: ${{ vars.BOT_NAMES }}
         with:
           script: |
+            // ok=true only if every check run on `sha` completed successfully. Shared by
+            // both classifications below, so skipping never masks a real failure sitting
+            // underneath an automated commit.
+            const wasProvablyGreen = async (sha) => {
+              const { data: checks } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: sha,
+                per_page: 100,
+              });
+              const runs = checks.check_runs;
+              if (!runs.length) {
+                return { ok: false, reason: `${sha.slice(0, 7)} has no check runs to confirm it was green` };
+              }
+              const failing = runs.filter(r =>
+                ['failure', 'timed_out', 'cancelled', 'action_required', 'stale']
+                  .includes(r.conclusion));
+              if (failing.length) {
+                return { ok: false, reason: `${sha.slice(0, 7)} had failing checks `
+                  + `(${failing.map(r => r.name).join(', ')})` };
+              }
+              const pending = runs.filter(r => r.status !== 'completed');
+              if (pending.length) {
+                return { ok: false, reason: `${sha.slice(0, 7)} still has unfinished checks `
+                  + `(${pending.map(r => r.name).join(', ')})` };
+              }
+              return { ok: true, reason: `${sha.slice(0, 7)} was green` };
+            };
+
             // Returns { value, reason }; biased to 'false' (run tests) when unsure.
-            // Shared with the bot-commit check below, which reuses the same head-commit lookup.
             let head;
-            const decide = async () => {
+            const decideMergeSync = async () => {
               // Only PR 'synchronize' events can be a merge sync. Everything else
               // (push, opened, reopened, ready_for_review) runs the full suite.
               if (context.eventName !== 'pull_request'
@@ -92,68 +121,76 @@ jobs:
 
               // It IS a genuine "Update branch" merge sync. But only skip the suite if the
               // developer's actual code (parent[0], the previous PR head) was ALREADY green.
-              // Skipping pytest on the sync would otherwise mask a prior failing/cancelled
-              // run, leaving a green, mergeable PR with failing tests. Bias to 'false'
-              // (run tests) whenever the previous head is not provably green.
               const prevHead = head.parents[0].sha;
-              const { data: prevChecks } = await github.rest.checks.listForRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: prevHead,
-                per_page: 100,
-              });
-              const runs = prevChecks.check_runs;
-              if (!runs.length) {
-                return { value: 'false', reason: `Previous `
-                  + `head ${prevHead.slice(0, 7)} has no check runs to confirm it was green; `
-                  + `running the suite.` };
-              }
-              const failing = runs.filter(r =>
-                ['failure', 'timed_out', 'cancelled', 'action_required', 'stale']
-                  .includes(r.conclusion));
-              if (failing.length) {
-                return { value: 'false', reason: `Previous `
-                  + `head ${prevHead.slice(0, 7)} had failing checks `
-                  + `(${failing.map(r => r.name).join(', ')}); running the suite.` };
-              }
-              const pending = runs.filter(r => r.status !== 'completed');
-              if (pending.length) {
-                return { value: 'false', reason: `Previous `
-                  + `head ${prevHead.slice(0, 7)} still has unfinished checks `
-                  + `(${pending.map(r => r.name).join(', ')}); running the suite.` };
+              const green = await wasProvablyGreen(prevHead);
+              if (!green.ok) {
+                return { value: 'false', reason: `Previous ${green.reason}; running the suite.` };
               }
               return {
                 value: 'true',
                 reason: `GitHub "Update branch" merge of '${pr.base.ref}' into head `
                   + `(incoming parent ${incoming.slice(0, 7)} contained in base; previous `
-                  + `head ${prevHead.slice(0, 7)} was green).`,
+                  + `${green.reason}).`,
               };
             };
 
-            const { value, reason } = await decide();
-            core.info(`is_merge_sync=${value} :: ${reason}`);
+            // Returns { value, reason }; biased to 'false' (run tests) when unsure.
+            // Reuses `head` fetched above — it's already available for any PR
+            // synchronize event, the only event this check applies to.
+            const decideBotCommit = async () => {
+              if (context.eventName !== 'pull_request'
+                  || context.payload.action !== 'synchronize') {
+                return { value: 'false', reason: `Not a PR synchronize event `
+                  + `(event=${context.eventName}, action=${context.payload.action ?? '-'}).` };
+              }
 
-            // Surface the decision on the run page so anyone can see what happened.
+              const botNames = (process.env.BOT_NAMES || '')
+                .split(',').map(s => s.trim()).filter(Boolean);
+              if (!botNames.includes(context.actor)) {
+                return { value: 'false', reason: `Triggering actor '${context.actor}' `
+                  + `not in allowed=[${botNames.join(', ')}].` };
+              }
+
+              if (!head || !head.parents || head.parents.length === 0) {
+                return { value: 'false', reason: `Actor '${context.actor}' matched, but `
+                  + `no parent commit to verify was green; running the suite.` };
+              }
+
+              // Only skip if the commit right before this one was ALREADY green —
+              // otherwise an automated commit could silently mask a real failure.
+              const prevSha = head.parents[0].sha;
+              const green = await wasProvablyGreen(prevSha);
+              if (!green.ok) {
+                return { value: 'false', reason: `Actor '${context.actor}' matched, but `
+                  + `previous ${green.reason}; running the suite.` };
+              }
+              return {
+                value: 'true',
+                reason: `Triggering actor '${context.actor}' matched; previous ${green.reason}.`,
+              };
+            };
+
+            const mergeSync = await decideMergeSync();
+            core.info(`is_merge_sync=${mergeSync.value} :: ${mergeSync.reason}`);
+            core.setOutput('is_merge_sync', mergeSync.value);
+
+            const botCommit = await decideBotCommit();
+            core.info(`is_bot_commit=${botCommit.value} :: ${botCommit.reason}`);
+            core.setOutput('is_bot_commit', botCommit.value);
+
+            // Surface both decisions on the run page so anyone can see what happened.
             await core.summary
               .addHeading('PR event classification', 3)
               .addTable([
                 [{ data: 'Field', header: true }, { data: 'Value', header: true }],
                 ['Event', `${context.eventName} / ${context.payload.action ?? '-'}`],
-                ['Merge sync?', value === 'true'
+                ['Merge sync?', mergeSync.value === 'true'
                   ? '✅ yes — pytest & sonar are skipped'
-                  : '❌ no — full test suite runs'],
-                ['Reason', reason],
+                  : '❌ no'],
+                ['Merge-sync reason', mergeSync.reason],
+                ['Bot commit?', botCommit.value === 'true'
+                  ? '✅ yes — pytest is skipped'
+                  : '❌ no'],
+                ['Bot-commit reason', botCommit.reason],
               ])
               .write();
-
-            core.setOutput('is_merge_sync', value);
-
-            // Independent check, using context.actor (not the commit's own author field).
-            const botNames = (process.env.BOT_NAMES || '')
-              .split(',').map(s => s.trim()).filter(Boolean);
-            const isBot = context.eventName === 'pull_request'
-              && context.payload.action === 'synchronize'
-              && botNames.includes(context.actor);
-            core.info(`is_bot_commit=${isBot} :: triggering actor=${context.actor}, `
-              + `allowed=[${botNames.join(', ')}]`);
-            core.setOutput('is_bot_commit', isBot ? 'true' : 'false');
