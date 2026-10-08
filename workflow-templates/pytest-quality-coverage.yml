@@ -22,8 +22,9 @@ jobs:
     with:
       is-draft: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft }}
 
-  # Early classification: detects a GitHub "Update branch" merge sync so pytest
-  # can be skipped for it (django-migration-test always runs regardless).
+  # Early classification: detects a GitHub "Update branch" merge sync, and
+  # whether the commit was made by our automation bot, so pytest can be
+  # skipped for either case.
   classify:
     uses: repowerednl/.github/.github/workflows/classify-pr-event.yml@main
 
@@ -59,8 +60,9 @@ jobs:
   # Option 2: simple (no postgres service)
   pytest-with-coverage:
     needs: [draft-pr-check, classify]
-    # Skip the test suite on a merge sync (the code was already validated before the sync).
-    if: needs.classify.outputs.is-merge-sync != 'true'
+    # Skip on a merge sync (already validated) or a bot commit (e.g. an
+    # automated image-tag bump) — neither needs the test suite re-run.
+    if: needs.classify.outputs.is-merge-sync != 'true' && needs.classify.outputs.is-bot-commit != 'true'
     uses: repowerednl/.github/.github/workflows/python-uv-test-coverage-simple.yml@main
     permissions:
       pull-requests: write
@@ -74,3 +76,31 @@ jobs:
     secrets:
       private_pypi_user: ${{ secrets.PRIVATE_PYPI_USER }}
       private_pypi_password: ${{ secrets.PRIVATE_PYPI_PASSWORD }}
+
+  ci-gate:
+    name: CI Gate
+    needs: pytest-with-coverage
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce required CI results
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pytest = '${{ needs.pytest-with-coverage.result }}';
+            const passed = pytest === 'success' || pytest === 'skipped';
+            core.info(`pytest=${pytest}, passed=${passed}`);
+
+            await core.summary
+              .addHeading('CI Gate', 3)
+              .addTable([
+                [{ data: 'Job', header: true }, { data: 'Result', header: true },
+                  { data: 'Requirement', header: true }],
+                ['pytest-with-coverage', pytest, 'success or skipped (merge sync / bot commit)'],
+                ['Gate verdict', passed ? '✅ pass' : '❌ fail', ''],
+              ])
+              .write();
+
+            if (!passed) {
+              core.setFailed(`CI gate failed: pytest=${pytest} (allowed: success|skipped).`);
+            }
