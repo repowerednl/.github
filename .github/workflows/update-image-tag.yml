@@ -123,7 +123,7 @@ jobs:
               const actorEmail = `${actorData.id}+${actor}@users.noreply.github.com`;
               const { data: newCommit } = await github.rest.git.createCommit({
                 owner, repo,
-                message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG} [skip ci]`,
+                message: `chore: update ${ENVIRONMENT} image to ${IMAGE_TAG}`,
                 tree: newTree.sha,
                 parents: [baseCommitSha],
                 author: {

@@ -10,6 +10,9 @@ on:
       is-merge-sync:
         description: "true when this synchronize is a GitHub 'Update branch' merge sync"
         value: ${{ jobs.classify.outputs.is-merge-sync }}
+      is-bot-commit:
+        description: "true when the head commit was authored by one of vars.BOT_NAMES"
+        value: ${{ jobs.classify.outputs.is-bot-commit }}
 
 jobs:
   classify:
@@ -20,13 +23,20 @@ jobs:
       checks: read
     outputs:
       is-merge-sync: ${{ steps.detect.outputs.is_merge_sync }}
+      is-bot-commit: ${{ steps.detect.outputs.is_bot_commit }}
     steps:
       - name: Detect merge sync
         id: detect
         uses: actions/github-script@v9
+        env:
+          # Comma-separated bot logins, e.g. "repowered-token-generator[bot],dependabot[bot]".
+          # Set once as an organization variable — add/rename/remove a bot there, not here.
+          BOT_NAMES: ${{ vars.BOT_NAMES }}
         with:
           script: |
             // Returns { value, reason }; biased to 'false' (run tests) when unsure.
+            // Shared with the bot-commit check below, which reuses the same head-commit lookup.
+            let head;
             const decide = async () => {
               // Only PR 'synchronize' events can be a merge sync. Everything else
               // (push, opened, reopened, ready_for_review) runs the full suite.
@@ -40,11 +50,12 @@ jobs:
               // Never use payload.before: it is all-zeros on first push / force-push.
               const headSha = context.payload.after || pr.head.sha;
 
-              const { data: head } = await github.rest.repos.getCommit({
+              const { data } = await github.rest.repos.getCommit({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: headSha,
               });
+              head = data;
 
               // The "Update branch" button always produces a 2-parent merge commit.
               if (!head.parents || head.parents.length !== 2) {
@@ -136,3 +147,15 @@ jobs:
               .write();
 
             core.setOutput('is_merge_sync', value);
+
+            // Independent check, same head commit already fetched above (if any —
+            // head stays undefined when decide() returned before fetching it, which
+            // only happens for events this check would say 'false' for anyway).
+            const botNames = (process.env.BOT_NAMES || '')
+              .split(',').map(s => s.trim()).filter(Boolean);
+            const isBot = context.eventName === 'pull_request'
+              && context.payload.action === 'synchronize'
+              && botNames.includes(head?.author?.login);
+            core.info(`is_bot_commit=${isBot} :: head author=${head?.author?.login ?? '-'}, `
+              + `allowed=[${botNames.join(', ')}]`);
+            core.setOutput('is_bot_commit', isBot ? 'true' : 'false');
