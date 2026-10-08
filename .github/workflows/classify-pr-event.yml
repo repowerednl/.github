@@ -148,14 +148,12 @@ jobs:
 
             core.setOutput('is_merge_sync', value);
 
-            // Independent check, same head commit already fetched above (if any —
-            // head stays undefined when decide() returned before fetching it, which
-            // only happens for events this check would say 'false' for anyway).
+            // Independent check, using context.actor (not the commit's own author field).
             const botNames = (process.env.BOT_NAMES || '')
               .split(',').map(s => s.trim()).filter(Boolean);
             const isBot = context.eventName === 'pull_request'
               && context.payload.action === 'synchronize'
-              && botNames.includes(head?.author?.login);
-            core.info(`is_bot_commit=${isBot} :: head author=${head?.author?.login ?? '-'}, `
+              && botNames.includes(context.actor);
+            core.info(`is_bot_commit=${isBot} :: triggering actor=${context.actor}, `
               + `allowed=[${botNames.join(', ')}]`);
             core.setOutput('is_bot_commit', isBot ? 'true' : 'false');
