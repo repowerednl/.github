@@ -66,6 +66,9 @@ jobs:
       image_tag: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ needs.docker.outputs.environment }}
       app-id: ${{ vars.APP_ID }}
+      # values_pattern: "values*.yml" # Optional, glob for the deployment values files (default shown)
+      # branch: "" # Optional, explicit branch to commit to (defaults to main for prod, else the repo's default branch) — used for PR-preview deploys
+      # required_checks: "CI Gate" # Optional, comma-separated required status check names to mark passed on this commit
     secrets:
       private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
