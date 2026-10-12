@@ -153,6 +153,10 @@ jobs:
       # require. This commit can only ever be a deployment image-tag bump
       # (see the script above), never code. Before marking a check passed here, we first confirm
       # that same check was actually green on the PARENT commit (the real code).
+      # The real test run and this job start independently of each other, so the
+      # parent's check may still be in progress when we first look — poll for a
+      # while rather than giving up instantly, so ordinary timing doesn't leave
+      # a genuinely-passing PR stuck.
       - name: Mark required checks as passed
         if: steps.commit.outputs.sha != '' && inputs.required_checks != ''
         uses: actions/github-script@v7
@@ -168,23 +172,48 @@ jobs:
             const repo = context.repo.repo;
             const checkNames = REQUIRED_CHECKS.split(',').map(s => s.trim()).filter(Boolean);
 
-            // true only if the most recent run of `name` on `ref` succeeded.
-            // Checks a SHA can have more than one run (retries) — only the
-            // latest attempt reflects the real outcome.
-            const wasGreenOn = async (ref, name) => {
+            const POLL_INTERVAL_MS = 30_000;
+            const POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
+            // State of the most recent run of `name` on `ref` — 'success',
+            // 'failed' (completed, not success), or 'pending' (still running,
+            // or hasn't reported yet). Checks a SHA can have more than one run
+            // (retries) — only the latest attempt reflects the real outcome.
+            const checkState = async (ref, name) => {
               const { data } = await github.rest.checks.listForRef({ owner, repo, ref, per_page: 100 });
               const runs = data.check_runs.filter(r => r.name === name);
-              if (!runs.length) return false;
+              if (!runs.length) return 'pending';
               const latest = runs.reduce((a, b) =>
                 new Date(b.started_at) > new Date(a.started_at) ? b : a);
-              return latest.conclusion === 'success';
+              if (latest.status !== 'completed') return 'pending';
+              return latest.conclusion === 'success' ? 'success' : 'failed';
+            };
+
+            // Waits for `name` to resolve on `ref`, instead of judging on a
+            // single instant snapshot — the real test run and this job start
+            // independently, so the result may simply not exist yet.
+            const waitForGreen = async (ref, name) => {
+              const deadline = Date.now() + POLL_TIMEOUT_MS;
+              while (true) {
+                const state = await checkState(ref, name);
+                if (state === 'success') return true;
+                if (state === 'failed') {
+                  core.info(`'${name}' on ${ref.slice(0, 7)} completed but did not succeed — not waiting further.`);
+                  return false;
+                }
+                if (Date.now() >= deadline) {
+                  core.info(`Timed out waiting for '${name}' on ${ref.slice(0, 7)} to report.`);
+                  return false;
+                }
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+              }
             };
 
             for (const name of checkNames) {
-              const parentGreen = await wasGreenOn(BASE_SHA, name);
+              const parentGreen = await waitForGreen(BASE_SHA, name);
               if (!parentGreen) {
                 core.info(`Not marking '${name}': parent ${BASE_SHA.slice(0, 7)}'s `
-                  + `'${name}' was not green — leaving it unresolved on ${COMMIT_SHA}.`);
+                  + `'${name}' was not confirmed green — leaving it unresolved on ${COMMIT_SHA}.`);
                 continue;
               }
 
