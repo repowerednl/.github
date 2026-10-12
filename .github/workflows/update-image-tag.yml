@@ -37,9 +37,6 @@ concurrency:
 jobs:
   update-tag:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      checks: write
     steps:
       - name: Generate GitHub App token
         uses: actions/create-github-app-token@v3
