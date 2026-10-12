@@ -106,6 +106,7 @@ jobs:
 
               const { data: refData } = await github.rest.git.getRef({ owner, repo, ref: `heads/${BRANCH}` });
               const baseCommitSha = refData.object.sha;
+              core.setOutput('base_sha', baseCommitSha);
               const { data: baseCommit } = await github.rest.git.getCommit({ owner, repo, commit_sha: baseCommitSha });
 
               const treeItems = await Promise.all(files.map(async (file) => {
@@ -149,23 +150,44 @@ jobs:
 
       # Uses the plain GITHUB_TOKEN (not the app token above) so these check
       # runs report as the GitHub Actions app, matching what branch rulesets
-      # require. Safe to mark passed directly: this commit can only ever be
-      # a deployment image-tag bump (see the script above), never code.
+      # require. This commit can only ever be a deployment image-tag bump
+      # (see the script above), never code. Before marking a check passed here, we first confirm
+      # that same check was actually green on the PARENT commit (the real code).
       - name: Mark required checks as passed
         if: steps.commit.outputs.sha != '' && inputs.required_checks != ''
         uses: actions/github-script@v7
         env:
           REQUIRED_CHECKS: ${{ inputs.required_checks }}
           COMMIT_SHA: ${{ steps.commit.outputs.sha }}
+          BASE_SHA: ${{ steps.commit.outputs.base_sha }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { REQUIRED_CHECKS, COMMIT_SHA } = process.env;
+            const { REQUIRED_CHECKS, COMMIT_SHA, BASE_SHA } = process.env;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const checkNames = REQUIRED_CHECKS.split(',').map(s => s.trim()).filter(Boolean);
 
+            // true only if the most recent run of `name` on `ref` succeeded.
+            // Checks a SHA can have more than one run (retries) — only the
+            // latest attempt reflects the real outcome.
+            const wasGreenOn = async (ref, name) => {
+              const { data } = await github.rest.checks.listForRef({ owner, repo, ref, per_page: 100 });
+              const runs = data.check_runs.filter(r => r.name === name);
+              if (!runs.length) return false;
+              const latest = runs.reduce((a, b) =>
+                new Date(b.started_at) > new Date(a.started_at) ? b : a);
+              return latest.conclusion === 'success';
+            };
+
             for (const name of checkNames) {
+              const parentGreen = await wasGreenOn(BASE_SHA, name);
+              if (!parentGreen) {
+                core.info(`Not marking '${name}': parent ${BASE_SHA.slice(0, 7)}'s `
+                  + `'${name}' was not green — leaving it unresolved on ${COMMIT_SHA}.`);
+                continue;
+              }
+
               await github.rest.checks.create({
                 owner, repo, name,
                 head_sha: COMMIT_SHA,
@@ -174,7 +196,8 @@ jobs:
                 output: {
                   title: 'Automated image-tag commit',
                   summary: `This commit only bumps a deployment image tag (no code change), `
-                    + `so '${name}' is marked passed directly instead of re-run.`,
+                    + `and the parent commit's '${name}' was green, so it's marked `
+                    + `passed directly instead of re-run.`,
                 },
               });
               core.info(`Marked '${name}' as passed for ${COMMIT_SHA}`);
