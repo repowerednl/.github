@@ -271,7 +271,9 @@ test("fails with a message when main or dev is missing", async () => {
   await assert.rejects(run(github), {
     message:
       "Comparing dev with main in repowerednl/repower-django failed: Not Found. " +
-      "This workflow needs both a main and a dev branch.",
+      "This job merges main into dev so what branches does it need?" +
+      " Right, main and dev....and it doesn't have both" +
+      " Remove this job from your workflow.",
   });
   assert.equal(github.rest.pulls.create.calls.length, 0);
   assert.equal(github.rest.repos.merge.calls.length, 0);
@@ -325,4 +327,233 @@ test("warns when no reviewer can be determined", async () => {
   assert.equal(status, "conflict");
   assert.equal(github.rest.pulls.requestReviewers.calls.length, 0);
   assert.ok(core.warnings.some((warning) => warning.includes("No reviewers")));
+});
+const versionBumpFile = (from, to) => ({
+  filename: "package.json",
+  patch: [
+    '@@ -1,6 +1,6 @@',
+    ' {',
+    '   "name": "repower-frontend",',
+    `-  "version": "${from}",`,
+    `+  "version": "${to}",`,
+    '   "private": true,',
+  ].join("\n"),
+});
+
+test("marks the merge [skip ci] when main only carries a version bump", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [versionBumpFile("11.7.0", "11.7.1")],
+    },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42) [skip ci]",
+  );
+});
+
+test("marks the merge [skip ci] when main changed no files at all", async () => {
+  const github = buildGithub({
+    comparison: { ahead_by: 1, status: "ahead", commits: [], files: [] },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42) [skip ci]",
+  );
+});
+
+test("keeps CI running when main carries a hotfix next to the version bump", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 2,
+      status: "ahead",
+      commits: [],
+      files: [
+        versionBumpFile("11.7.0", "11.7.1"),
+        {
+          filename: "src/components/Chart.vue",
+          patch: '@@ -1,3 +1,3 @@\n-const a = 1;\n+const a = 2;',
+        },
+      ],
+    },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
+
+test("keeps CI running when package.json changed beyond its version", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "package.json",
+          patch: [
+            '@@ -1,6 +1,6 @@',
+            '-  "version": "11.7.0",',
+            '+  "version": "11.7.1",',
+            '-    "vue": "3.4.0"',
+            '+    "vue": "3.5.0"',
+          ].join("\n"),
+        },
+      ],
+    },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
+
+test("keeps CI running when the comparison carries no file list", async () => {
+  const github = buildGithub({
+    comparison: { ahead_by: 1, status: "ahead", commits: [] },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
+
+test("marks the merge [skip ci] for a pyproject.toml version bump", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "pyproject.toml",
+          patch: '@@ -1,3 +1,3 @@\n-version = "2024.11.1"\n+version = "2024.11.2"',
+        },
+      ],
+    },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42) [skip ci]",
+  );
+  assert.equal(status, "merged");
+});
+
+test("marks the merge [skip ci] for a nested Chart.yaml version bump", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "deployment/Chart.yaml",
+          patch: "@@ -1,3 +1,3 @@\n-version: 1.0.0\n+version: 1.0.1",
+        },
+      ],
+    },
+  });
+
+  await run(github);
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42) [skip ci]",
+  );
+});
+
+test("keeps CI running for a pyproject.toml dependency bump", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "pyproject.toml",
+          patch: '@@ -5,3 +5,3 @@\n-django = "^5.2"\n+django = "^5.3"',
+        },
+      ],
+    },
+  });
+
+  await run(github);
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
+
+test("keeps CI running for an indented chart dependency version", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "deployment/Chart.yaml",
+          patch: "@@ -4,3 +4,3 @@\n-    version: 1.4.0\n+    version: 1.5.0",
+        },
+      ],
+    },
+  });
+
+  await run(github);
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
+
+test("keeps CI running for a file that is not a configured version file", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "pyproject.toml",
+          patch: '@@ -1,3 +1,3 @@\n-version = "1.0.0"\n+version = "1.0.1"',
+        },
+      ],
+    },
+  });
+
+  await run(github, { VERSION_FILES: "package.json" });
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
 });

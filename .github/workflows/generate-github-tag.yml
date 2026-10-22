@@ -2,18 +2,29 @@ name: Generate and Publish GitHub Tag
 
 on:
   workflow_call:
+    inputs:
+      version_files:
+        required: false
+        type: string
+        default: "package.json,pyproject.toml,setup.cfg,Chart.yaml"
+        description: "Comma separated files whose version declaration on its own does not count as a code change"
     outputs:
       tag:
         description: "The Semantic Versioning GitHub tag used for version control"
         value: ${{ jobs.generate-tag.outputs.tag }}
+      code-changed:
+        description: "'true' when the code changed since the previous tag, 'false' when that tag was reused"
+        value: ${{ jobs.generate-tag.outputs.code-changed }}
 
 jobs:
   generate-tag:
     permissions:
       contents: write
+      pull-requests: read
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.github-tag.outputs.tag }}
+      tag: ${{ steps.github-tag.outputs.tag || steps.code-changes.outputs.existing_tag }}
+      code-changed: ${{ steps.code-changes.outputs.code_changed }}
     if: ${{ github.event_name == 'push'
       || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev')
       || contains(github.event.workflow_run.head_branch, 'main')
@@ -35,7 +46,8 @@ jobs:
           script: |
             const branch = context.payload.workflow_run?.head_branch
               || process.env.GITHUB_HEAD_REF
-              || process.env.GITHUB_REF?.split('/').pop();
+              || context.ref?.replace('refs/heads/', '')
+              || '';
             const commitMsg = context.payload.workflow_run?.head_commit?.message ?? '';
             const label = context.payload.label?.name ?? '';
             const prHead = context.payload.pull_request?.head?.ref ?? '';
@@ -57,6 +69,18 @@ jobs:
                        (prHead === 'dev' || prHead.startsWith('hotfix/'))) {
               isPrerelease = true;
               reason = `PR from \`${prHead}\` to \`main\`.`;
+            } else {
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                base: 'main',
+                head: `${context.repo.owner}:${branch}`,
+              });
+              if (prs.length > 0) {
+                isPrerelease = true;
+                reason = `Open PR from \`${branch}\` to \`main\`.`;
+              }
             }
 
             core.setOutput('is_prerelease', isPrerelease);
@@ -69,9 +93,89 @@ jobs:
               await core.summary.addHeading('🎉 Creating a **full release** tag', 3).write();
             }
 
+      - name: Check for code changes since the latest tag
+        id: code-changes
+        uses: actions/github-script@v9
+        env:
+          VERSION_FILES: ${{ inputs.version_files }}
+        with:
+          script: |
+            const semver = /^v?\d+\.\d+\.\d+$/;
+            const versionLine =
+              /^ {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?v?\d[\w.+-]*["']?,?\s*$/;
+            const versionFiles = (process.env.VERSION_FILES || '')
+              .split(',')
+              .map((file) => file.trim())
+              .filter(Boolean);
+
+            const isVersionFile = (file) =>
+              versionFiles.some((entry) => file === entry || file.endsWith(`/${entry}`));
+
+            const git = async (args) => {
+              const result = await exec.getExecOutput('git', args, {
+                silent: true,
+                ignoreReturnCode: true,
+              });
+              return result.exitCode === 0 ? result.stdout.trim() : null;
+            };
+
+            const decide = async (changed, detail) => {
+              core.setOutput('code_changed', changed);
+              await core.summary
+                .addHeading(changed ? '🔖 Tagging a new version' : '♻️ Reusing the existing tag', 3)
+                .addRaw(detail)
+                .write();
+            };
+
+            const refs = (await git(['for-each-ref', '--sort=-v:refname', '--format=%(refname:lstrip=2)'])) || '';
+            const tag = refs.split('\n').find((ref) => semver.test(ref));
+
+            if (!tag) {
+              await decide(true, 'No release tag exists yet.');
+              return;
+            }
+            core.setOutput('existing_tag', tag);
+
+            const diff = await git(['diff', '--name-only', tag, 'HEAD']);
+            if (diff === null) {
+              await decide(true, `Could not diff \`${tag}\` against HEAD.`);
+              return;
+            }
+
+            const files = diff.split('\n').filter(Boolean);
+            if (!files.length) {
+              await decide(false, `HEAD is identical to \`${tag}\`.`);
+              return;
+            }
+
+            const versionFieldOnly = async (file) => {
+              const patch = await git(['diff', '-U0', tag, 'HEAD', '--', file]);
+              if (!patch) {
+                return false;
+              }
+              const changed = patch
+                .split('\n')
+                .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
+              return (
+                changed.length > 0 &&
+                changed.every((line) => versionLine.test(line.slice(1)))
+              );
+            };
+
+            for (const file of files) {
+              if (!isVersionFile(file) || !(await versionFieldOnly(file))) {
+                await decide(true, `\`${file}\` changed since \`${tag}\`.`);
+                return;
+              }
+            }
+
+            const listed = files.map((file) => `\`${file}\``).join(', ');
+            await decide(false, `Only the version declaration of ${listed} changed since \`${tag}\`.`);
+
       # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag
         id: github-tag
+        if: steps.code-changes.outputs.code_changed == 'true'
         uses: anothrNick/github-tag-action@1.75.0 # (7/5/25) Pinned version needed: https://github.com/anothrNick/github-tag-action/issues/341
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -79,6 +183,3 @@ jobs:
           RELEASE_BRANCHES: main
           DEFAULT_BUMP: patch
           PRERELEASE: ${{ steps.set-prerelease-flag.outputs.is_prerelease == 'true' }}
-
-
-
