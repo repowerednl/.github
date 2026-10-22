@@ -100,6 +100,8 @@ jobs:
             ];
             const isVersionLine = (line) =>
               versionLines.some((pattern) => pattern.test(line));
+            const imageValuesFile = /(?:^|\/)deployment\/[^/]+\/values[^/]*\.ya?ml$/;
+            const imageTagLine = /^image:\s*["']?\S+:v?\d[\w.+-]*["']?\s*$/;
             const versionFiles = (process.env.VERSION_FILES || '')
               .split(',')
               .map((file) => file.trim())
@@ -145,7 +147,7 @@ jobs:
               return;
             }
 
-            const versionFieldOnly = async (file) => {
+            const onlyChanges = async (file, isAllowed) => {
               const patch = await git(['diff', '-U0', tag, 'HEAD', '--', file]);
               if (!patch) {
                 return false;
@@ -155,19 +157,23 @@ jobs:
                 .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
               return (
                 changed.length > 0 &&
-                changed.every((line) => isVersionLine(line.slice(1)))
+                changed.every((line) => isAllowed(line.slice(1)))
               );
             };
 
+            const releaseOnly = async (file) =>
+              (isVersionFile(file) && (await onlyChanges(file, isVersionLine))) ||
+              (imageValuesFile.test(file) && (await onlyChanges(file, (line) => imageTagLine.test(line))));
+
             for (const file of files) {
-              if (!isVersionFile(file) || !(await versionFieldOnly(file))) {
+              if (!(await releaseOnly(file))) {
                 await decide(true, `\`${file}\` changed since \`${tag}\`.`);
                 return;
               }
             }
 
             const listed = files.map((file) => `\`${file}\``).join(', ');
-            await decide(false, `Only the version declaration of ${listed} changed since \`${tag}\`.`);
+            await decide(false, `Only the version or image tag declaration of ${listed} changed since \`${tag}\`.`);
 
       # Automatically create and push tag with the latest SemVer formatted version.
       - name: Generate and push GitHub tag

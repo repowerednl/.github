@@ -7,6 +7,10 @@ const VERSION_PATTERNS = [
   /^(LABEL\s+(?:org\.opencontainers\.image\.)?version\s*=\s*["']?)(v?\d[\w.+-]*)(["']?\s*)$/i,
 ];
 
+const IMAGE_VALUES_FILE = /(?:^|\/)deployment\/[^/]+\/values[^/]*\.ya?ml$/;
+
+const IMAGE_TAG_LINE = /^image:\s*["']?\S+:v?\d[\w.+-]*["']?\s*$/;
+
 const matchVersion = (line) => {
   for (const pattern of VERSION_PATTERNS) {
     const found = line.match(pattern);
@@ -24,13 +28,19 @@ const changedLines = (patch) =>
     .split("\n")
     .filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
 
-const isVersionOnlyPatch = (patch) => {
+const isImageTagLine = (line) => IMAGE_TAG_LINE.test(line);
+
+const onlyChanges = (patch, isAllowed) => {
   if (typeof patch !== "string") {
     return false;
   }
   const changed = changedLines(patch);
-  return changed.length > 0 && changed.every((line) => isVersionLine(line.slice(1)));
+  return changed.length > 0 && changed.every((line) => isAllowed(line.slice(1)));
 };
+
+const isVersionOnlyPatch = (patch) => onlyChanges(patch, isVersionLine);
+
+const isImageTagOnlyPatch = (patch) => onlyChanges(patch, isImageTagLine);
 
 const toList = (value) =>
   (value || "")
@@ -43,6 +53,12 @@ const isVersionFile = (filename, versionFiles) =>
     (entry) => filename === entry || filename.endsWith(`/${entry}`),
   );
 
+const isImageValuesFile = (filename) => IMAGE_VALUES_FILE.test(filename);
+
+const isReleaseOnlyChange = (filename, patch, versionFiles) =>
+  (isVersionFile(filename, versionFiles) && isVersionOnlyPatch(patch)) ||
+  (isImageValuesFile(filename) && isImageTagOnlyPatch(patch));
+
 module.exports = {
   DEFAULT_VERSION_FILES,
   VERSION_PATTERNS,
@@ -52,4 +68,8 @@ module.exports = {
   isVersionOnlyPatch,
   toList,
   isVersionFile,
+  isImageTagLine,
+  isImageTagOnlyPatch,
+  isImageValuesFile,
+  isReleaseOnlyChange,
 };

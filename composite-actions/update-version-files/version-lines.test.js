@@ -7,6 +7,10 @@ const {
   isVersionOnlyPatch,
   isVersionFile,
   toList,
+  isImageTagLine,
+  isImageTagOnlyPatch,
+  isImageValuesFile,
+  isReleaseOnlyChange,
 } = require("./version-lines.js");
 
 const MATCH = [
@@ -132,4 +136,40 @@ test("toList trims and drops blanks", () => {
   assert.deepEqual(toList(" a , b ,, c "), ["a", "b", "c"]);
   assert.deepEqual(toList(""), []);
   assert.deepEqual(toList(undefined), []);
+});
+
+test("recognises the image line update-image-tag writes", () => {
+  assert.equal(isImageTagLine("image: docker.io/repowered/repower-frontend:v15.3.19"), true);
+  assert.equal(isImageTagLine("image: docker.io/repowered/repower-frontend:v15.3.19-beta.0"), true);
+  assert.equal(isImageTagLine('image: "registry:5000/repowered/owen:1.2.3"'), true);
+  assert.equal(isImageTagLine("  image: docker.io/repowered/sidecar:v1.0.0"), false);
+  assert.equal(isImageTagLine("image: docker.io/repowered/repower-frontend:latest"), false);
+  assert.equal(isImageTagLine("replicas: 2"), false);
+});
+
+test("values files match only under deployment/<environment>/", () => {
+  assert.equal(isImageValuesFile("deployment/dev/values.yml"), true);
+  assert.equal(isImageValuesFile("deployment/prod/values_api.yml"), true);
+  assert.equal(isImageValuesFile("deployment/prod/values_redocs.yaml"), true);
+  assert.equal(isImageValuesFile("deployment/references/values.yaml"), true);
+  assert.equal(isImageValuesFile("deployment/values.yml"), false);
+  assert.equal(isImageValuesFile("deployment/dev/helmfile.yaml"), false);
+  assert.equal(isImageValuesFile("src/values.yml"), false);
+});
+
+test("an image tag bump in a values file is a release-only change", () => {
+  const patch = "@@ -1 +1 @@\n-image: docker.io/repowered/repower-frontend:v15.3.17\n+image: docker.io/repowered/repower-frontend:v15.3.19-beta.0";
+  assert.equal(isImageTagOnlyPatch(patch), true);
+  assert.equal(isReleaseOnlyChange("deployment/dev/values.yml", patch, []), true);
+  assert.equal(isReleaseOnlyChange("docker-compose.yml", patch, []), false);
+});
+
+test("a values change beyond the image tag is a code change", () => {
+  const patch = "@@ -1,2 +1,2 @@\n-image: repo:v1.0.0\n+image: repo:v1.0.1\n-replicas: 1\n+replicas: 2";
+  assert.equal(isReleaseOnlyChange("deployment/prod/values.yml", patch, []), false);
+});
+
+test("an image tag line in a version file does not count as a version bump", () => {
+  const patch = "@@ -1 +1 @@\n-image: repo:v1.0.0\n+image: repo:v1.0.1";
+  assert.equal(isReleaseOnlyChange("Chart.yaml", patch, ["Chart.yaml"]), false);
 });
