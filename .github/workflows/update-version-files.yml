@@ -52,7 +52,7 @@ jobs:
 
       - name: Update ${{ inputs.version_files }} to ${{ inputs.tag }}
         id: update
-        uses: repowerednl/.github/composite-actions/update-version-files@IN-598-extend-bump-other-versioning-files
+        uses: repowerednl/.github/composite-actions/update-version-files@main
         with:
           tag: ${{ inputs.tag }}
           version_files: ${{ inputs.version_files }}

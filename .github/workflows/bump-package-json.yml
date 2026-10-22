@@ -29,7 +29,7 @@ jobs:
   update-package-json:
     permissions:
       contents: write
-    uses: repowerednl/.github/.github/workflows/update-version-files.yml@IN-598-extend-bump-other-versioning-files
+    uses: repowerednl/.github/.github/workflows/update-version-files.yml@main
     with:
       tag: ${{ inputs.tag }}
       app-id: ${{ inputs.app-id }}

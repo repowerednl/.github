@@ -65,7 +65,7 @@ jobs:
 
       - name: Merge main back to dev
         id: merge-back
-        uses: repowerednl/.github/composite-actions/merge-main-to-dev@IN-598-extend-bump-other-versioning-files
+        uses: repowerednl/.github/composite-actions/merge-main-to-dev@main
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           reviewers: ${{ inputs.reviewers }}
