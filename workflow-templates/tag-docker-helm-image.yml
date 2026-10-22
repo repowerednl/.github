@@ -73,7 +73,8 @@ jobs:
       private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
   merge-main-to-dev:
-    if: github.event_name == 'push' && github.ref_name == 'main'
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref_name == 'main' }}
+    needs: [ update-image-tag ]
     permissions:
       contents: read
     uses: repowerednl/.github/.github/workflows/merge-main-to-dev.yml@main
