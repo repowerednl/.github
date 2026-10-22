@@ -1,3 +1,10 @@
+const {
+  DEFAULT_VERSION_FILES,
+  isVersionOnlyPatch,
+  isVersionFile,
+  toList,
+} = require("../update-version-files/version-lines.js");
+
 const CONFLICT_MARKER = "<!-- repowered-merge-back-conflict -->";
 const MAX_REVIEWERS = 15;
 const MAX_ASSIGNEES = 10;
@@ -11,11 +18,17 @@ const RESULTS = {
 
 const FAILING = ["conflict", "blocked"];
 
-const toList = (value) =>
-  (value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+const onlyVersionChanges = (comparison, versionFiles) => {
+  const files = comparison.files;
+  if (!Array.isArray(files)) {
+    return false;
+  }
+  return files.every(
+    (file) =>
+      isVersionFile(file.filename, versionFiles) &&
+      isVersionOnlyPatch(file.patch),
+  );
+};
 
 const humanAuthors = (commits) => [
   ...new Set(
@@ -262,18 +275,30 @@ module.exports = async ({ github, context, core, env = process.env }) => {
 
   const pullRequest = await findOrCreatePullRequest(comparison);
 
+  const skipCi = onlyVersionChanges(
+    comparison,
+    toList(env.VERSION_FILES || DEFAULT_VERSION_FILES),
+  );
+
   try {
     const { data: merged } = await github.rest.repos.merge({
       owner,
       repo,
       base: "dev",
       head: "main",
-      commit_message: `Merge main back into dev (#${pullRequest.number})`,
+      commit_message:
+        `Merge main back into dev (#${pullRequest.number})` +
+        (skipCi ? " [skip ci]" : ""),
     });
     const sha = merged && merged.sha;
+    const detail = sha
+      ? `Merged as ${sha.slice(0, 7)}.`
+      : "dev already contained main.";
     return report(
       "merged",
-      sha ? `Merged as ${sha.slice(0, 7)}.` : "dev already contained main.",
+      skipCi
+        ? `${detail} main carries no code changes, so the merge is marked [skip ci].`
+        : detail,
       pullRequest,
     );
   } catch (error) {
