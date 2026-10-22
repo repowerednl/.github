@@ -557,3 +557,57 @@ test("keeps CI running for a file that is not a configured version file", async 
     "Merge main back into dev (#42)",
   );
 });
+
+const dockerfileChange = (patch) => ({
+  ahead_by: 1,
+  status: "ahead",
+  commits: [],
+  files: [{ filename: "Dockerfile", patch }],
+});
+
+test("marks the merge [skip ci] for a Dockerfile app version bump", async () => {
+  const github = buildGithub({
+    comparison: dockerfileChange(
+      "@@ -3,3 +3,3 @@\n-ARG VERSION=16.0.4\n+ARG VERSION=16.0.5",
+    ),
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42) [skip ci]",
+  );
+});
+
+test("keeps CI running for a Dockerfile toolchain bump", async () => {
+  const github = buildGithub({
+    comparison: dockerfileChange(
+      "@@ -1,3 +1,3 @@\n-ARG PYTHON_VERSION=3.11.10\n+ARG PYTHON_VERSION=3.12.0",
+    ),
+  });
+
+  await run(github);
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+    "ARG PYTHON_VERSION is a toolchain pin, not the release version",
+  );
+});
+
+test("keeps CI running for a Dockerfile base image change", async () => {
+  const github = buildGithub({
+    comparison: dockerfileChange(
+      "@@ -2,2 +2,2 @@\n-FROM python:3.11.10-alpine\n+FROM python:3.12.0-alpine",
+    ),
+  });
+
+  await run(github);
+
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
