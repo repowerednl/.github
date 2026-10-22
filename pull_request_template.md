@@ -17,6 +17,11 @@ _Pending — author must write this in their own words before marking the PR Rea
 - [ ] I have added unit tests
 - [ ] I have tested this locally
 
+## Security and privacy
+<!-- Write "No", or "Yes:" with the category or data and where. See https://github.com/repowerednl/redocs/blob/main/docs/platform/reference/security-and-privacy-review.md -->
+- Security (OWASP Top 10): No / Yes: <category, where>
+- Personal data: No / Yes: <which data, where>
+
 ## [Optional] Data changes
 - [ ] I have added a migration
 - [ ] I have backfilled data for new/updated fields 
