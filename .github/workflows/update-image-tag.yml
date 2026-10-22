@@ -79,13 +79,14 @@ jobs:
               return;
             }
 
+            const imageLine = /^image:[^\r\n]*/m;
             for (const file of files) {
-              try {
-                await exec.exec('yq', ['e', '-i', `.image = "${IMAGE_TAG}"`, file]);
-              } catch (err) {
-                core.setFailed(`Failed to update ${path.basename(file)}: ${err.message}`);
+              const content = fs.readFileSync(file, 'utf8');
+              if (!imageLine.test(content)) {
+                core.setFailed(`No top-level 'image:' key in ${path.basename(file)}`);
                 return;
               }
+              fs.writeFileSync(file, content.replace(imageLine, `image: ${IMAGE_TAG}`));
             }
             core.info(`Updated ${files.length} file(s) under ${dir}`);
 
