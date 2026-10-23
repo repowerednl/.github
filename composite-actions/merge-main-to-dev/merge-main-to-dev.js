@@ -1,7 +1,6 @@
 const {
   DEFAULT_VERSION_FILES,
-  isVersionOnlyPatch,
-  isVersionFile,
+  isReleaseOnlyChange,
   toList,
 } = require("../update-version-files/version-lines.js");
 
@@ -23,10 +22,8 @@ const onlyVersionChanges = (comparison, versionFiles) => {
   if (!Array.isArray(files)) {
     return false;
   }
-  return files.every(
-    (file) =>
-      isVersionFile(file.filename, versionFiles) &&
-      isVersionOnlyPatch(file.patch),
+  return files.every((file) =>
+    isReleaseOnlyChange(file.filename, file.patch, versionFiles),
   );
 };
 

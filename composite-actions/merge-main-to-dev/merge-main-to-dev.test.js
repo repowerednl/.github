@@ -611,3 +611,52 @@ test("keeps CI running for a Dockerfile base image change", async () => {
     "Merge main back into dev (#42)",
   );
 });
+
+test("marks the merge [skip ci] when main only carries a version bump and a prod image tag", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 2,
+      status: "ahead",
+      commits: [],
+      files: [
+        versionBumpFile("15.3.18", "15.3.19"),
+        {
+          filename: "deployment/prod/values.yml",
+          patch: "@@ -1,4 +1,4 @@\n-image: docker.io/repowered/repower-frontend:v15.3.18\n+image: docker.io/repowered/repower-frontend:v15.3.19\n replicas: 2",
+        },
+      ],
+    },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42) [skip ci]",
+  );
+});
+
+test("keeps CI running when a values file changed beyond its image tag", async () => {
+  const github = buildGithub({
+    comparison: {
+      ahead_by: 1,
+      status: "ahead",
+      commits: [],
+      files: [
+        {
+          filename: "deployment/prod/values.yml",
+          patch: "@@ -1,2 +1,2 @@\n-image: repo:v1.0.0\n+image: repo:v1.0.1\n-replicas: 1\n+replicas: 2",
+        },
+      ],
+    },
+  });
+
+  const { status } = await run(github);
+
+  assert.equal(status, "merged");
+  assert.equal(
+    github.rest.repos.merge.calls[0].commit_message,
+    "Merge main back into dev (#42)",
+  );
+});
