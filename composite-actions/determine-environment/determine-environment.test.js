@@ -173,6 +173,12 @@ test("a workflow_dispatch deploys to dev without an API call, even on main", asy
   assert.equal(github.calls.length, 0);
 });
 
+test("a schedule deploys to dev without an API call", async () => {
+  const { environment, github } = await run({ eventName: "schedule", refName: "dev", openPullRequestHeads: ["dev"] });
+  assert.equal(environment, "dev");
+  assert.equal(github.calls.length, 0);
+});
+
 test("a workflow_run without any branch deploys to dev without an API call", async () => {
   const { environment, github } = await run({ eventName: "workflow_run", payload: workflowRun(null) });
   assert.equal(environment, "dev");
