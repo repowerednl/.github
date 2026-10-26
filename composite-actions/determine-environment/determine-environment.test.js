@@ -34,11 +34,12 @@ const buildCore = () => {
   return { outputs, headings, summary, setOutput: (name, value) => (outputs[name] = value) };
 };
 
-const run = async ({ eventName, payload = {}, refName, openPullRequestHeads }) => {
+const run = async ({ eventName, payload = {}, refName, openPullRequestHeads, deployToQa = "true" }) => {
   const github = buildGithub(openPullRequestHeads);
   const core = buildCore();
   const context = { eventName, payload, repo: { owner: "repowerednl", repo: "repower-django" } };
-  const environment = await determineEnvironment({ github, context, core, env: { GITHUB_REF_NAME: refName } });
+  const env = { GITHUB_REF_NAME: refName, DEPLOY_TO_QA: deployToQa };
+  const environment = await determineEnvironment({ github, context, core, env });
   assert.equal(core.outputs.environment, environment);
   assert.equal(core.headings.length, 1);
   return { environment, github };
@@ -58,6 +59,11 @@ test("a workflow_run on main deploys to prod", async () => {
   assert.equal(environment, "prod");
 });
 
+test("a workflow_run on main deploys to prod without deploy_to_qa", async () => {
+  const { environment } = await run({ eventName: "workflow_run", payload: workflowRun("main"), deployToQa: "false" });
+  assert.equal(environment, "prod");
+});
+
 test("a workflow_run on dev with an open release pull request deploys to qa", async () => {
   const { environment, github } = await run({
     eventName: "workflow_run",
@@ -69,6 +75,29 @@ test("a workflow_run on dev with an open release pull request deploys to qa", as
   assert.deepEqual(github.calls, [
     { owner: "repowerednl", repo: "repower-django", state: "open", base: "main", head: "repowerednl:dev" },
   ]);
+});
+
+test("a workflow_run on dev with an open release pull request deploys to dev without deploy_to_qa", async () => {
+  const { environment, github } = await run({
+    eventName: "workflow_run",
+    payload: workflowRun("dev"),
+    openPullRequestHeads: ["dev"],
+    deployToQa: "false",
+  });
+  assert.equal(environment, "dev");
+  assert.equal(github.calls.length, 0);
+});
+
+test("deploy_to_qa is off unless it is exactly 'true'", async () => {
+  for (const deployToQa of ["", "false", "TRUE", "yes"]) {
+    const { environment } = await run({
+      eventName: "workflow_run",
+      payload: workflowRun("dev"),
+      openPullRequestHeads: ["dev"],
+      deployToQa,
+    });
+    assert.equal(environment, "dev");
+  }
 });
 
 test("a workflow_run on dev without a release pull request deploys to dev", async () => {
@@ -113,6 +142,15 @@ test("a pull request from a hotfix to main deploys to qa", async () => {
   assert.equal(environment, "qa");
 });
 
+test("a pull request to main deploys to dev without deploy_to_qa", async () => {
+  const { environment } = await run({
+    eventName: "pull_request",
+    payload: pullRequest("hotfix/broken-login", "main"),
+    deployToQa: "false",
+  });
+  assert.equal(environment, "dev");
+});
+
 test("a pull request to dev deploys to dev, even with an open release pull request", async () => {
   const { environment, github } = await run({
     eventName: "pull_request",
@@ -149,6 +187,6 @@ test("a failing API call fails the action instead of guessing an environment", a
   const github = { rest: { pulls: { list: async () => Promise.reject(new Error("Bad credentials")) } } };
   const core = buildCore();
   const context = { eventName: "workflow_run", payload: workflowRun("dev"), repo: { owner: "o", repo: "r" } };
-  await assert.rejects(determineEnvironment({ github, context, core, env: {} }), /Bad credentials/);
+  await assert.rejects(determineEnvironment({ github, context, core, env: { DEPLOY_TO_QA: "true" } }), /Bad credentials/);
   assert.equal(core.outputs.environment, undefined);
 });

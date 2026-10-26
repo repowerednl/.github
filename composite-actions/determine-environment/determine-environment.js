@@ -14,14 +14,13 @@ const openReleasePullRequest = async ({ github, context }, branch) => {
 const resolve = async ({ github, context, env }) => {
   const eventName = context.eventName;
   const branch = context.payload.workflow_run?.head_branch || env.GITHUB_REF_NAME || "";
+  const deployToQa = env.DEPLOY_TO_QA === "true";
 
   if (eventName === "pull_request" || eventName === "pull_request_target") {
     const base = context.payload.pull_request?.base?.ref ?? "";
     const head = context.payload.pull_request?.head?.ref ?? "";
-    if (base === RELEASE_BRANCH) {
-      return { environment: "qa", reason: `Pull request from \`${head}\` to \`${base}\`.` };
-    }
-    return { environment: "dev", reason: `Pull request from \`${head}\` to \`${base}\`.` };
+    const reason = `Pull request from \`${head}\` to \`${base}\`.`;
+    return { environment: deployToQa && base === RELEASE_BRANCH ? "qa" : "dev", reason };
   }
 
   if (eventName !== "push" && eventName !== "workflow_run") {
@@ -32,7 +31,7 @@ const resolve = async ({ github, context, env }) => {
     return { environment: "prod", reason: `\`${eventName}\` on \`${branch}\`.` };
   }
 
-  if (branch && (await openReleasePullRequest({ github, context }, branch))) {
+  if (deployToQa && branch && (await openReleasePullRequest({ github, context }, branch))) {
     return {
       environment: "qa",
       reason: `\`${eventName}\` on \`${branch}\`, which has an open pull request to \`${RELEASE_BRANCH}\`.`,
