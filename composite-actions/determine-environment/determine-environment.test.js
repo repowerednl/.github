@@ -54,14 +54,10 @@ test("a push to main deploys to prod without an API call", async () => {
   assert.equal(github.calls.length, 0);
 });
 
-test("a workflow_run on main deploys to prod", async () => {
-  const { environment } = await run({ eventName: "workflow_run", payload: workflowRun("main"), refName: "dev" });
-  assert.equal(environment, "prod");
-});
-
-test("a workflow_run on main deploys to prod without deploy_to_qa", async () => {
-  const { environment } = await run({ eventName: "workflow_run", payload: workflowRun("main"), deployToQa: "false" });
-  assert.equal(environment, "prod");
+test("a workflow_run on main deploys to dev without an API call", async () => {
+  const { environment, github } = await run({ eventName: "workflow_run", payload: workflowRun("main"), refName: "main" });
+  assert.equal(environment, "dev");
+  assert.equal(github.calls.length, 0);
 });
 
 test("a workflow_run on dev with an open release pull request deploys to qa", async () => {

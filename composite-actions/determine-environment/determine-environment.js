@@ -28,7 +28,7 @@ const resolve = async ({ github, context, env }) => {
   }
 
   if (branch === RELEASE_BRANCH) {
-    return { environment: "prod", reason: `\`${eventName}\` on \`${branch}\`.` };
+    return { environment: eventName === "push" ? "prod" : "dev", reason: `\`${eventName}\` on \`${branch}\`.` };
   }
 
   if (deployToQa && branch && (await openReleasePullRequest({ github, context }, branch))) {
