@@ -32,6 +32,6 @@ jobs:
     steps:
       - name: Retrieve environment
         id: retrieve-environment
-        uses: repowerednl/.github/composite-actions/determine-environment@main
+        uses: repowerednl/.github/composite-actions/determine-environment@add-qa-deploy-logic
         with:
           deploy_to_qa: ${{ inputs.deploy_to_qa }}
