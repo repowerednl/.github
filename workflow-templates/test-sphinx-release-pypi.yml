@@ -26,7 +26,7 @@ jobs:
       matrix:
         # Make sure that the configured python versions are available here.
         # These versions are cached on the runner; otherwise setting up python is too slow for the CI
-        # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
+        # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2204.json#L4
         # python_version: [ "3.11.2" ]
         # poetry_version: [ "1.8.4" ]
         uv_version: [ "0.13.5" ]
