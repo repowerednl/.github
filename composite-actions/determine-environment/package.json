@@ -1,0 +1,11 @@
+{
+  "name": "determine-environment",
+  "version": "1.0.0",
+  "description": "Composite action that resolves the GitHub environment (prod, qa or dev) to deploy to",
+  "private": true,
+  "type": "commonjs",
+  "main": "determine-environment.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}
