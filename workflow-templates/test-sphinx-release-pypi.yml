@@ -29,7 +29,7 @@ jobs:
         # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
         # python_version: [ "3.11.2" ]
         # poetry_version: [ "1.8.4" ]
-        uv_version: [ "0.9.4" ]
+        uv_version: [ "0.13.5" ]
     with:
       # python_version: ${{ matrix.python_version }}
       # poetry_version: ${{ matrix.poetry_version }}
@@ -65,7 +65,7 @@ jobs:
     with:
       # python_version: "3.11.2"
       # poetry_version: "1.8.4"
-      uv_version: "0.9.4"
+      uv_version: "0.13.5"
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages
       # when configuring a working directory, make sure the cached paths are also up-to-date
       # file_paths_to_cache: |
@@ -86,7 +86,7 @@ jobs:
     with:
       tag: ${{ needs.tag.outputs.tag }}
       # python_version: "3.11.2"
-      uv_version: "0.9.4"
+      uv_version: "0.13.5"
       # poetry_version: "1.8.4"
       # poetry_no_root: false
       # The poetry cached installation is in '/home/runner/.local/' and the './.venv' is for the poetry packages

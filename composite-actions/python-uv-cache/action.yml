@@ -4,14 +4,14 @@ description: This composite action loads the cache that can be configured for mu
 inputs:
   uv_version:
     required: false
-    default: 0.7.20
+    default: 0.13.5
   private_pypi_user:
     required: true
   private_pypi_password:
     required: true
   enable_cache:
     required: false
-    description: "[DEPRECATED] only used for backward compatibility (always enabled)"
+    description: "[DEPRECATED] only used for backward compatibility (ignored, setup-uv decides via enable-cache: auto)"
     default: true
   working_directory:
     required: false
@@ -22,10 +22,10 @@ runs:
   using: "composite"
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@v8.2.0
+      uses: astral-sh/setup-uv@v10.3.2
       with:
         version: ${{ inputs.uv_version }}
-        enable-cache: true
+        enable-cache: auto
         cache-python: true
         prune-cache: false
         cache-local-path: ${{ github.workspace }}/.uv-cache
