@@ -42,7 +42,7 @@ jobs:
   #     matrix:
   #       # Make sure that the configured uv versions are available here.
   #       # https://github.com/actions/runner-images/blob/main/images/ubuntu/toolsets/toolset-2004.json#L4
-  #       uv_version: [ "1.8.4" ]
+  #       uv_version: [ "0.13.5" ]
   #   with:
   #     postgres_db: ${{ vars.POSTGRES_DB }}
   #     postgres_user: ${{ vars.POSTGRES_USER }}
