@@ -22,8 +22,10 @@ jobs:
     env:
       PACKAGES_AUTH_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout
+      - name: Checkout the tested commit
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Node.js, yarn and the dependencies
         uses: repowerednl/.github/composite-actions/yarn-setup@update-yarn-workflow

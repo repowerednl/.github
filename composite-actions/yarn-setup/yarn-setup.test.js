@@ -132,11 +132,30 @@ test("a failing yarn install skips all setup commands", async () => {
   assert.equal(core.failures.length, 1);
 });
 
-test("writes the versions and the results to the job summary", async () => {
+test("writes the job summary when setup commands are used", async () => {
   const { core, result } = run("yarn a");
   await result;
 
   assert.deepEqual(core.raw, ["Node.js v24.11.0 · yarn 4.9.2"]);
   assert.equal(core.tables.length, 1);
   assert.equal(core.tables[0].length, 3);
+});
+
+test("writes the job summary when the yarn install fails", async () => {
+  const { core, result } = run("", { "yarn install --immutable": 1 });
+  await result;
+
+  assert.equal(core.tables.length, 1);
+  assert.deepEqual(core.tables[0][1], [
+    "yarn install --immutable",
+    "❌ exit code 1",
+  ]);
+});
+
+test("writes no job summary for a successful install only", async () => {
+  const { core, result } = run("");
+  await result;
+
+  assert.deepEqual(core.raw, []);
+  assert.deepEqual(core.tables, []);
 });

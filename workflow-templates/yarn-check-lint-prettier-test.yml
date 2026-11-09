@@ -3,6 +3,7 @@ name: Classify and run Yarn commands (install, lint, prettier and test)
 on:
   push:
     branches:
+      - main
       - dev
       - hotfix**
   pull_request:

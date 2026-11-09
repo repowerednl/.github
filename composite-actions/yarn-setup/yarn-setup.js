@@ -15,10 +15,11 @@ module.exports = async ({
   yarnVersion,
   env = process.env,
 }) => {
+  const commands = toCommands(env.SETUP_COMMANDS);
   const rows = [];
   let failed = null;
 
-  for (const command of toCommands(env.SETUP_COMMANDS)) {
+  for (const command of commands) {
     if (failed) {
       rows.push([command, "⏭️ skipped"]);
       continue;
@@ -32,17 +33,19 @@ module.exports = async ({
     }
   }
 
-  await core.summary
-    .addHeading("Dependencies", 3)
-    .addRaw(`Node.js ${nodeVersion} · yarn ${yarnVersion}`, true)
-    .addTable([
-      [
-        { data: "Command", header: true },
-        { data: "Result", header: true },
-      ],
-      ...rows,
-    ])
-    .write();
+  if (failed || commands.length > 1) {
+    await core.summary
+      .addHeading("Dependencies", 3)
+      .addRaw(`Node.js ${nodeVersion} · yarn ${yarnVersion}`, true)
+      .addTable([
+        [
+          { data: "Command", header: true },
+          { data: "Result", header: true },
+        ],
+        ...rows,
+      ])
+      .write();
+  }
 
   if (failed) {
     core.setFailed(`Setting up the dependencies failed on: ${failed}`);
