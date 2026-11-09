@@ -48,31 +48,15 @@ runs:
     - name: Install dependencies
       uses: actions/github-script@v9
       env:
+        ACTION_PATH: ${{ github.action_path }}
         # Via env, as multi-line text would break a JavaScript string when inserted with ${{ }} in the script
         SETUP_COMMANDS: ${{ inputs.setup_commands }}
       with:
         script: |
-          const commands = [
-            'yarn install --immutable',
-            ...process.env.SETUP_COMMANDS.split('\n').map((line) => line.trim()).filter(Boolean),
-          ]
-          const rows = []
-          let failed = null
-
-          for (const command of commands) {
-            if (failed) {
-              rows.push([command, '⏭️ skipped'])
-              continue
-            }
-            const exitCode = await core.group(command, () => exec.exec(command, [], { ignoreReturnCode: true }))
-            rows.push([command, exitCode === 0 ? '✅' : `❌ exit code ${exitCode}`])
-            if (exitCode !== 0) failed = command
-          }
-
-          await core.summary
-            .addHeading('Dependencies', 3)
-            .addRaw('Node.js ${{ steps.yarn.outputs.node_version }} · yarn ${{ steps.yarn.outputs.version }}', true)
-            .addTable([[{ data: 'Command', header: true }, { data: 'Result', header: true }], ...rows])
-            .write()
-
-          if (failed) core.setFailed(`Setting up the dependencies failed on: ${failed}`)
+          const yarnSetup = require(`${process.env.ACTION_PATH}/yarn-setup.js`);
+          await yarnSetup({
+            core,
+            exec,
+            nodeVersion: '${{ steps.yarn.outputs.node_version }}',
+            yarnVersion: '${{ steps.yarn.outputs.version }}',
+          });
