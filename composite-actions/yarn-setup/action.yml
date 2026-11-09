@@ -1,0 +1,78 @@
+name: Yarn setup including cache and extra setup commands
+description: >-
+  Sets up Node.js and the project's yarn version (via corepack), restores the yarn cache, installs the
+  dependencies and runs optional extra setup commands (e.g. installing Playwright browsers). Works on the
+  runner and in (glibc-based) containers.
+
+inputs:
+  node_version:
+    required: false
+    description: The Node.js version to use
+    default: "24"
+  setup_commands:
+    required: false
+    description: >-
+      Extra commands to run after `yarn install`, one per line.
+      For example `yarn playwright install --with-deps chromium`
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js ${{ inputs.node_version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node_version }}
+
+    - name: Prepare yarn
+      id: yarn
+      uses: actions/github-script@v9
+      with:
+        script: |
+          await exec.exec('corepack', ['enable'])
+          const { stdout: node } = await exec.getExecOutput('node', ['--version'], { silent: true })
+          const { stdout: version } = await exec.getExecOutput('yarn', ['--version'], { silent: true })
+          const { stdout: cacheFolder } = await exec.getExecOutput('yarn', ['config', 'get', 'cacheFolder'], { silent: true })
+          core.info(`Using Node.js ${node.trim()} and yarn ${version.trim()} with cache folder ${cacheFolder.trim()}`)
+          core.setOutput('node_version', node.trim())
+          core.setOutput('version', version.trim())
+          core.setOutput('cache_folder', cacheFolder.trim())
+
+    - name: Restore yarn cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.yarn.outputs.cache_folder }}
+        key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: yarn-${{ runner.os }}-
+
+    - name: Install dependencies
+      uses: actions/github-script@v9
+      env:
+        # Via env, as multi-line text would break a JavaScript string when inserted with ${{ }} in the script
+        SETUP_COMMANDS: ${{ inputs.setup_commands }}
+      with:
+        script: |
+          const commands = [
+            'yarn install --immutable',
+            ...process.env.SETUP_COMMANDS.split('\n').map((line) => line.trim()).filter(Boolean),
+          ]
+          const rows = []
+          let failed = null
+
+          for (const command of commands) {
+            if (failed) {
+              rows.push([command, '⏭️ skipped'])
+              continue
+            }
+            const exitCode = await core.group(command, () => exec.exec(command, [], { ignoreReturnCode: true }))
+            rows.push([command, exitCode === 0 ? '✅' : `❌ exit code ${exitCode}`])
+            if (exitCode !== 0) failed = command
+          }
+
+          await core.summary
+            .addHeading('Dependencies', 3)
+            .addRaw('Node.js ${{ steps.yarn.outputs.node_version }} · yarn ${{ steps.yarn.outputs.version }}', true)
+            .addTable([[{ data: 'Command', header: true }, { data: 'Result', header: true }], ...rows])
+            .write()
+
+          if (failed) core.setFailed(`Setting up the dependencies failed on: ${failed}`)

@@ -1,0 +1,44 @@
+name: Tag, bump the version files and publish the package
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - package.json
+      - yarn.lock
+  workflow_dispatch:
+
+jobs:
+  tag:
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: repowerednl/.github/.github/workflows/generate-github-tag.yml@main
+
+  create-release:
+    needs: tag
+    uses: repowerednl/.github/.github/workflows/release-notes-generator.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+
+  bump:
+    needs: tag
+    permissions:
+      contents: write
+    uses: repowerednl/.github/.github/workflows/update-version-files.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+  publish:
+    needs: tag
+    permissions:
+      contents: read
+      packages: write
+    uses: repowerednl/.github/.github/workflows/yarn-publish-package.yml@main
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      # node_version: "24" # Optional, defaults to "24"
