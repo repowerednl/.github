@@ -173,3 +173,21 @@ test("an image tag line in a version file does not count as a version bump", () 
   const patch = "@@ -1 +1 @@\n-image: repo:v1.0.0\n+image: repo:v1.0.1";
   assert.equal(isReleaseOnlyChange("Chart.yaml", patch, ["Chart.yaml"]), false);
 });
+
+test("a uv.lock counts as a version file alongside its pyproject.toml", () => {
+  assert.equal(isVersionFile("uv.lock", ["pyproject.toml"]), true);
+  assert.equal(isVersionFile("django-test/uv.lock", ["django-test/pyproject.toml"]), true);
+  assert.equal(isVersionFile("django-test/uv.lock", ["pyproject.toml"]), true);
+  assert.equal(isVersionFile("uv.lock", ["package.json"]), false);
+  assert.equal(isVersionFile("other/uv.lock", ["django-test/pyproject.toml"]), false);
+});
+
+test("a project version bump in uv.lock is a release-only change", () => {
+  const patch = '@@ -12 +12 @@\n-version = "16.0.4"\n+version = "16.0.5"';
+  assert.equal(isReleaseOnlyChange("uv.lock", patch, ["pyproject.toml"]), true);
+});
+
+test("a dependency upgrade in uv.lock is a code change", () => {
+  const patch = '@@ -7,2 +7,2 @@\n-version = "5.2.1"\n+version = "5.2.2"\n-sdist = { url = "https://x/django-5.2.1.tar.gz", hash = "sha256:aa" }\n+sdist = { url = "https://x/django-5.2.2.tar.gz", hash = "sha256:bb" }';
+  assert.equal(isReleaseOnlyChange("uv.lock", patch, ["pyproject.toml"]), false);
+});

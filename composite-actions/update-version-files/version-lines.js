@@ -48,8 +48,17 @@ const toList = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const COMPANION_FILES = { "pyproject.toml": ["uv.lock"] };
+
+const withCompanions = (versionFiles) =>
+  versionFiles.flatMap((entry) => {
+    const base = entry.split("/").pop();
+    const dir = entry.slice(0, entry.length - base.length);
+    return [entry, ...(COMPANION_FILES[base] || []).map((companion) => `${dir}${companion}`)];
+  });
+
 const isVersionFile = (filename, versionFiles) =>
-  versionFiles.some(
+  withCompanions(versionFiles).some(
     (entry) => filename === entry || filename.endsWith(`/${entry}`),
   );
 
@@ -67,6 +76,8 @@ module.exports = {
   changedLines,
   isVersionOnlyPatch,
   toList,
+  COMPANION_FILES,
+  withCompanions,
   isVersionFile,
   isImageTagLine,
   isImageTagOnlyPatch,
