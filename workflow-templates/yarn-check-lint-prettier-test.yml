@@ -1,8 +1,9 @@
-name: Classify and run Yarn commands (install, check-updates, lint, prettier, test with coverage and/or build with publish)
+name: Classify and run Yarn commands (install, lint, prettier and test)
 
 on:
   push:
     branches:
+      - main
       - dev
       - hotfix**
   pull_request:
@@ -27,21 +28,20 @@ jobs:
   classify:
     uses: repowerednl/.github/.github/workflows/classify-pr-event.yml@main
 
-  yarn-check-lint-prettier-test-publish:
+  yarn-check-lint-prettier-test:
     needs: [draft-pr-check, classify]
     # Skip the yarn checks on a merge sync (the code was already validated before the sync).
     if: needs.classify.outputs.is-merge-sync != 'true'
     permissions:
-      contents: write
+      contents: read
       packages: read
-    uses: repowerednl/.github/.github/workflows/yarn-check-lint-prettier-test-publish.yml@main
-    with:
-      should_publish: false # Replace with ${{ endsWith( GITHUB.REF, 'main') }} to enable publishing
-      should_test: true
-      # prettier_check_content: # Optional, defaults to "{json-server,src}/**/*.{js,vue,json,html,css,md}"
-      # node_version: # Optional, defaults to "20"
-      # working_directory: # Optional, defaults to '.'
+    uses: repowerednl/.github/.github/workflows/yarn-check-lint-prettier-test.yml@main
+    # with:
+    #   prettier_check_content: # Optional, defaults to "{json-server,src}/**/*.{js,vue,json,html,css,md}"
+    #   node_version: # Optional, defaults to "24"
+    #   container_image: # Optional, e.g. mcr.microsoft.com/playwright:v1.63.0-noble
+    #   container_options: # Optional, e.g. --ipc=host
+    #   setup_commands: | # Optional, e.g.
+    #     yarn playwright install --with-deps chromium
     secrets:
       packages_auth_token: ${{ secrets.GITHUB_TOKEN }}
-
-
