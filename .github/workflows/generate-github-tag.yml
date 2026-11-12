@@ -105,7 +105,12 @@ jobs:
             const versionFiles = (process.env.VERSION_FILES || '')
               .split(',')
               .map((file) => file.trim())
-              .filter(Boolean);
+              .filter(Boolean)
+              .flatMap((file) =>
+                file === 'pyproject.toml' || file.endsWith('/pyproject.toml')
+                  ? [file, file.replace(/pyproject\.toml$/, 'uv.lock')]
+                  : [file],
+              );
 
             const isVersionFile = (file) =>
               versionFiles.some((entry) => file === entry || file.endsWith(`/${entry}`));

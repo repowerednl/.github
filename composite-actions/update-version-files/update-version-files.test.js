@@ -54,6 +54,7 @@ const bump = async (files, tag, versionFiles) => {
 
 const PKG = '{\n  "name": "workflow-tests",\n  "version": "16.0.4",\n  "private": true\n}\n';
 const PYPROJECT = '[project]\nname = "workflow-tests"\nversion = "16.0.4"\n\n[tool.poetry.dependencies]\ndjango = "^5.2"\n';
+const UV_LOCK = 'version = 1\nrevision = 3\nrequires-python = ">=3.12"\n\n[[package]]\nname = "django"\nversion = "5.2.1"\nsource = { registry = "https://pypi.org/simple" }\n\n[[package]]\nname = "workflow-tests"\nversion = "16.0.4"\nsource = { virtual = "." }\ndependencies = [\n    { name = "django" },\n]\n';
 const DOCKERFILE = "ARG PYTHON_VERSION=3.11.10\nFROM python:${PYTHON_VERSION}-alpine\nARG VERSION=16.0.4\nARG ARG_1=1\n";
 
 test("bumps every configured file to the same version", async () => {
@@ -167,4 +168,56 @@ test("fails when no tag is given", async () => {
   const { failures } = await bump({ "package.json": PKG }, "");
   assert.equal(failures.length, 1);
   assert.match(failures[0], /No tag was given/);
+});
+
+test("bumps the project entry in a uv.lock next to pyproject.toml", async () => {
+  const { outputs, after } = await bump(
+    { "pyproject.toml": PYPROJECT, "uv.lock": UV_LOCK },
+    "v16.0.5",
+    "pyproject.toml",
+  );
+
+  assert.equal(outputs.bumped_files, "pyproject.toml,uv.lock");
+  assert.equal(after["uv.lock"], UV_LOCK.replace('version = "16.0.4"', 'version = "16.0.5"'));
+  assert.match(after["uv.lock"], /^name = "django"\nversion = "5\.2\.1"$/m);
+});
+
+test("bumps a nested uv.lock and matches the normalized project name", async () => {
+  const pyproject = PYPROJECT.replace('name = "workflow-tests"', 'name = "Workflow_Tests"');
+  const { after } = await bump(
+    { "django-test/pyproject.toml": pyproject, "django-test/uv.lock": UV_LOCK },
+    "v16.0.5",
+    "django-test/pyproject.toml",
+  );
+
+  assert.match(after["django-test/uv.lock"], /^name = "workflow-tests"\nversion = "16\.0\.5"$/m);
+});
+
+test("pulls a drifted uv.lock back in line when pyproject.toml is already at the target", async () => {
+  const pyproject = PYPROJECT.replace('"16.0.4"', '"16.0.5"');
+  const { outputs, after } = await bump(
+    { "pyproject.toml": pyproject, "uv.lock": UV_LOCK },
+    "v16.0.5",
+    "pyproject.toml",
+  );
+
+  assert.equal(outputs.needs_bump, "true");
+  assert.equal(outputs.bumped_files, "uv.lock");
+  assert.match(after["uv.lock"], /^name = "workflow-tests"\nversion = "16\.0\.5"$/m);
+});
+
+test("does nothing to a pyproject.toml without a uv.lock", async () => {
+  const { outputs, failures } = await bump({ "pyproject.toml": PYPROJECT }, "v16.0.5");
+  assert.equal(failures.length, 0);
+  assert.equal(outputs.bumped_files, "pyproject.toml");
+});
+
+test("fails when the uv.lock does not hold the project", async () => {
+  const { failures } = await bump(
+    { "pyproject.toml": PYPROJECT, "uv.lock": UV_LOCK.replace(/workflow-tests/, "something-else") },
+    "v16.0.5",
+    "pyproject.toml",
+  );
+  assert.equal(failures.length, 1);
+  assert.match(failures[0], /No version for project workflow-tests found in uv\.lock/);
 });

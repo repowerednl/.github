@@ -1,7 +1,7 @@
 name: Bump the version files
 description: >-
   Writes the version of a SemVer tag into every configured version file, in one pass, so the files
-  cannot drift apart. Supports package.json, pyproject.toml, setup.cfg, Chart.yaml and Dockerfile
+  cannot drift apart. Supports package.json, pyproject.toml (plus the project entry in a uv.lock next to it), setup.cfg, Chart.yaml and Dockerfile
   (ARG/ENV VERSION and LABEL version). Reports a per-file table in the job summary and does nothing
   when every file already holds the target version.
 

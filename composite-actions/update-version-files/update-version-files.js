@@ -1,8 +1,49 @@
 const fs = require("fs");
+const path = require("path");
 
 const { matchVersion, toList } = require("./version-lines.js");
 
 const DEFAULT_VERSION_FILES = "package.json";
+
+const normalizeName = (name) => name.toLowerCase().replace(/[-_.]+/g, "-");
+
+const projectName = (lines) => {
+  let section = null;
+  for (const line of lines) {
+    const header = line.match(/^\s*\[([^\]]+)\]\s*$/);
+    if (header) {
+      section = header[1].trim();
+      continue;
+    }
+    if (section === "project" || section === "tool.poetry") {
+      const found = line.match(/^name\s*=\s*["']([^"']+)["']\s*$/);
+      if (found) {
+        return found[1];
+      }
+    }
+  }
+  return null;
+};
+
+const lockVersionIndex = (lines, name) => {
+  const wanted = normalizeName(name);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() !== "[[package]]") {
+      continue;
+    }
+    const nameLine = (lines[i + 1] || "").match(/^name\s*=\s*"([^"]+)"\s*$/);
+    if (!nameLine || normalizeName(nameLine[1]) !== wanted) {
+      continue;
+    }
+    for (let j = i + 2; j < lines.length && lines[j].trim() !== "" && !lines[j].startsWith("["); j++) {
+      if (/^version\s*=/.test(lines[j]) && matchVersion(lines[j])) {
+        return j;
+      }
+    }
+    return -1;
+  }
+  return -1;
+};
 
 module.exports = async ({ core, env = process.env }) => {
   const target = (env.TAG || "").replace(/^v/, "");
@@ -21,12 +62,32 @@ module.exports = async ({ core, env = process.env }) => {
   const rows = [];
   const bumped = [];
 
-  for (const file of files) {
-    let lines;
+  const read = (file) => {
     try {
-      lines = fs.readFileSync(file, "utf8").split("\n");
+      return fs.readFileSync(file, "utf8").split("\n");
     } catch (error) {
       core.setFailed(`Could not read ${file}: ${error.message}`);
+      return null;
+    }
+  };
+
+  const bumpLine = (file, lines, index) => {
+    const { prefix, version, suffix } = matchVersion(lines[index]);
+
+    if (version === target) {
+      rows.push([file, version, "already at the target"]);
+      return;
+    }
+
+    lines[index] = `${prefix}${target}${suffix}`;
+    fs.writeFileSync(file, lines.join("\n"));
+    rows.push([file, version, target]);
+    bumped.push(file);
+  };
+
+  for (const file of files) {
+    const lines = read(file);
+    if (!lines) {
       return null;
     }
 
@@ -36,17 +97,35 @@ module.exports = async ({ core, env = process.env }) => {
       return null;
     }
 
-    const { prefix, version, suffix } = matchVersion(lines[index]);
+    bumpLine(file, lines, index);
 
-    if (version === target) {
-      rows.push([file, version, "already at the target"]);
+    if (path.posix.basename(file) !== "pyproject.toml") {
       continue;
     }
 
-    lines[index] = `${prefix}${target}${suffix}`;
-    fs.writeFileSync(file, lines.join("\n"));
-    rows.push([file, version, target]);
-    bumped.push(file);
+    const lockFile = path.posix.join(path.posix.dirname(file), "uv.lock");
+    if (!fs.existsSync(lockFile)) {
+      continue;
+    }
+
+    const name = projectName(lines);
+    if (!name) {
+      core.setFailed(`No project name found in ${file} to locate it in ${lockFile}.`);
+      return null;
+    }
+
+    const lockLines = read(lockFile);
+    if (!lockLines) {
+      return null;
+    }
+
+    const lockIndex = lockVersionIndex(lockLines, name);
+    if (lockIndex === -1) {
+      core.setFailed(`No version for project ${name} found in ${lockFile}.`);
+      return null;
+    }
+
+    bumpLine(lockFile, lockLines, lockIndex);
   }
 
   core.setOutput("needs_bump", bumped.length > 0);
