@@ -207,10 +207,49 @@ jobs:
               }
             };
 
+            const versionLines = [
+              /^ {0,2}["']?(?:__)?version(?:__)?["']?\s*[:=]\s*["']?v?\d[\w.+-]*["']?,?\s*$/,
+              /^(?:ARG|ENV)\s+(?:APP_)?VERSION\s*=\s*["']?v?\d[\w.+-]*["']?\s*$/i,
+              /^LABEL\s+(?:org\.opencontainers\.image\.)?version\s*=\s*["']?v?\d[\w.+-]*["']?\s*$/i,
+            ];
+            const versionFiles = ['package.json', 'pyproject.toml', 'setup.cfg', 'Chart.yaml', 'Dockerfile', 'uv.lock'];
+            const imageValuesFile = /(?:^|\/)deployment\/[^/]+\/values[^/]*\.ya?ml$/;
+            const imageTagLine = /^image:\s*["']?\S+:v?\d[\w.+-]*["']?\s*$/;
+            const MAX_RELEASE_COMMITS = 5;
+
+            const onlyChanges = (patch, isAllowed) => {
+              if (typeof patch !== 'string') return false;
+              const changed = patch.split('\n').filter((line) => /^[+-]/.test(line) && !/^(\+\+\+|---)/.test(line));
+              return changed.length > 0 && changed.every((line) => isAllowed(line.slice(1)));
+            };
+
+            const isReleaseOnlyFile = (file) =>
+              (file.status === 'modified' && versionFiles.includes(file.filename.split('/').pop())
+                && onlyChanges(file.patch, (line) => versionLines.some((pattern) => pattern.test(line))))
+              || (file.status === 'modified' && imageValuesFile.test(file.filename)
+                && onlyChanges(file.patch, (line) => imageTagLine.test(line)));
+
+            const codeCommit = async (sha) => {
+              let current = sha;
+              for (let i = 0; i < MAX_RELEASE_COMMITS; i++) {
+                const { data } = await github.rest.repos.getCommit({ owner, repo, ref: current });
+                const releaseOnly = data.parents.length === 1
+                  && data.files.length > 0
+                  && data.files.length < 300
+                  && data.files.every(isReleaseOnlyFile);
+                if (!releaseOnly) return current;
+                core.info(`${current.slice(0, 7)} only changes version or image tag lines, checking its parent.`);
+                current = data.parents[0].sha;
+              }
+              return current;
+            };
+
+            const CODE_SHA = await codeCommit(BASE_SHA);
+
             for (const name of checkNames) {
-              const parentGreen = await waitForGreen(BASE_SHA, name);
+              const parentGreen = await waitForGreen(CODE_SHA, name);
               if (!parentGreen) {
-                core.info(`Not marking '${name}': parent ${BASE_SHA.slice(0, 7)}'s `
+                core.info(`Not marking '${name}': ${CODE_SHA.slice(0, 7)}'s `
                   + `'${name}' was not confirmed green — leaving it unresolved on ${COMMIT_SHA}.`);
                 continue;
               }
@@ -223,7 +262,8 @@ jobs:
                 output: {
                   title: 'Automated image-tag commit',
                   summary: `This commit only bumps a deployment image tag (no code change), `
-                    + `and the parent commit's '${name}' was green, so it's marked `
+                    + `and '${name}' was green on ${CODE_SHA.slice(0, 7)}, the last commit that `
+                    + `changed code, so it's marked `
                     + `passed directly instead of re-run.`,
                 },
               });
