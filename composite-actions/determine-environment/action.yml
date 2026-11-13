@@ -1,0 +1,30 @@
+name: Determine the GitHub environment
+description: >-
+  Resolves the GitHub environment to deploy to. 'main' deploys to prod. With 'deploy_to_qa', a pull
+  request to 'main', or a branch with an open pull request to 'main' (the dev release or a hotfix),
+  deploys to qa. Everything else deploys to dev. Writes the decision and its reason to the job summary.
+
+inputs:
+  deploy_to_qa:
+    description: "'true' when the repository has a qa environment that release candidates deploy to."
+    required: false
+    default: "false"
+
+outputs:
+  environment:
+    description: "One of: prod, qa, dev"
+    value: ${{ steps.determine.outputs.environment }}
+
+runs:
+  using: composite
+  steps:
+    - name: Determine the GitHub environment
+      id: determine
+      uses: actions/github-script@v9
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        DEPLOY_TO_QA: ${{ inputs.deploy_to_qa }}
+      with:
+        script: |
+          const determineEnvironment = require(`${process.env.ACTION_PATH}/determine-environment.js`);
+          await determineEnvironment({ github, context, core });

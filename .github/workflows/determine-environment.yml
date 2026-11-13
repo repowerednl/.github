@@ -4,6 +4,12 @@ name: Determine GitHub environment
 
 on:
   workflow_call:
+    inputs:
+      deploy_to_qa:
+        required: false
+        type: boolean
+        default: false
+        description: "Deploy release candidates (a pull request to main, or a branch with one open) to qa instead of dev. Only enable when the repository has a qa environment."
     outputs:
       environment:
         description: "The GitHub's environment"
@@ -16,34 +22,16 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      env_name: ${{ steps.retrieve-environment.outputs.env_name }}
+      env_name: ${{ steps.retrieve-environment.outputs.environment }}
     if: ${{ github.event_name == 'push' 
       || (contains(github.event.workflow_run.conclusion, 'success') && (contains(github.event.workflow_run.head_branch, 'dev') 
       || contains(github.event.workflow_run.head_branch, 'main') 
       || contains(github.event.workflow_run.head_branch, 'hotfix/')
       || contains(github.event.workflow_run.head_commit.message, '[deploy]'))) 
-      || github.event.label.name == 'deploy' || github.event_name == 'workflow_dispatch' }}
+      || github.event.label.name == 'deploy' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     steps:
       - name: Retrieve environment
         id: retrieve-environment
-        uses: actions/github-script@v9
+        uses: repowerednl/.github/composite-actions/determine-environment@add-qa-deploy-logic
         with:
-          script: |
-            const eventName = context.eventName;
-            const refName = process.env.GITHUB_REF_NAME;
-            const headBranch = context.payload.workflow_run?.head_branch;
-
-            if (eventName === 'push' && refName === 'main') {
-              core.setOutput('env_name', 'prod');
-            } else if (eventName === 'workflow_run' && headBranch === 'dev') {
-              const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open',
-                base: 'main',
-                head: `${context.repo.owner}:dev`,
-              });
-              core.setOutput('env_name', prs.length > 0 ? 'prod' : 'dev');
-            } else {
-              core.setOutput('env_name', 'dev');
-            }
+          deploy_to_qa: ${{ inputs.deploy_to_qa }}

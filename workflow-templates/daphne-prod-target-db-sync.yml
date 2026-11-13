@@ -19,6 +19,8 @@ jobs:
     permissions:
       pull-requests: read
     uses: repowerednl/.github/.github/workflows/determine-environment.yml@main
+    with:
+      deploy_to_qa: false
 
   sync-source-to-target-db:
     needs: github-environment
