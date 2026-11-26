@@ -1,0 +1,11 @@
+{
+  "name": "yarn-setup",
+  "version": "1.0.0",
+  "description": "Composite action that sets up Node.js and yarn, installs the dependencies and runs extra setup commands",
+  "private": true,
+  "type": "commonjs",
+  "main": "yarn-setup.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

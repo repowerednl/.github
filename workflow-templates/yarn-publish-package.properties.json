@@ -1,0 +1,10 @@
+{
+    "name": "Publish a yarn package",
+    "description": "Generate a tag and release notes, bump package.json to the tag and publish the package with yarn",
+    "iconName": "octicon package",
+    "categories": ["Repowered"],
+    "filePatterns": [
+        "package.json",
+        "yarn.lock"
+    ]
+}

@@ -1,0 +1,39 @@
+name: Publish yarn package
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+        description: The Semantic Versioning GitHub tag to publish
+      node_version:
+        required: false
+        type: string
+        description: The Node.js version to use
+        default: "24"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PACKAGES_AUTH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout the tested commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js, yarn and the dependencies
+        uses: repowerednl/.github/composite-actions/yarn-setup@update-yarn-workflow
+        with:
+          node_version: ${{ inputs.node_version }}
+
+      - name: Update version to ${{ inputs.tag }}
+        run: yarn version ${{ inputs.tag }}
+
+      - name: Yarn build and publish
+        run: yarn build && yarn npm publish

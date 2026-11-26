@@ -1,0 +1,82 @@
+name: Yarn install, eslint, prettier and test
+
+on:
+  workflow_call:
+    inputs:
+      prettier_check_content:
+        required: false
+        type: string
+        description: The files prettier should check
+        default: "'{json-server,src}/**/*.{js,vue,json,html,css,md}'"
+      node_version:
+        required: false
+        type: string
+        description: The Node.js version to use
+        default: "24"
+      container_image:
+        required: false
+        type: string
+        description: >-
+          Run the job in this container image, e.g. 'mcr.microsoft.com/playwright:v1.63.0-noble' for browser tests.
+          Alpine-based images are not supported. Leave empty to run directly on the runner
+        default: ""
+      container_options:
+        required: false
+        type: string
+        description: Docker options for the container, e.g. '--ipc=host' for Playwright
+        default: ""
+      setup_commands:
+        required: false
+        type: string
+        description: >-
+          Extra commands to run after `yarn install`, one per line.
+          For example `yarn playwright install --with-deps chromium`
+        default: ""
+    secrets:
+      # The token that is used to pull repowerednl packages from GitHub.
+      # Note: The repository needs to be added to the allowed list within the package!
+      packages_auth_token:
+        required: true
+
+jobs:
+  yarn-check-lint-prettier-test:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.container_image }}
+      options: ${{ inputs.container_options }}
+    env:
+      CI: true
+      PACKAGES_AUTH_TOKEN: ${{ secrets.packages_auth_token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js, yarn and the dependencies
+        uses: repowerednl/.github/composite-actions/yarn-setup@update-yarn-workflow
+        with:
+          node_version: ${{ inputs.node_version }}
+          setup_commands: ${{ inputs.setup_commands }}
+
+      - name: Yarn lint
+        run: yarn lint
+
+      - name: Yarn prettier check
+        run: yarn prettier --check ${{ inputs.prettier_check_content }}
+
+      - name: Yarn test
+        run: yarn test
+
+      - name: Show test failures in the job summary
+        if: failure()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs')
+            if (!fs.existsSync('test_report.md')) {
+              core.info('No test_report.md found, nothing to add to the job summary')
+              return
+            }
+            const sections = fs.readFileSync('test_report.md', 'utf8').split(/^(?=## )/m)
+            const summary = sections[0].startsWith('## ') ? '' : sections.shift()
+            const failures = sections.filter((section) => section.startsWith('## ❌'))
+            await core.summary.addRaw([summary, ...failures].join('\n'), true).write()
